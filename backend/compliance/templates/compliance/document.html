@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ne">
+<head>
+<meta charset="utf-8">
+<title>{{ d.title_en }} {{ d.number }}</title>
+<style>
+  @page { size: {% if d.kind == "abbreviated" %}80mm auto{% else %}A5{% endif %}; margin: 8mm; }
+  body { font: 11px/1.4 "Noto Sans Devanagari", "Noto Sans", system-ui, sans-serif; color: #000; margin: 0; }
+  .doc { max-width: {% if d.kind == "abbreviated" %}72mm{% else %}190mm{% endif %}; margin: 0 auto; }
+  .center { text-align: center; }
+  h1 { font-size: 15px; margin: 4px 0; }
+  .seller { font-weight: 700; font-size: 13px; }
+  .stamp { color: #c00; font-weight: 700; border: 2px solid #c00; display: inline-block; padding: 2px 8px; margin: 4px 0; }
+  .meta { display: grid; grid-template-columns: {% if d.kind == "abbreviated" %}1fr{% else %}1fr 1fr{% endif %}; gap: 2px 16px; margin: 8px 0; }
+  table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+  th, td { border-bottom: 1px solid #999; padding: 3px 4px; text-align: left; vertical-align: top; }
+  th { background: #eee; }
+  .num { text-align: right; white-space: nowrap; }
+  .totals { margin-left: auto; width: {% if d.kind == "abbreviated" %}100%{% else %}60%{% endif %}; }
+  .totals td { border: 0; }
+  .grand td { border-top: 2px solid #000; font-weight: 700; font-size: 13px; }
+  .words { margin-top: 6px; }
+  .sig { display: flex; justify-content: space-between; margin-top: 40px; }
+  .sig div { border-top: 1px solid #000; padding-top: 2px; min-width: 40%; text-align: center; }
+  .cancelled { color: #c00; font-weight: 700; font-size: 14px; border: 3px double #c00; padding: 4px; margin: 6px 0; text-align: center; }
+</style>
+</head>
+<body>
+<div class="doc">
+  <div class="center">
+    <div class="seller">{{ d.seller.name }}{% if d.seller.name_np %} / {{ d.seller.name_np }}{% endif %}</div>
+    <div>{{ d.seller.address }}{% if d.seller.phone %} · {{ d.seller.phone }}{% endif %}</div>
+    <div>PAN/VAT: <b>{{ d.seller.pan|default:"—" }}</b> · {{ d.seller.branch }}</div>
+    <h1>{{ d.title_np }}<br>{{ d.title_en }}</h1>
+    {% if d.stamp.label %}<div class="stamp">{{ d.stamp.label }}</div>{% endif %}
+  </div>
+  {% if d.cancelled %}<div class="cancelled">CANCELLED — {{ d.cancelled_at.bs }} BS ({{ d.cancelled_at.ad }}) — {{ d.cancel_reason }}</div>{% endif %}
+  <div class="meta">
+    <div><b>No.:</b> {{ d.number }}</div>
+    <div><b>Fiscal year:</b> {{ d.fiscal_year }}</div>
+    {% if d.doc == "invoice" %}
+      <div><b>Transaction date:</b> {{ d.transaction.bs }} BS ({{ d.transaction.ad }} {{ d.transaction.time }})</div>
+      <div><b>Issue date:</b> {{ d.issued.bs }} BS ({{ d.issued.ad }} {{ d.issued.time }})</div>
+    {% else %}
+      <div><b>Date:</b> {{ d.issued.bs }} BS ({{ d.issued.ad }})</div>
+      <div><b>Against invoice:</b> {{ d.original.number }} dated {{ d.original.date_bs }} BS ({{ d.original.date_ad }})</div>
+    {% endif %}
+    <div><b>Buyer:</b> {{ d.buyer.name|default:"—" }}</div>
+    {% if d.buyer.pan or d.kind == "full" %}<div><b>Buyer PAN:</b> {{ d.buyer.pan|default:"—" }}</div>{% endif %}
+    {% if d.buyer.address or d.kind == "full" %}<div><b>Address:</b> {{ d.buyer.address|default:"—" }}</div>{% endif %}
+    {% if d.doc == "invoice" %}
+      <div><b>Payment:</b> {{ d.payment_method }}{% if d.payment_ref %} ({{ d.payment_ref }}){% endif %}</div>
+      {% if d.register %}<div><b>Till:</b> {{ d.register }} · {{ d.cashier }}</div>{% endif %}
+      {% if d.provisional_ref %}<div><b>Provisional slip:</b> {{ d.provisional_ref }}</div>{% endif %}
+    {% else %}
+      <div><b>Reason:</b> {{ d.reason }}</div>
+    {% endif %}
+  </div>
+  <table>
+    {% if d.doc == "invoice" %}
+      <thead><tr><th>S.No.</th>{% if d.kind == "full" %}<th>HS code</th>{% endif %}<th>Description</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Amount</th></tr></thead>
+      <tbody>{% for r in d.lines %}<tr><td>{{ r.sno }}</td>{% if d.kind == "full" %}<td>{{ r.hs_code }}</td>{% endif %}<td>{{ r.description }}{% if r.vat_rate != "13%" %} <small>({{ r.vat_rate }})</small>{% endif %}</td><td class="num">{{ r.qty }}</td><td class="num">{{ r.rate }}</td><td class="num">{{ r.amount }}</td></tr>{% endfor %}</tbody>
+    {% else %}
+      <thead><tr><th>S.No.</th><th>Description</th><th class="num">Qty</th><th class="num">Amount</th><th class="num">VAT</th></tr></thead>
+      <tbody>{% for r in d.lines %}<tr><td>{{ r.sno }}</td><td>{{ r.description }}</td><td class="num">{{ r.qty }}</td><td class="num">{{ r.amount }}</td><td class="num">{{ r.vat }}</td></tr>{% endfor %}</tbody>
+    {% endif %}
+  </table>
+  <table class="totals">
+    {% if d.doc == "invoice" %}
+      <tr><td>Total</td><td class="num">{{ d.subtotal }}</td></tr>
+      <tr><td>Discount</td><td class="num">{{ d.discount }}</td></tr>
+      <tr><td>Taxable value</td><td class="num">{{ d.taxable_value }}</td></tr>
+      {% if d.exempt_sales != "0.00" %}<tr><td>of which exempt / zero-rated</td><td class="num">{{ d.exempt_sales }}</td></tr>{% endif %}
+      <tr><td>{{ d.vat_label }}</td><td class="num">{{ d.vat }}</td></tr>
+      {% if d.excise %}<tr><td>Excise</td><td class="num">{{ d.excise }}</td></tr>{% endif %}
+      {% if d.hst %}<tr><td>Health Service Tax</td><td class="num">{{ d.hst }}</td></tr>{% endif %}
+      {% if d.esf %}<tr><td>Education Service Fee</td><td class="num">{{ d.esf }}</td></tr>{% endif %}
+      {% if d.digital_discount %}<tr><td>Digital payment VAT discount</td><td class="num">-{{ d.digital_discount }}</td></tr>{% endif %}
+      {% if d.round_adjust %}<tr><td>Rounding</td><td class="num">{{ d.round_adjust }}</td></tr>{% endif %}
+    {% else %}
+      <tr><td>Taxable value</td><td class="num">{{ d.taxable_value }}</td></tr>
+      <tr><td>{{ d.vat_label|default:"VAT" }}</td><td class="num">{{ d.vat }}</td></tr>
+    {% endif %}
+    <tr class="grand"><td>Grand total</td><td class="num">Rs {{ d.total }}</td></tr>
+    {% if d.tendered %}<tr><td>Tendered</td><td class="num">{{ d.tendered }}</td></tr>{% endif %}
+    {% if d.change %}<tr><td>Change</td><td class="num">{{ d.change }}</td></tr>{% endif %}
+  </table>
+  <div class="words"><b>In words:</b> {{ d.in_words }}</div>
+  {% if d.kind != "abbreviated" %}<div class="sig"><div>Prepared by</div><div>Authorised signature</div></div>{% endif %}
+</div>
+</body>
+</html>

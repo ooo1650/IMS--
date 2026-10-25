@@ -1,0 +1,25 @@
+# One origin for SPA + API so session cookies and CSRF stay first-party.
+# Rate limiting needs the caddy-ratelimit plugin; deploy/nginx.conf has the
+# equivalent rules if you use nginx instead.
+{$IMS_DOMAIN:localhost} {
+	encode gzip
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+	handle /api/* {
+		reverse_proxy backend:8000
+	}
+	handle /django-admin/* {
+		reverse_proxy backend:8000
+	}
+	handle /static/* {
+		root * /srv
+		file_server
+	}
+	handle {
+		root * /srv/spa
+		@sw path /sw.js
+		header @sw Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}

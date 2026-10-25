@@ -1,0 +1,44 @@
+# Single-VM deployment: Postgres + Django/gunicorn + Caddy serving the SPA.
+# WAL archiving is on; add nightly base backups and the weekly restore drill (README).
+services:
+  db:
+    image: postgres:16.6
+    environment:
+      POSTGRES_DB: ims
+      POSTGRES_USER: ims
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ims}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - walarchive:/wal_archive
+    command: ["postgres", "-c", "wal_level=replica", "-c", "archive_mode=on",
+              "-c", "archive_command=test ! -f /wal_archive/%f && cp %p /wal_archive/%f"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ims"]
+      interval: 5s
+  backend:
+    build: ./backend
+    env_file: ./backend/.env
+    depends_on:
+      db: { condition: service_healthy }
+    volumes: [static:/app/staticfiles]
+  migrate:
+    build: ./backend
+    env_file: ./backend/.env
+    command: python manage.py migrate --no-input
+    depends_on:
+      db: { condition: service_healthy }
+    profiles: [release]
+  web:
+    image: caddy:2.8.4
+    ports: ["80:80", "443:443"]
+    environment:
+      IMS_DOMAIN: ${IMS_DOMAIN:-localhost}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./frontend/dist:/srv/spa:ro
+      - static:/srv/static:ro
+    depends_on: [backend]
+volumes:
+  pgdata:
+  walarchive:
+  static:

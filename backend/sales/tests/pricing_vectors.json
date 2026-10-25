@@ -1,0 +1,6519 @@
+[
+ {
+  "name": "exclusive_three",
+  "lines": [
+   {
+    "unit_price_paisa": 1000,
+    "qty": 1,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 1000,
+    "qty": 1,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 1000,
+    "qty": 1,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 3000,
+   "discount_total_paisa": 0,
+   "tax_total_paisa": 390,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 0,
+   "total_paisa": 3390,
+   "taxable_sales_vat_paisa": 3000,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 1000,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 130,
+     "line_total_paisa": 1130,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 1000,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 130,
+     "line_total_paisa": 1130,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 1000,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 130,
+     "line_total_paisa": 1130,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "inclusive_round_once",
+  "lines": [
+   {
+    "unit_price_paisa": 100,
+    "qty": 1,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 100,
+    "qty": 1,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 100,
+    "qty": 1,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 265,
+   "discount_total_paisa": 0,
+   "tax_total_paisa": 35,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 0,
+   "total_paisa": 300,
+   "taxable_sales_vat_paisa": 265,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 100,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 12,
+     "line_total_paisa": 100,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 100,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 12,
+     "line_total_paisa": 100,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 100,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 11,
+     "line_total_paisa": 100,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "line_pct",
+  "lines": [
+   {
+    "unit_price_paisa": 1000,
+    "qty": 1,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "percent",
+    "discount_value": 1000,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 1000,
+   "discount_total_paisa": 100,
+   "tax_total_paisa": 117,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 0,
+   "total_paisa": 1017,
+   "taxable_sales_vat_paisa": 900,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 1000,
+     "line_discount_paisa": 100,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 117,
+     "line_total_paisa": 1017,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "sale_amount",
+  "lines": [
+   {
+    "unit_price_paisa": 300,
+    "qty": 1,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 100,
+    "qty": 1,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "amount",
+  "sale_discount_value": 100,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 400,
+   "discount_total_paisa": 100,
+   "tax_total_paisa": 39,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 0,
+   "total_paisa": 339,
+   "taxable_sales_vat_paisa": 300,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 300,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 75,
+     "tax_amount_paisa": 29,
+     "line_total_paisa": 254,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 100,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 25,
+     "tax_amount_paisa": 10,
+     "line_total_paisa": 85,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "cash_round",
+  "lines": [
+   {
+    "unit_price_paisa": 1000,
+    "qty": 1,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 1000,
+    "qty": 1,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 1000,
+    "qty": 1,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 100,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 3000,
+   "discount_total_paisa": 0,
+   "tax_total_paisa": 390,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 10,
+   "total_paisa": 3400,
+   "taxable_sales_vat_paisa": 3000,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 1000,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 130,
+     "line_total_paisa": 1130,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 1000,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 130,
+     "line_total_paisa": 1130,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 1000,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 130,
+     "line_total_paisa": 1130,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "inclusive_sale_disc",
+  "lines": [
+   {
+    "unit_price_paisa": 11300,
+    "qty": 1,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "amount",
+  "sale_discount_value": 1130,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 10000,
+   "discount_total_paisa": 1000,
+   "tax_total_paisa": 1170,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 0,
+   "total_paisa": 10170,
+   "taxable_sales_vat_paisa": 9000,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 11300,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 1130,
+     "tax_amount_paisa": 1170,
+     "line_total_paisa": 10170,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "digital_discount",
+  "lines": [
+   {
+    "unit_price_paisa": 1000,
+    "qty": 1,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 1000,
+    "qty": 1,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 1000,
+    "qty": 1,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 1000,
+  "expected": {
+   "subtotal_paisa": 3000,
+   "discount_total_paisa": 0,
+   "tax_total_paisa": 390,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 39,
+   "round_adjust_paisa": 0,
+   "total_paisa": 3351,
+   "taxable_sales_vat_paisa": 3000,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 1000,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 130,
+     "line_total_paisa": 1130,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 1000,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 130,
+     "line_total_paisa": 1130,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 1000,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 130,
+     "line_total_paisa": 1130,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_0",
+  "lines": [
+   {
+    "unit_price_paisa": 103501,
+    "qty": 6,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 95864,
+    "qty": 5,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 9830,
+    "qty": 1,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "hst",
+    "levy_rate": "5"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 1000,
+  "expected": {
+   "subtotal_paisa": 1038245,
+   "discount_total_paisa": 0,
+   "tax_total_paisa": 133755,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 468,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 13376,
+   "round_adjust_paisa": 0,
+   "total_paisa": 1159092,
+   "taxable_sales_vat_paisa": 1028883,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 9362,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 621006,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 71443,
+     "line_total_paisa": 621006,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 479320,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 62312,
+     "line_total_paisa": 541632,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 9830,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 9830,
+     "excise_paisa": 0,
+     "levy_paisa": 468
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_1",
+  "lines": [
+   {
+    "unit_price_paisa": 148231,
+    "qty": 1,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "zero",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 151285,
+    "qty": 5,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "hst",
+    "levy_rate": "5"
+   },
+   {
+    "unit_price_paisa": 12212,
+    "qty": 5,
+    "tax_rate": "5",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "reduced",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 141738,
+    "qty": 1,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "percent",
+  "sale_discount_value": 740,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 1000,
+  "expected": {
+   "subtotal_paisa": 1068526,
+   "discount_total_paisa": 79071,
+   "tax_total_paisa": 2692,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 33355,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 269,
+   "round_adjust_paisa": 0,
+   "total_paisa": 1025233,
+   "taxable_sales_vat_paisa": 53850,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 667094,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 131249,
+   "zero_rated_sales_paisa": 137262,
+   "lines": [
+    {
+     "gross_paisa": 148231,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 10969,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 137262,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 756425,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 55976,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 700449,
+     "excise_paisa": 0,
+     "levy_paisa": 33355
+    },
+    {
+     "gross_paisa": 61060,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 4518,
+     "tax_amount_paisa": 2692,
+     "line_total_paisa": 56542,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 141738,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 10489,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 131249,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_2",
+  "lines": [
+   {
+    "unit_price_paisa": 97622,
+    "qty": 1,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 130133,
+    "qty": 6,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "hst",
+    "levy_rate": "5"
+   },
+   {
+    "unit_price_paisa": 153502,
+    "qty": 4,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 2962,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 183238,
+    "qty": 7,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "zero",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 137678,
+    "qty": 4,
+    "tax_rate": "12.5",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 360160,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 1000,
+  "expected": {
+   "subtotal_paisa": 3253385,
+   "discount_total_paisa": 502011,
+   "tax_total_paisa": 32403,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 39040,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 3240,
+   "round_adjust_paisa": 0,
+   "total_paisa": 2819577,
+   "taxable_sales_vat_paisa": 255771,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 780798,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 432139,
+   "zero_rated_sales_paisa": 1282666,
+   "lines": [
+    {
+     "gross_paisa": 97622,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 11231,
+     "line_total_paisa": 97622,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 780798,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 819838,
+     "excise_paisa": 0,
+     "levy_paisa": 39040
+    },
+    {
+     "gross_paisa": 614008,
+     "line_discount_paisa": 181869,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 432139,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 1282666,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 1282666,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 550712,
+     "line_discount_paisa": 360160,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 21172,
+     "line_total_paisa": 190552,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_3",
+  "lines": [
+   {
+    "unit_price_paisa": 198480,
+    "qty": 3,
+    "tax_rate": "5",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "reduced",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 10278,
+    "qty": 6,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 635,
+    "tax_kind": "standard",
+    "excise_rate": "10",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 155811,
+    "qty": 4,
+    "tax_rate": "12.5",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 608064,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 70763,
+    "qty": 4,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "percent",
+  "sale_discount_value": 1268,
+  "cash_rounding": 100,
+  "digital_vat_discount_bp": 1000,
+  "expected": {
+   "subtotal_paisa": 1449535,
+   "discount_total_paisa": 658518,
+   "tax_total_paisa": 61706,
+   "excise_total_paisa": 4057,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 6171,
+   "round_adjust_paisa": -9,
+   "total_paisa": 850600,
+   "taxable_sales_vat_paisa": 795074,
+   "excisable_amount_paisa": 40570,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 595440,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 75502,
+     "tax_amount_paisa": 25997,
+     "line_total_paisa": 545935,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 61668,
+     "line_discount_paisa": 3916,
+     "sale_discount_share_paisa": 7323,
+     "tax_amount_paisa": 5802,
+     "line_total_paisa": 50429,
+     "excise_paisa": 4057,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 623244,
+     "line_discount_paisa": 608064,
+     "sale_discount_share_paisa": 1925,
+     "tax_amount_paisa": 1473,
+     "line_total_paisa": 13255,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 283052,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 35891,
+     "tax_amount_paisa": 28434,
+     "line_total_paisa": 247161,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_4",
+  "lines": [
+   {
+    "unit_price_paisa": 74606,
+    "qty": 6,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 3160,
+    "tax_kind": "standard",
+    "excise_rate": "10",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 93183,
+    "qty": 2,
+    "tax_rate": "12.5",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 959,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 33906,
+    "qty": 6,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 64910,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "hst",
+    "levy_rate": "5"
+   },
+   {
+    "unit_price_paisa": 21124,
+    "qty": 2,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 3679,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "hst",
+    "levy_rate": "5"
+   },
+   {
+    "unit_price_paisa": 112859,
+    "qty": 7,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 178972,
+    "qty": 4,
+    "tax_rate": "5",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 241960,
+    "tax_kind": "reduced",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 1000,
+  "expected": {
+   "subtotal_paisa": 2231580,
+   "discount_total_paisa": 436746,
+   "tax_total_paisa": 76515,
+   "excise_total_paisa": 24633,
+   "hst_total_paisa": 7868,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 7652,
+   "round_adjust_paisa": -1,
+   "total_paisa": 1896197,
+   "taxable_sales_vat_paisa": 872091,
+   "excisable_amount_paisa": 246326,
+   "taxable_sales_hst_paisa": 157363,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 790013,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 447636,
+     "line_discount_paisa": 141453,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 35225,
+     "line_total_paisa": 306183,
+     "excise_paisa": 24633,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 186366,
+     "line_discount_paisa": 17872,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 18722,
+     "line_total_paisa": 168494,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 203436,
+     "line_discount_paisa": 64910,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 138526,
+     "excise_paisa": 0,
+     "levy_paisa": 6596
+    },
+    {
+     "gross_paisa": 42248,
+     "line_discount_paisa": 15543,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 26705,
+     "excise_paisa": 0,
+     "levy_paisa": 1272
+    },
+    {
+     "gross_paisa": 790013,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 790013,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 715888,
+     "line_discount_paisa": 241960,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 22568,
+     "line_total_paisa": 473928,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_5",
+  "lines": [
+   {
+    "unit_price_paisa": 127131,
+    "qty": 7,
+    "tax_rate": "5",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "reduced",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 38189,
+    "qty": 4,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "10",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "amount",
+  "sale_discount_value": 975,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 1000,
+  "expected": {
+   "subtotal_paisa": 1000296,
+   "discount_total_paisa": 935,
+   "tax_total_paisa": 64161,
+   "excise_total_paisa": 15261,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 6416,
+   "round_adjust_paisa": 0,
+   "total_paisa": 1072367,
+   "taxable_sales_vat_paisa": 1014622,
+   "excisable_amount_paisa": 152613,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 889917,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 832,
+     "tax_amount_paisa": 42337,
+     "line_total_paisa": 889085,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 152756,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 143,
+     "tax_amount_paisa": 21824,
+     "line_total_paisa": 189698,
+     "excise_paisa": 15261,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_6",
+  "lines": [
+   {
+    "unit_price_paisa": 119707,
+    "qty": 7,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "hst",
+    "levy_rate": "5"
+   },
+   {
+    "unit_price_paisa": 27142,
+    "qty": 4,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 3280,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 115508,
+    "qty": 2,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 26839,
+    "qty": 1,
+    "tax_rate": "5",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "reduced",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 160888,
+    "qty": 1,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "amount",
+    "discount_value": 18432,
+    "tax_kind": "zero",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 100,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 1285012,
+   "discount_total_paisa": 49945,
+   "tax_total_paisa": 36248,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 39902,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": -17,
+   "total_paisa": 1311200,
+   "taxable_sales_vat_paisa": 294564,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 798047,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 142456,
+   "lines": [
+    {
+     "gross_paisa": 837949,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 837949,
+     "excise_paisa": 0,
+     "levy_paisa": 39902
+    },
+    {
+     "gross_paisa": 108568,
+     "line_discount_paisa": 35610,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 8393,
+     "line_total_paisa": 72958,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 231016,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 26577,
+     "line_total_paisa": 231016,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 26839,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 1278,
+     "line_total_paisa": 26839,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 160888,
+     "line_discount_paisa": 18432,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 142456,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_7",
+  "lines": [
+   {
+    "unit_price_paisa": 124296,
+    "qty": 1,
+    "tax_rate": "12.5",
+    "tax_inclusive": false,
+    "discount_type": "amount",
+    "discount_value": 15119,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 125933,
+    "qty": 4,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 2554,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 194079,
+    "qty": 3,
+    "tax_rate": "5",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 501871,
+    "tax_kind": "reduced",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 100,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 1124588,
+   "discount_total_paisa": 606944,
+   "tax_total_paisa": 60625,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 31,
+   "total_paisa": 578300,
+   "taxable_sales_vat_paisa": 517644,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 124296,
+     "line_discount_paisa": 15119,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 13647,
+     "line_total_paisa": 122824,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 503732,
+     "line_discount_paisa": 128653,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 43151,
+     "line_total_paisa": 375079,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 582237,
+     "line_discount_paisa": 501871,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 3827,
+     "line_total_paisa": 80366,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_8",
+  "lines": [
+   {
+    "unit_price_paisa": 198743,
+    "qty": 5,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 182504,
+    "qty": 7,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 2271243,
+   "discount_total_paisa": 0,
+   "tax_total_paisa": 0,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 0,
+   "total_paisa": 2271243,
+   "taxable_sales_vat_paisa": 0,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 2271243,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 993715,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 993715,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 1277528,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 1277528,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_9",
+  "lines": [
+   {
+    "unit_price_paisa": 166840,
+    "qty": 2,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "amount",
+    "discount_value": 321508,
+    "tax_kind": "zero",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 193954,
+    "qty": 7,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 1857,
+    "tax_kind": "zero",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 191629,
+    "qty": 1,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 7323,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 181541,
+    "qty": 5,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "10",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 95588,
+    "qty": 1,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 28896,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 2697832,
+   "discount_total_paisa": 606524,
+   "tax_total_paisa": 112099,
+   "excise_total_paisa": 73025,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 0,
+   "total_paisa": 2276432,
+   "taxable_sales_vat_paisa": 862298,
+   "excisable_amount_paisa": 730253,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 184306,
+   "zero_rated_sales_paisa": 1117729,
+   "lines": [
+    {
+     "gross_paisa": 333680,
+     "line_discount_paisa": 321508,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 12172,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 1357678,
+     "line_discount_paisa": 252121,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 1105557,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 191629,
+     "line_discount_paisa": 7323,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 184306,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 907705,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 104426,
+     "line_total_paisa": 907705,
+     "excise_paisa": 73025,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 95588,
+     "line_discount_paisa": 28896,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 7673,
+     "line_total_paisa": 66692,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_10",
+  "lines": [
+   {
+    "unit_price_paisa": 125692,
+    "qty": 6,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "10",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 173169,
+    "qty": 1,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "hst",
+    "levy_rate": "5"
+   },
+   {
+    "unit_price_paisa": 125314,
+    "qty": 2,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "hst",
+    "levy_rate": "5"
+   },
+   {
+    "unit_price_paisa": 22741,
+    "qty": 7,
+    "tax_rate": "12.5",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 103766,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 100,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 1319449,
+   "discount_total_paisa": 92236,
+   "tax_total_paisa": 114002,
+   "excise_total_paisa": 75415,
+   "hst_total_paisa": 21190,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": -20,
+   "total_paisa": 1437800,
+   "taxable_sales_vat_paisa": 878830,
+   "excisable_amount_paisa": 754152,
+   "taxable_sales_hst_paisa": 423797,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 754152,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 107844,
+     "line_total_paisa": 937411,
+     "excise_paisa": 75415,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 173169,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 181828,
+     "excise_paisa": 0,
+     "levy_paisa": 8659
+    },
+    {
+     "gross_paisa": 250628,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 263159,
+     "excise_paisa": 0,
+     "levy_paisa": 12531
+    },
+    {
+     "gross_paisa": 159187,
+     "line_discount_paisa": 103766,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 6158,
+     "line_total_paisa": 55421,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_11",
+  "lines": [
+   {
+    "unit_price_paisa": 7222,
+    "qty": 2,
+    "tax_rate": "12.5",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 160321,
+    "qty": 7,
+    "tax_rate": "12.5",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "amount",
+  "sale_discount_value": 159,
+  "cash_rounding": 100,
+  "digital_vat_discount_bp": 1000,
+  "expected": {
+   "subtotal_paisa": 1136691,
+   "discount_total_paisa": 159,
+   "tax_total_paisa": 142067,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 14207,
+   "round_adjust_paisa": 8,
+   "total_paisa": 1264400,
+   "taxable_sales_vat_paisa": 1136532,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 14444,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 2,
+     "tax_amount_paisa": 1805,
+     "line_total_paisa": 16247,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 1122247,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 157,
+     "tax_amount_paisa": 140262,
+     "line_total_paisa": 1262352,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_12",
+  "lines": [
+   {
+    "unit_price_paisa": 3734,
+    "qty": 7,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 113721,
+    "qty": 7,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "zero",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 819178,
+   "discount_total_paisa": 0,
+   "tax_total_paisa": 3007,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 0,
+   "total_paisa": 822185,
+   "taxable_sales_vat_paisa": 23131,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 796047,
+   "lines": [
+    {
+     "gross_paisa": 26138,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 3007,
+     "line_total_paisa": 26138,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 796047,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 796047,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_13",
+  "lines": [
+   {
+    "unit_price_paisa": 131377,
+    "qty": 2,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 170912,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 15966,
+    "qty": 6,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "10",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "percent",
+  "sale_discount_value": 2389,
+  "cash_rounding": 100,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 358550,
+   "discount_total_paisa": 215739,
+   "tax_total_paisa": 10426,
+   "excise_total_paisa": 7291,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": -28,
+   "total_paisa": 160500,
+   "taxable_sales_vat_paisa": 80201,
+   "excisable_amount_paisa": 72910,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 69901,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 262754,
+     "line_discount_paisa": 170912,
+     "sale_discount_share_paisa": 21941,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 69901,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 95796,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 22886,
+     "tax_amount_paisa": 10426,
+     "line_total_paisa": 90627,
+     "excise_paisa": 7291,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_14",
+  "lines": [
+   {
+    "unit_price_paisa": 139415,
+    "qty": 2,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 159529,
+    "qty": 1,
+    "tax_rate": "5",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "reduced",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 162294,
+    "qty": 6,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 985,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 27816,
+    "qty": 5,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 465,
+    "tax_kind": "zero",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 25624,
+    "qty": 5,
+    "tax_rate": "12.5",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 1545465,
+   "discount_total_paisa": 91348,
+   "tax_total_paisa": 159072,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": -1,
+   "total_paisa": 1613188,
+   "taxable_sales_vat_paisa": 1321503,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 132613,
+   "lines": [
+    {
+     "gross_paisa": 278830,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 36248,
+     "line_total_paisa": 315078,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 159529,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 7597,
+     "line_total_paisa": 159529,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 973764,
+     "line_discount_paisa": 95916,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 100991,
+     "line_total_paisa": 877848,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 139080,
+     "line_discount_paisa": 6467,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 132613,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 128120,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 14236,
+     "line_total_paisa": 128120,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_15",
+  "lines": [
+   {
+    "unit_price_paisa": 181596,
+    "qty": 3,
+    "tax_rate": "12.5",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 133105,
+    "qty": 2,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "percent",
+    "discount_value": 4286,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 117317,
+    "qty": 2,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "hst",
+    "levy_rate": "5"
+   },
+   {
+    "unit_price_paisa": 82833,
+    "qty": 1,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 1971,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "hst",
+    "levy_rate": "5"
+   },
+   {
+    "unit_price_paisa": 32074,
+    "qty": 7,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 40487,
+    "tax_kind": "standard",
+    "excise_rate": "10",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 1233441,
+   "discount_total_paisa": 162219,
+   "tax_total_paisa": 81704,
+   "excise_total_paisa": 14805,
+   "hst_total_paisa": 14340,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 1,
+   "total_paisa": 1182072,
+   "taxable_sales_vat_paisa": 647115,
+   "excisable_amount_paisa": 148054,
+   "taxable_sales_hst_paisa": 286801,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 152112,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 544788,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 60532,
+     "line_total_paisa": 544788,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 266210,
+     "line_discount_paisa": 114098,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 152112,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 234634,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 234634,
+     "excise_paisa": 0,
+     "levy_paisa": 11173
+    },
+    {
+     "gross_paisa": 82833,
+     "line_discount_paisa": 16326,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 66507,
+     "excise_paisa": 0,
+     "levy_paisa": 3167
+    },
+    {
+     "gross_paisa": 224518,
+     "line_discount_paisa": 40487,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 21172,
+     "line_total_paisa": 184031,
+     "excise_paisa": 14805,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_16",
+  "lines": [
+   {
+    "unit_price_paisa": 104401,
+    "qty": 4,
+    "tax_rate": "5",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "reduced",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 42328,
+    "qty": 6,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "hst",
+    "levy_rate": "5"
+   },
+   {
+    "unit_price_paisa": 88898,
+    "qty": 4,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 1603,
+    "tax_kind": "standard",
+    "excise_rate": "10",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 5108,
+    "qty": 3,
+    "tax_rate": "12.5",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 9077,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 100754,
+    "qty": 3,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 29583,
+    "qty": 7,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "zero",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 1480612,
+   "discount_total_paisa": 53926,
+   "tax_total_paisa": 55925,
+   "excise_total_paisa": 24022,
+   "hst_total_paisa": 12698,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 0,
+   "total_paisa": 1519331,
+   "taxable_sales_vat_paisa": 687397,
+   "excisable_amount_paisa": 240218,
+   "taxable_sales_hst_paisa": 253968,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 302262,
+   "zero_rated_sales_paisa": 207081,
+   "lines": [
+    {
+     "gross_paisa": 417604,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 20880,
+     "line_total_paisa": 438484,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 253968,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 266666,
+     "excise_paisa": 0,
+     "levy_paisa": 12698
+    },
+    {
+     "gross_paisa": 355592,
+     "line_discount_paisa": 57001,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 34351,
+     "line_total_paisa": 298591,
+     "excise_paisa": 24022,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 15324,
+     "line_discount_paisa": 9077,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 694,
+     "line_total_paisa": 6247,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 302262,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 302262,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 207081,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 207081,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_17",
+  "lines": [
+   {
+    "unit_price_paisa": 47593,
+    "qty": 3,
+    "tax_rate": "5",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "reduced",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 106417,
+    "qty": 2,
+    "tax_rate": "12.5",
+    "tax_inclusive": false,
+    "discount_type": "amount",
+    "discount_value": 140666,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 73155,
+    "qty": 1,
+    "tax_rate": "5",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "reduced",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 425284,
+   "discount_total_paisa": 140666,
+   "tax_total_paisa": 19644,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 0,
+   "total_paisa": 304262,
+   "taxable_sales_vat_paisa": 284618,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 142779,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 7139,
+     "line_total_paisa": 149918,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 212834,
+     "line_discount_paisa": 140666,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 9021,
+     "line_total_paisa": 81189,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 73155,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 3484,
+     "line_total_paisa": 73155,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_18",
+  "lines": [
+   {
+    "unit_price_paisa": 68303,
+    "qty": 1,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "zero",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 118955,
+    "qty": 1,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "10",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 70218,
+    "qty": 5,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 1058,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 28693,
+    "qty": 2,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 81787,
+    "qty": 6,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 76012,
+    "qty": 4,
+    "tax_rate": "5",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "reduced",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 1335635,
+   "discount_total_paisa": 32872,
+   "tax_total_paisa": 67606,
+   "excise_total_paisa": 11896,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 1,
+   "total_paisa": 1382266,
+   "taxable_sales_vat_paisa": 698247,
+   "excisable_amount_paisa": 118955,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 548108,
+   "zero_rated_sales_paisa": 68303,
+   "lines": [
+    {
+     "gross_paisa": 68303,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 68303,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 118955,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 17011,
+     "line_total_paisa": 147862,
+     "excise_paisa": 11896,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 351090,
+     "line_discount_paisa": 37145,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 36117,
+     "line_total_paisa": 313945,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 57386,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 57386,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 490722,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 490722,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 304048,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 14478,
+     "line_total_paisa": 304048,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_19",
+  "lines": [
+   {
+    "unit_price_paisa": 192173,
+    "qty": 5,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "zero",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 960865,
+   "discount_total_paisa": 0,
+   "tax_total_paisa": 0,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 0,
+   "total_paisa": 960865,
+   "taxable_sales_vat_paisa": 0,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 960865,
+   "lines": [
+    {
+     "gross_paisa": 960865,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 960865,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_20",
+  "lines": [
+   {
+    "unit_price_paisa": 172101,
+    "qty": 4,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "percent",
+    "discount_value": 4472,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "hst",
+    "levy_rate": "5"
+   },
+   {
+    "unit_price_paisa": 180288,
+    "qty": 2,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 120358,
+    "tax_kind": "standard",
+    "excise_rate": "10",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 106090,
+    "qty": 3,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 18540,
+    "qty": 6,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 22148,
+    "qty": 6,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "hst",
+    "levy_rate": "5"
+   },
+   {
+    "unit_price_paisa": 156967,
+    "qty": 2,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 153647,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 1818705,
+   "discount_total_paisa": 540653,
+   "tax_total_paisa": 87451,
+   "excise_total_paisa": 19326,
+   "hst_total_paisa": 25672,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": -1,
+   "total_paisa": 1410500,
+   "taxable_sales_vat_paisa": 672699,
+   "excisable_amount_paisa": 193257,
+   "taxable_sales_hst_paisa": 513438,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 111240,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 688404,
+     "line_discount_paisa": 307854,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 399578,
+     "excise_paisa": 0,
+     "levy_paisa": 19028
+    },
+    {
+     "gross_paisa": 360576,
+     "line_discount_paisa": 120358,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 27636,
+     "line_total_paisa": 240218,
+     "excise_paisa": 19326,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 318270,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 41375,
+     "line_total_paisa": 359645,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 111240,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 111240,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 132888,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 139532,
+     "excise_paisa": 0,
+     "levy_paisa": 6644
+    },
+    {
+     "gross_paisa": 313934,
+     "line_discount_paisa": 153647,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 18440,
+     "line_total_paisa": 160287,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_21",
+  "lines": [
+   {
+    "unit_price_paisa": 95458,
+    "qty": 3,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 169624,
+    "tax_kind": "zero",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "amount",
+  "sale_discount_value": 223,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 286374,
+   "discount_total_paisa": 169847,
+   "tax_total_paisa": 0,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 0,
+   "total_paisa": 116527,
+   "taxable_sales_vat_paisa": 0,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 116527,
+   "lines": [
+    {
+     "gross_paisa": 286374,
+     "line_discount_paisa": 169624,
+     "sale_discount_share_paisa": 223,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 116527,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_22",
+  "lines": [
+   {
+    "unit_price_paisa": 100042,
+    "qty": 1,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 62212,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 1000,
+  "expected": {
+   "subtotal_paisa": 100042,
+   "discount_total_paisa": 62212,
+   "tax_total_paisa": 0,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 0,
+   "total_paisa": 37830,
+   "taxable_sales_vat_paisa": 0,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 37830,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 100042,
+     "line_discount_paisa": 62212,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 37830,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_23",
+  "lines": [
+   {
+    "unit_price_paisa": 69251,
+    "qty": 7,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "percent",
+  "sale_discount_value": 170,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 428988,
+   "discount_total_paisa": 7293,
+   "tax_total_paisa": 54820,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 1,
+   "total_paisa": 476516,
+   "taxable_sales_vat_paisa": 421696,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 484757,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 8241,
+     "tax_amount_paisa": 54820,
+     "line_total_paisa": 476516,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_24",
+  "lines": [
+   {
+    "unit_price_paisa": 165065,
+    "qty": 2,
+    "tax_rate": "5",
+    "tax_inclusive": false,
+    "discount_type": "amount",
+    "discount_value": 44293,
+    "tax_kind": "reduced",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 85495,
+    "qty": 6,
+    "tax_rate": "5",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 4048,
+    "tax_kind": "reduced",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 11479,
+    "qty": 7,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "hst",
+    "levy_rate": "5"
+   }
+  ],
+  "sale_discount_type": "percent",
+  "sale_discount_value": 570,
+  "cash_rounding": 100,
+  "digital_vat_discount_bp": 1000,
+  "expected": {
+   "subtotal_paisa": 899026,
+   "discount_total_paisa": 279502,
+   "tax_total_paisa": 27188,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 3789,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 2719,
+   "round_adjust_paisa": 18,
+   "total_paisa": 647800,
+   "taxable_sales_vat_paisa": 543751,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 75773,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 330130,
+     "line_discount_paisa": 44293,
+     "sale_discount_share_paisa": 16293,
+     "tax_amount_paisa": 13477,
+     "line_total_paisa": 283021,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 512970,
+     "line_discount_paisa": 207650,
+     "sale_discount_share_paisa": 17403,
+     "tax_amount_paisa": 13711,
+     "line_total_paisa": 287917,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 80353,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 4580,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 79562,
+     "excise_paisa": 0,
+     "levy_paisa": 3789
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_25",
+  "lines": [
+   {
+    "unit_price_paisa": 179955,
+    "qty": 5,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "zero",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 34890,
+    "qty": 6,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "10",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 118329,
+    "qty": 5,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "percent",
+    "discount_value": 415,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 128266,
+    "qty": 3,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 196154,
+    "qty": 5,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 100,
+  "digital_vat_discount_bp": 1000,
+  "expected": {
+   "subtotal_paisa": 3022059,
+   "discount_total_paisa": 24553,
+   "tax_total_paisa": 275426,
+   "excise_total_paisa": 20934,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 27543,
+   "round_adjust_paisa": -23,
+   "total_paisa": 3266300,
+   "taxable_sales_vat_paisa": 2118665,
+   "excisable_amount_paisa": 209340,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 899775,
+   "lines": [
+    {
+     "gross_paisa": 899775,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 899775,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 209340,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 29935,
+     "line_total_paisa": 260209,
+     "excise_paisa": 20934,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 591645,
+     "line_discount_paisa": 24553,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 73722,
+     "line_total_paisa": 640814,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 384798,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 44269,
+     "line_total_paisa": 384798,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 980770,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 127500,
+     "line_total_paisa": 1108270,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_26",
+  "lines": [
+   {
+    "unit_price_paisa": 19517,
+    "qty": 7,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "amount",
+    "discount_value": 69614,
+    "tax_kind": "zero",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 60487,
+    "qty": 6,
+    "tax_rate": "12.5",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 20117,
+    "qty": 4,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "percent",
+    "discount_value": 2353,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 20309,
+    "qty": 5,
+    "tax_rate": "5",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "reduced",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "percent",
+  "sale_discount_value": 2838,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 1000,
+  "expected": {
+   "subtotal_paisa": 636394,
+   "discount_total_paisa": 244027,
+   "tax_total_paisa": 38073,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 3807,
+   "round_adjust_paisa": 0,
+   "total_paisa": 426633,
+   "taxable_sales_vat_paisa": 344378,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 47989,
+   "lines": [
+    {
+     "gross_paisa": 136619,
+     "line_discount_paisa": 69614,
+     "sale_discount_share_paisa": 19016,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 47989,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 362922,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 102997,
+     "tax_amount_paisa": 28881,
+     "line_total_paisa": 259925,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 80468,
+     "line_discount_paisa": 18934,
+     "sale_discount_share_paisa": 17463,
+     "tax_amount_paisa": 5729,
+     "line_total_paisa": 49800,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 101545,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 28819,
+     "tax_amount_paisa": 3463,
+     "line_total_paisa": 72726,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_27",
+  "lines": [
+   {
+    "unit_price_paisa": 3269,
+    "qty": 4,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 181453,
+    "qty": 2,
+    "tax_rate": "12.5",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 121809,
+    "qty": 4,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "amount",
+    "discount_value": 244496,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 81704,
+    "qty": 1,
+    "tax_rate": "12.5",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 20045,
+    "qty": 7,
+    "tax_rate": "12.5",
+    "tax_inclusive": false,
+    "discount_type": "percent",
+    "discount_value": 4150,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "amount",
+  "sale_discount_value": 214,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 1034332,
+   "discount_total_paisa": 302927,
+   "tax_total_paisa": 92696,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": -1,
+   "total_paisa": 824100,
+   "taxable_sales_vat_paisa": 731404,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 13076,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 4,
+     "tax_amount_paisa": 1504,
+     "line_total_paisa": 13072,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 362906,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 99,
+     "tax_amount_paisa": 40312,
+     "line_total_paisa": 362807,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 487236,
+     "line_discount_paisa": 244496,
+     "sale_discount_share_paisa": 66,
+     "tax_amount_paisa": 31547,
+     "line_total_paisa": 274221,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 81704,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 22,
+     "tax_amount_paisa": 9076,
+     "line_total_paisa": 81682,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 140315,
+     "line_discount_paisa": 58231,
+     "sale_discount_share_paisa": 23,
+     "tax_amount_paisa": 10257,
+     "line_total_paisa": 92318,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_28",
+  "lines": [
+   {
+    "unit_price_paisa": 37157,
+    "qty": 6,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 158169,
+    "qty": 7,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 60656,
+    "qty": 4,
+    "tax_rate": "12.5",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 235328,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 942,
+    "qty": 4,
+    "tax_rate": "12.5",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 109100,
+    "qty": 3,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "hst",
+    "levy_rate": "5"
+   }
+  ],
+  "sale_discount_type": "amount",
+  "sale_discount_value": 1,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 1860854,
+   "discount_total_paisa": 209181,
+   "tax_total_paisa": 1229,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 15586,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 0,
+   "total_paisa": 1668488,
+   "taxable_sales_vat_paisa": 9835,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 311714,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 1330124,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 222942,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 222942,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 1107183,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 1,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 1107182,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 242624,
+     "line_discount_paisa": 235328,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 810,
+     "line_total_paisa": 7296,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 3768,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 419,
+     "line_total_paisa": 3768,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 327300,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 327300,
+     "excise_paisa": 0,
+     "levy_paisa": 15586
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_29",
+  "lines": [
+   {
+    "unit_price_paisa": 51313,
+    "qty": 6,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 66379,
+    "qty": 3,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 17033,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "hst",
+    "levy_rate": "5"
+   },
+   {
+    "unit_price_paisa": 94558,
+    "qty": 4,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 26663,
+    "qty": 1,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "amount",
+    "discount_value": 21691,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 902427,
+   "discount_total_paisa": 37913,
+   "tax_total_paisa": 40024,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 8672,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 0,
+   "total_paisa": 913210,
+   "taxable_sales_vat_paisa": 307878,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 173432,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 383204,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 307878,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 40024,
+     "line_total_paisa": 347902,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 199137,
+     "line_discount_paisa": 17033,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 182104,
+     "excise_paisa": 0,
+     "levy_paisa": 8672
+    },
+    {
+     "gross_paisa": 378232,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 378232,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 26663,
+     "line_discount_paisa": 21691,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 4972,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_30",
+  "lines": [
+   {
+    "unit_price_paisa": 49768,
+    "qty": 7,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "amount",
+    "discount_value": 195742,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "hst",
+    "levy_rate": "5"
+   },
+   {
+    "unit_price_paisa": 145268,
+    "qty": 5,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 1666,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 118191,
+    "qty": 5,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 1135,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 44765,
+    "qty": 4,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "hst",
+    "levy_rate": "5"
+   }
+  ],
+  "sale_discount_type": "amount",
+  "sale_discount_value": 261,
+  "cash_rounding": 100,
+  "digital_vat_discount_bp": 1000,
+  "expected": {
+   "subtotal_paisa": 1752643,
+   "discount_total_paisa": 370149,
+   "tax_total_paisa": 69628,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 16155,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 6963,
+   "round_adjust_paisa": -14,
+   "total_paisa": 1461300,
+   "taxable_sales_vat_paisa": 535596,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 323110,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 523788,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 348376,
+     "line_discount_paisa": 195742,
+     "sale_discount_share_paisa": 27,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 160237,
+     "excise_paisa": 0,
+     "levy_paisa": 7630
+    },
+    {
+     "gross_paisa": 726340,
+     "line_discount_paisa": 121008,
+     "sale_discount_share_paisa": 108,
+     "tax_amount_paisa": 69628,
+     "line_total_paisa": 605224,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 590955,
+     "line_discount_paisa": 67073,
+     "sale_discount_share_paisa": 94,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 523788,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 179060,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 32,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 179028,
+     "excise_paisa": 0,
+     "levy_paisa": 8525
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_31",
+  "lines": [
+   {
+    "unit_price_paisa": 106486,
+    "qty": 6,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 250258,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 31390,
+    "qty": 2,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 1324,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 144281,
+    "qty": 2,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "percent",
+    "discount_value": 3710,
+    "tax_kind": "standard",
+    "excise_rate": "10",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 112047,
+    "qty": 2,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 4487,
+    "tax_kind": "zero",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 89642,
+    "qty": 5,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 67727,
+    "qty": 7,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "amount",
+    "discount_value": 298643,
+    "tax_kind": "zero",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "percent",
+  "sale_discount_value": 1690,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 2077865,
+   "discount_total_paisa": 985930,
+   "tax_total_paisa": 69626,
+   "excise_total_paisa": 15083,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": -1,
+   "total_paisa": 1176643,
+   "taxable_sales_vat_paisa": 535582,
+   "excisable_amount_paisa": 150831,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 322975,
+   "zero_rated_sales_paisa": 248460,
+   "lines": [
+    {
+     "gross_paisa": 638916,
+     "line_discount_paisa": 250258,
+     "sale_discount_share_paisa": 65683,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 322975,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 62780,
+     "line_discount_paisa": 8312,
+     "sale_discount_share_paisa": 9205,
+     "tax_amount_paisa": 5207,
+     "line_total_paisa": 45263,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 288562,
+     "line_discount_paisa": 107057,
+     "sale_discount_share_paisa": 30674,
+     "tax_amount_paisa": 21569,
+     "line_total_paisa": 187483,
+     "excise_paisa": 15083,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 224094,
+     "line_discount_paisa": 100551,
+     "sale_discount_share_paisa": 20879,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 102664,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 448210,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 75748,
+     "tax_amount_paisa": 42850,
+     "line_total_paisa": 372462,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 474089,
+     "line_discount_paisa": 298643,
+     "sale_discount_share_paisa": 29650,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 145796,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_32",
+  "lines": [
+   {
+    "unit_price_paisa": 98794,
+    "qty": 3,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "10",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 72750,
+    "qty": 5,
+    "tax_rate": "5",
+    "tax_inclusive": false,
+    "discount_type": "percent",
+    "discount_value": 2950,
+    "tax_kind": "reduced",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 24275,
+    "qty": 3,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "zero",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 113204,
+    "qty": 3,
+    "tax_rate": "5",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 178,
+    "tax_kind": "reduced",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 153925,
+    "qty": 4,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 1,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 117690,
+    "qty": 2,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 893,
+    "tax_kind": "zero",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "percent",
+  "sale_discount_value": 2793,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 1000,
+  "expected": {
+   "subtotal_paisa": 1836644,
+   "discount_total_paisa": 609647,
+   "tax_total_paisa": 102278,
+   "excise_total_paisa": 21360,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 10228,
+   "round_adjust_paisa": 0,
+   "total_paisa": 1340407,
+   "taxable_sales_vat_paisa": 1041383,
+   "excisable_amount_paisa": 213603,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 206975,
+   "lines": [
+    {
+     "gross_paisa": 296382,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 82779,
+     "tax_amount_paisa": 30545,
+     "line_total_paisa": 265508,
+     "excise_paisa": 21360,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 363750,
+     "line_discount_paisa": 107306,
+     "sale_discount_share_paisa": 71625,
+     "tax_amount_paisa": 9241,
+     "line_total_paisa": 194060,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 72825,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 20340,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 52485,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 339612,
+     "line_discount_paisa": 6045,
+     "sale_discount_share_paisa": 93165,
+     "tax_amount_paisa": 11448,
+     "line_total_paisa": 240402,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 615700,
+     "line_discount_paisa": 62,
+     "sale_discount_share_paisa": 171948,
+     "tax_amount_paisa": 51044,
+     "line_total_paisa": 443690,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 235380,
+     "line_discount_paisa": 21019,
+     "sale_discount_share_paisa": 59871,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 154490,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_33",
+  "lines": [
+   {
+    "unit_price_paisa": 22284,
+    "qty": 5,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "percent",
+    "discount_value": 323,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 149261,
+    "qty": 1,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 138479,
+    "qty": 6,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 458679,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 137478,
+    "qty": 5,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 201013,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "hst",
+    "levy_rate": "5"
+   },
+   {
+    "unit_price_paisa": 2743,
+    "qty": 5,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 82932,
+    "qty": 6,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 440093,
+    "tax_kind": "zero",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 100,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 2161932,
+   "discount_total_paisa": 1041044,
+   "tax_total_paisa": 56836,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 23161,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 15,
+   "total_paisa": 1200900,
+   "taxable_sales_vat_paisa": 437197,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 463216,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 162976,
+   "zero_rated_sales_paisa": 57499,
+   "lines": [
+    {
+     "gross_paisa": 111420,
+     "line_discount_paisa": 3599,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 14017,
+     "line_total_paisa": 121838,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 149261,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 149261,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 830874,
+     "line_discount_paisa": 458679,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 42819,
+     "line_total_paisa": 372195,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 687390,
+     "line_discount_paisa": 201013,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 486377,
+     "excise_paisa": 0,
+     "levy_paisa": 23161
+    },
+    {
+     "gross_paisa": 13715,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 13715,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 497592,
+     "line_discount_paisa": 440093,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 57499,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_34",
+  "lines": [
+   {
+    "unit_price_paisa": 184721,
+    "qty": 6,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 2518,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "amount",
+  "sale_discount_value": 906,
+  "cash_rounding": 100,
+  "digital_vat_discount_bp": 1000,
+  "expected": {
+   "subtotal_paisa": 980819,
+   "discount_total_paisa": 247772,
+   "tax_total_paisa": 95296,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 9530,
+   "round_adjust_paisa": -13,
+   "total_paisa": 818800,
+   "taxable_sales_vat_paisa": 733048,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 1108326,
+     "line_discount_paisa": 279076,
+     "sale_discount_share_paisa": 906,
+     "tax_amount_paisa": 95296,
+     "line_total_paisa": 828344,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_35",
+  "lines": [
+   {
+    "unit_price_paisa": 67439,
+    "qty": 2,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "hst",
+    "levy_rate": "5"
+   },
+   {
+    "unit_price_paisa": 129223,
+    "qty": 1,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "10",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 178931,
+    "qty": 4,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "amount",
+    "discount_value": 207701,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 53797,
+    "qty": 4,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "zero",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 1195013,
+   "discount_total_paisa": 207701,
+   "tax_total_paisa": 84522,
+   "excise_total_paisa": 12922,
+   "hst_total_paisa": 6744,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 0,
+   "total_paisa": 1091500,
+   "taxable_sales_vat_paisa": 650168,
+   "excisable_amount_paisa": 129223,
+   "taxable_sales_hst_paisa": 134878,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 215188,
+   "lines": [
+    {
+     "gross_paisa": 134878,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 141622,
+     "excise_paisa": 0,
+     "levy_paisa": 6744
+    },
+    {
+     "gross_paisa": 129223,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 18479,
+     "line_total_paisa": 160624,
+     "excise_paisa": 12922,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 715724,
+     "line_discount_paisa": 207701,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 66043,
+     "line_total_paisa": 574066,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 215188,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 215188,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_36",
+  "lines": [
+   {
+    "unit_price_paisa": 199353,
+    "qty": 3,
+    "tax_rate": "12.5",
+    "tax_inclusive": false,
+    "discount_type": "amount",
+    "discount_value": 114303,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 127154,
+    "qty": 4,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 1106675,
+   "discount_total_paisa": 114303,
+   "tax_total_paisa": 126590,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 0,
+   "total_paisa": 1118962,
+   "taxable_sales_vat_paisa": 992372,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 598059,
+     "line_discount_paisa": 114303,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 60470,
+     "line_total_paisa": 544226,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 508616,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 66120,
+     "line_total_paisa": 574736,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_37",
+  "lines": [
+   {
+    "unit_price_paisa": 156272,
+    "qty": 2,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "hst",
+    "levy_rate": "5"
+   },
+   {
+    "unit_price_paisa": 48262,
+    "qty": 4,
+    "tax_rate": "12.5",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "amount",
+  "sale_discount_value": 750,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 490709,
+   "discount_total_paisa": 728,
+   "tax_total_paisa": 24095,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 14861,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 0,
+   "total_paisa": 528937,
+   "taxable_sales_vat_paisa": 192762,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 297219,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 312544,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 464,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 312080,
+     "excise_paisa": 0,
+     "levy_paisa": 14861
+    },
+    {
+     "gross_paisa": 193048,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 286,
+     "tax_amount_paisa": 24095,
+     "line_total_paisa": 216857,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_38",
+  "lines": [
+   {
+    "unit_price_paisa": 49987,
+    "qty": 2,
+    "tax_rate": "12.5",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 85520,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 98012,
+    "qty": 3,
+    "tax_rate": "5",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 3624,
+    "tax_kind": "reduced",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 368900,
+   "discount_total_paisa": 177503,
+   "tax_total_paisa": 10533,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 1,
+   "total_paisa": 201931,
+   "taxable_sales_vat_paisa": 191398,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 99974,
+     "line_discount_paisa": 85520,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 1606,
+     "line_total_paisa": 14454,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 294036,
+     "line_discount_paisa": 106559,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 8927,
+     "line_total_paisa": 187477,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_39",
+  "lines": [
+   {
+    "unit_price_paisa": 32430,
+    "qty": 5,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 1699,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "hst",
+    "levy_rate": "5"
+   },
+   {
+    "unit_price_paisa": 113364,
+    "qty": 1,
+    "tax_rate": "12.5",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 6456,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 50601,
+    "qty": 3,
+    "tax_rate": "12.5",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 2983,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "amount",
+  "sale_discount_value": 253,
+  "cash_rounding": 100,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 390133,
+   "discount_total_paisa": 72458,
+   "tax_total_paisa": 23697,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 6405,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 23,
+   "total_paisa": 347800,
+   "taxable_sales_vat_paisa": 189576,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 128098,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 162150,
+     "line_discount_paisa": 27549,
+     "sale_discount_share_paisa": 98,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 134503,
+     "excise_paisa": 0,
+     "levy_paisa": 6405
+    },
+    {
+     "gross_paisa": 113364,
+     "line_discount_paisa": 6456,
+     "sale_discount_share_paisa": 78,
+     "tax_amount_paisa": 11870,
+     "line_total_paisa": 106830,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 151803,
+     "line_discount_paisa": 45283,
+     "sale_discount_share_paisa": 77,
+     "tax_amount_paisa": 11827,
+     "line_total_paisa": 106443,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_40",
+  "lines": [
+   {
+    "unit_price_paisa": 9137,
+    "qty": 4,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 512,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "percent",
+  "sale_discount_value": 257,
+  "cash_rounding": 100,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 32343,
+   "discount_total_paisa": 2444,
+   "tax_total_paisa": 3887,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 14,
+   "total_paisa": 33800,
+   "taxable_sales_vat_paisa": 29899,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 36548,
+     "line_discount_paisa": 1871,
+     "sale_discount_share_paisa": 891,
+     "tax_amount_paisa": 3887,
+     "line_total_paisa": 33786,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_41",
+  "lines": [
+   {
+    "unit_price_paisa": 87811,
+    "qty": 5,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "amount",
+    "discount_value": 22851,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 72255,
+    "qty": 3,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 988,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 28118,
+    "qty": 4,
+    "tax_rate": "12.5",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "amount",
+  "sale_discount_value": 808,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 743354,
+   "discount_total_paisa": 24506,
+   "tax_total_paisa": 38841,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 0,
+   "total_paisa": 757689,
+   "taxable_sales_vat_paisa": 303096,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 415752,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 439055,
+     "line_discount_paisa": 22851,
+     "sale_discount_share_paisa": 452,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 415752,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 216765,
+     "line_discount_paisa": 988,
+     "sale_discount_share_paisa": 234,
+     "tax_amount_paisa": 24797,
+     "line_total_paisa": 215543,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 112472,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 122,
+     "tax_amount_paisa": 14044,
+     "line_total_paisa": 126394,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_42",
+  "lines": [
+   {
+    "unit_price_paisa": 130166,
+    "qty": 2,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 181433,
+    "qty": 7,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 317331,
+    "tax_kind": "zero",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 120792,
+    "qty": 3,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 312327,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 197365,
+    "qty": 2,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 2025,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "hst",
+    "levy_rate": "5"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 1000,
+  "expected": {
+   "subtotal_paisa": 2226983,
+   "discount_total_paisa": 669853,
+   "tax_total_paisa": 39601,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 14990,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 3960,
+   "round_adjust_paisa": 0,
+   "total_paisa": 1607761,
+   "taxable_sales_vat_paisa": 304623,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 299807,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 952700,
+   "lines": [
+    {
+     "gross_paisa": 260332,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 33843,
+     "line_total_paisa": 294175,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 1270031,
+     "line_discount_paisa": 317331,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 952700,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 362376,
+     "line_discount_paisa": 312327,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 5758,
+     "line_total_paisa": 50049,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 394730,
+     "line_discount_paisa": 79933,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 314797,
+     "excise_paisa": 0,
+     "levy_paisa": 14990
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_43",
+  "lines": [
+   {
+    "unit_price_paisa": 42125,
+    "qty": 4,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 27583,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 54616,
+    "qty": 1,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "hst",
+    "levy_rate": "5"
+   },
+   {
+    "unit_price_paisa": 45402,
+    "qty": 2,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 1088,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "hst",
+    "levy_rate": "5"
+   },
+   {
+    "unit_price_paisa": 196078,
+    "qty": 5,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 77014,
+    "qty": 3,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 148605,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "percent",
+  "sale_discount_value": 1066,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 1499042,
+   "discount_total_paisa": 322775,
+   "tax_total_paisa": 128348,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 5766,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 0,
+   "total_paisa": 1310381,
+   "taxable_sales_vat_paisa": 987292,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 115327,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 73649,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 168500,
+     "line_discount_paisa": 27583,
+     "sale_discount_share_paisa": 15022,
+     "tax_amount_paisa": 14484,
+     "line_total_paisa": 125895,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 54616,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 5822,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 48794,
+     "excise_paisa": 0,
+     "levy_paisa": 2323
+    },
+    {
+     "gross_paisa": 90804,
+     "line_discount_paisa": 9879,
+     "sale_discount_share_paisa": 8626,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 72299,
+     "excise_paisa": 0,
+     "levy_paisa": 3443
+    },
+    {
+     "gross_paisa": 980390,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 104510,
+     "tax_amount_paisa": 113864,
+     "line_total_paisa": 989744,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 231042,
+     "line_discount_paisa": 148605,
+     "sale_discount_share_paisa": 8788,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 73649,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_44",
+  "lines": [
+   {
+    "unit_price_paisa": 64315,
+    "qty": 2,
+    "tax_rate": "5",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "reduced",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 85548,
+    "qty": 1,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "hst",
+    "levy_rate": "5"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 100,
+  "digital_vat_discount_bp": 1000,
+  "expected": {
+   "subtotal_paisa": 203979,
+   "discount_total_paisa": 0,
+   "tax_total_paisa": 6125,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 4074,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 613,
+   "round_adjust_paisa": 35,
+   "total_paisa": 213600,
+   "taxable_sales_vat_paisa": 122505,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 81474,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 128630,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 6125,
+     "line_total_paisa": 128630,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 85548,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 85548,
+     "excise_paisa": 0,
+     "levy_paisa": 4074
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_45",
+  "lines": [
+   {
+    "unit_price_paisa": 171266,
+    "qty": 4,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 60586,
+    "qty": 7,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 3672,
+    "tax_kind": "standard",
+    "excise_rate": "10",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "amount",
+  "sale_discount_value": 238,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 947444,
+   "discount_total_paisa": 125491,
+   "tax_total_paisa": 109660,
+   "excise_total_paisa": 21585,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 0,
+   "total_paisa": 953198,
+   "taxable_sales_vat_paisa": 843538,
+   "excisable_amount_paisa": 215853,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 685064,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 171,
+     "tax_amount_paisa": 78793,
+     "line_total_paisa": 684893,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 424102,
+     "line_discount_paisa": 155730,
+     "sale_discount_share_paisa": 67,
+     "tax_amount_paisa": 30867,
+     "line_total_paisa": 268305,
+     "excise_paisa": 21585,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_46",
+  "lines": [
+   {
+    "unit_price_paisa": 19692,
+    "qty": 3,
+    "tax_rate": "5",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "reduced",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 174262,
+    "qty": 1,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 27729,
+    "tax_kind": "standard",
+    "excise_rate": "10",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "amount",
+  "sale_discount_value": 348,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 196458,
+   "discount_total_paisa": 22603,
+   "tax_total_paisa": 19637,
+   "excise_total_paisa": 11769,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 0,
+   "total_paisa": 205261,
+   "taxable_sales_vat_paisa": 185623,
+   "excisable_amount_paisa": 117687,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 59076,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 100,
+     "tax_amount_paisa": 2808,
+     "line_total_paisa": 58976,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 174262,
+     "line_discount_paisa": 27729,
+     "sale_discount_share_paisa": 248,
+     "tax_amount_paisa": 16829,
+     "line_total_paisa": 146285,
+     "excise_paisa": 11769,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_47",
+  "lines": [
+   {
+    "unit_price_paisa": 10024,
+    "qty": 5,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "amount",
+    "discount_value": 47987,
+    "tax_kind": "zero",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 107216,
+    "qty": 6,
+    "tax_rate": "5",
+    "tax_inclusive": false,
+    "discount_type": "amount",
+    "discount_value": 389870,
+    "tax_kind": "reduced",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 693416,
+   "discount_total_paisa": 437857,
+   "tax_total_paisa": 12671,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 0,
+   "total_paisa": 268230,
+   "taxable_sales_vat_paisa": 253426,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 2133,
+   "lines": [
+    {
+     "gross_paisa": 50120,
+     "line_discount_paisa": 47987,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 2133,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 643296,
+     "line_discount_paisa": 389870,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 12671,
+     "line_total_paisa": 266097,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_48",
+  "lines": [
+   {
+    "unit_price_paisa": 16587,
+    "qty": 4,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "percent",
+    "discount_value": 830,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "hst",
+    "levy_rate": "5"
+   },
+   {
+    "unit_price_paisa": 167558,
+    "qty": 5,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 182297,
+    "qty": 3,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "percent",
+    "discount_value": 3356,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 13464,
+    "qty": 3,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 4640,
+    "tax_kind": "standard",
+    "excise_rate": "10",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 1000,
+  "expected": {
+   "subtotal_paisa": 1483525,
+   "discount_total_paisa": 204122,
+   "tax_total_paisa": 111403,
+   "excise_total_paisa": 1742,
+   "hst_total_paisa": 3042,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 11140,
+   "round_adjust_paisa": -1,
+   "total_paisa": 1384449,
+   "taxable_sales_vat_paisa": 856949,
+   "excisable_amount_paisa": 17418,
+   "taxable_sales_hst_paisa": 60841,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 363354,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 66348,
+     "line_discount_paisa": 5507,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 63883,
+     "excise_paisa": 0,
+     "levy_paisa": 3042
+    },
+    {
+     "gross_paisa": 837790,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 108912,
+     "line_total_paisa": 946702,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 546891,
+     "line_discount_paisa": 183537,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 363354,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 40392,
+     "line_discount_paisa": 18742,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 2491,
+     "line_total_paisa": 21650,
+     "excise_paisa": 1742,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_49",
+  "lines": [
+   {
+    "unit_price_paisa": 190850,
+    "qty": 4,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 1668,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 111085,
+    "qty": 1,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "amount",
+  "sale_discount_value": 471,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 773881,
+   "discount_total_paisa": 113103,
+   "tax_total_paisa": 85901,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 0,
+   "total_paisa": 746679,
+   "taxable_sales_vat_paisa": 660778,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 763400,
+     "line_discount_paisa": 127335,
+     "sale_discount_share_paisa": 401,
+     "tax_amount_paisa": 73129,
+     "line_total_paisa": 635664,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 111085,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 70,
+     "tax_amount_paisa": 12772,
+     "line_total_paisa": 111015,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_50",
+  "lines": [
+   {
+    "unit_price_paisa": 144585,
+    "qty": 2,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "hst",
+    "levy_rate": "5"
+   }
+  ],
+  "sale_discount_type": "percent",
+  "sale_discount_value": 1518,
+  "cash_rounding": 100,
+  "digital_vat_discount_bp": 1000,
+  "expected": {
+   "subtotal_paisa": 275400,
+   "discount_total_paisa": 41806,
+   "tax_total_paisa": 0,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 11680,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 26,
+   "total_paisa": 245300,
+   "taxable_sales_vat_paisa": 0,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 233594,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 289170,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 43896,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 245274,
+     "excise_paisa": 0,
+     "levy_paisa": 11680
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_51",
+  "lines": [
+   {
+    "unit_price_paisa": 91212,
+    "qty": 3,
+    "tax_rate": "5",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "reduced",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 28520,
+    "qty": 4,
+    "tax_rate": "12.5",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 374686,
+   "discount_total_paisa": 0,
+   "tax_total_paisa": 27290,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 0,
+   "total_paisa": 401976,
+   "taxable_sales_vat_paisa": 374686,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 273636,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 13030,
+     "line_total_paisa": 273636,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 114080,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 14260,
+     "line_total_paisa": 128340,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_52",
+  "lines": [
+   {
+    "unit_price_paisa": 82452,
+    "qty": 1,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 4977,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "hst",
+    "levy_rate": "5"
+   }
+  ],
+  "sale_discount_type": "percent",
+  "sale_discount_value": 2540,
+  "cash_rounding": 100,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 78526,
+   "discount_total_paisa": 49101,
+   "tax_total_paisa": 0,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 1471,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 4,
+   "total_paisa": 30900,
+   "taxable_sales_vat_paisa": 0,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 29425,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 82452,
+     "line_discount_paisa": 41036,
+     "sale_discount_share_paisa": 10520,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 30896,
+     "excise_paisa": 0,
+     "levy_paisa": 1471
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_53",
+  "lines": [
+   {
+    "unit_price_paisa": 162806,
+    "qty": 4,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "zero",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 148224,
+    "qty": 2,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 100553,
+    "qty": 3,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 10774,
+    "qty": 5,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 30863,
+    "qty": 4,
+    "tax_rate": "12.5",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 78580,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 170139,
+    "qty": 4,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 323183,
+    "tax_kind": "zero",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "percent",
+  "sale_discount_value": 1505,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 1000,
+  "expected": {
+   "subtotal_paisa": 2024683,
+   "discount_total_paisa": 638596,
+   "tax_total_paisa": 68637,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 6864,
+   "round_adjust_paisa": 1,
+   "total_paisa": 1447861,
+   "taxable_sales_vat_paisa": 529285,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 856803,
+   "lines": [
+    {
+     "gross_paisa": 651224,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 98009,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 553215,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 296448,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 44616,
+     "tax_amount_paisa": 28972,
+     "line_total_paisa": 251832,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 301659,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 45400,
+     "tax_amount_paisa": 29481,
+     "line_total_paisa": 256259,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 53870,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 8107,
+     "tax_amount_paisa": 5949,
+     "line_total_paisa": 51712,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 123452,
+     "line_discount_paisa": 78580,
+     "sale_discount_share_paisa": 6753,
+     "tax_amount_paisa": 4235,
+     "line_total_paisa": 38119,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 680556,
+     "line_discount_paisa": 323183,
+     "sale_discount_share_paisa": 53785,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 303588,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_54",
+  "lines": [
+   {
+    "unit_price_paisa": 6128,
+    "qty": 1,
+    "tax_rate": "12.5",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 162156,
+    "qty": 7,
+    "tax_rate": "5",
+    "tax_inclusive": false,
+    "discount_type": "percent",
+    "discount_value": 3754,
+    "tax_kind": "reduced",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 28070,
+    "qty": 1,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "percent",
+    "discount_value": 1052,
+    "tax_kind": "standard",
+    "excise_rate": "10",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 115860,
+    "qty": 5,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 1000,
+  "expected": {
+   "subtotal_paisa": 1675776,
+   "discount_total_paisa": 428490,
+   "tax_total_paisa": 105665,
+   "excise_total_paisa": 2021,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 10567,
+   "round_adjust_paisa": 0,
+   "total_paisa": 1344405,
+   "taxable_sales_vat_paisa": 1249307,
+   "excisable_amount_paisa": 20207,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 6128,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 681,
+     "line_total_paisa": 6128,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 1135092,
+     "line_discount_paisa": 426114,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 35449,
+     "line_total_paisa": 744427,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 28070,
+     "line_discount_paisa": 2953,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 2890,
+     "line_total_paisa": 25117,
+     "excise_paisa": 2021,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 579300,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 66645,
+     "line_total_paisa": 579300,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_55",
+  "lines": [
+   {
+    "unit_price_paisa": 14226,
+    "qty": 7,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "hst",
+    "levy_rate": "5"
+   },
+   {
+    "unit_price_paisa": 6779,
+    "qty": 7,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 50780,
+    "qty": 2,
+    "tax_rate": "12.5",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "none",
+  "sale_discount_value": 0,
+  "cash_rounding": 100,
+  "digital_vat_discount_bp": 1000,
+  "expected": {
+   "subtotal_paisa": 237311,
+   "discount_total_paisa": 0,
+   "tax_total_paisa": 17453,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 4979,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 1745,
+   "round_adjust_paisa": 2,
+   "total_paisa": 258000,
+   "taxable_sales_vat_paisa": 137729,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 99582,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 99582,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 104561,
+     "excise_paisa": 0,
+     "levy_paisa": 4979
+    },
+    {
+     "gross_paisa": 47453,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 6169,
+     "line_total_paisa": 53622,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 101560,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 0,
+     "tax_amount_paisa": 11284,
+     "line_total_paisa": 101560,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_56",
+  "lines": [
+   {
+    "unit_price_paisa": 91986,
+    "qty": 5,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 119644,
+    "qty": 2,
+    "tax_rate": "12.5",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 66626,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "amount",
+  "sale_discount_value": 630,
+  "cash_rounding": 100,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 672630,
+   "discount_total_paisa": 59834,
+   "tax_total_paisa": 19166,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 38,
+   "total_paisa": 632000,
+   "taxable_sales_vat_paisa": 153324,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 459472,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 459930,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 458,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 459472,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 239288,
+     "line_discount_paisa": 66626,
+     "sale_discount_share_paisa": 172,
+     "tax_amount_paisa": 19166,
+     "line_total_paisa": 172490,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_57",
+  "lines": [
+   {
+    "unit_price_paisa": 9656,
+    "qty": 2,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 5966,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "hst",
+    "levy_rate": "5"
+   },
+   {
+    "unit_price_paisa": 178175,
+    "qty": 3,
+    "tax_rate": "5",
+    "tax_inclusive": false,
+    "discount_type": "amount",
+    "discount_value": 395146,
+    "tax_kind": "reduced",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 30168,
+    "qty": 7,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "amount",
+    "discount_value": 139125,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "amount",
+  "sale_discount_value": 989,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 1000,
+  "expected": {
+   "subtotal_paisa": 764093,
+   "discount_total_paisa": 540939,
+   "tax_total_paisa": 16263,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 633,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 1626,
+   "round_adjust_paisa": 0,
+   "total_paisa": 238424,
+   "taxable_sales_vat_paisa": 210500,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 12654,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 0,
+   "lines": [
+    {
+     "gross_paisa": 19312,
+     "line_discount_paisa": 5966,
+     "sale_discount_share_paisa": 59,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 13287,
+     "excise_paisa": 0,
+     "levy_paisa": 633
+    },
+    {
+     "gross_paisa": 534525,
+     "line_discount_paisa": 395146,
+     "sale_discount_share_paisa": 613,
+     "tax_amount_paisa": 6938,
+     "line_total_paisa": 145704,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 211176,
+     "line_discount_paisa": 139125,
+     "sale_discount_share_paisa": 317,
+     "tax_amount_paisa": 9325,
+     "line_total_paisa": 81059,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_58",
+  "lines": [
+   {
+    "unit_price_paisa": 66069,
+    "qty": 5,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "hst",
+    "levy_rate": "5"
+   },
+   {
+    "unit_price_paisa": 69404,
+    "qty": 4,
+    "tax_rate": "5",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 193433,
+    "tax_kind": "reduced",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 115942,
+    "qty": 2,
+    "tax_rate": "5",
+    "tax_inclusive": false,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "reduced",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 77696,
+    "qty": 7,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "exempt",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 192162,
+    "qty": 1,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 8858,
+    "tax_kind": "zero",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "percent",
+  "sale_discount_value": 2562,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 0,
+  "expected": {
+   "subtotal_paisa": 1562659,
+   "discount_total_paisa": 543966,
+   "tax_total_paisa": 11605,
+   "excise_total_paisa": 0,
+   "hst_total_paisa": 12286,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 0,
+   "round_adjust_paisa": 0,
+   "total_paisa": 1042584,
+   "taxable_sales_vat_paisa": 232108,
+   "excisable_amount_paisa": 0,
+   "taxable_sales_hst_paisa": 245711,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 404532,
+   "zero_rated_sales_paisa": 136342,
+   "lines": [
+    {
+     "gross_paisa": 330345,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 84634,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 257997,
+     "excise_paisa": 0,
+     "levy_paisa": 12286
+    },
+    {
+     "gross_paisa": 277616,
+     "line_discount_paisa": 193433,
+     "sale_discount_share_paisa": 21568,
+     "tax_amount_paisa": 2982,
+     "line_total_paisa": 62615,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 231884,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 59409,
+     "tax_amount_paisa": 8623,
+     "line_total_paisa": 181098,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 543872,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 139340,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 404532,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 192162,
+     "line_discount_paisa": 8858,
+     "sale_discount_share_paisa": 46962,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 136342,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ },
+ {
+  "name": "random_59",
+  "lines": [
+   {
+    "unit_price_paisa": 12525,
+    "qty": 2,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "amount",
+    "discount_value": 16003,
+    "tax_kind": "zero",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 5844,
+    "qty": 1,
+    "tax_rate": "13",
+    "tax_inclusive": true,
+    "discount_type": "none",
+    "discount_value": 0,
+    "tax_kind": "standard",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 27883,
+    "qty": 5,
+    "tax_rate": "0",
+    "tax_inclusive": true,
+    "discount_type": "amount",
+    "discount_value": 93625,
+    "tax_kind": "zero",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 154427,
+    "qty": 2,
+    "tax_rate": "13",
+    "tax_inclusive": false,
+    "discount_type": "amount",
+    "discount_value": 107051,
+    "tax_kind": "standard",
+    "excise_rate": "10",
+    "levy_type": "",
+    "levy_rate": "0"
+   },
+   {
+    "unit_price_paisa": 41583,
+    "qty": 2,
+    "tax_rate": "0",
+    "tax_inclusive": false,
+    "discount_type": "percent",
+    "discount_value": 115,
+    "tax_kind": "zero",
+    "excise_rate": "0",
+    "levy_type": "",
+    "levy_rate": "0"
+   }
+  ],
+  "sale_discount_type": "amount",
+  "sale_discount_value": 98,
+  "cash_rounding": 1,
+  "digital_vat_discount_bp": 1000,
+  "expected": {
+   "subtotal_paisa": 561657,
+   "discount_total_paisa": 217733,
+   "tax_total_paisa": 29522,
+   "excise_total_paisa": 20175,
+   "hst_total_paisa": 0,
+   "esf_total_paisa": 0,
+   "digital_vat_discount_paisa": 2952,
+   "round_adjust_paisa": 0,
+   "total_paisa": 390669,
+   "taxable_sales_vat_paisa": 227091,
+   "excisable_amount_paisa": 201746,
+   "taxable_sales_hst_paisa": 0,
+   "amount_for_esf_paisa": 0,
+   "tax_exempted_sales_paisa": 0,
+   "zero_rated_sales_paisa": 137008,
+   "lines": [
+    {
+     "gross_paisa": 25050,
+     "line_discount_paisa": 16003,
+     "sale_discount_share_paisa": 3,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 9044,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 5844,
+     "line_discount_paisa": 0,
+     "sale_discount_share_paisa": 2,
+     "tax_amount_paisa": 672,
+     "line_total_paisa": 5842,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 139415,
+     "line_discount_paisa": 93625,
+     "sale_discount_share_paisa": 13,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 45777,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 308854,
+     "line_discount_paisa": 107051,
+     "sale_discount_share_paisa": 57,
+     "tax_amount_paisa": 28850,
+     "line_total_paisa": 250771,
+     "excise_paisa": 20175,
+     "levy_paisa": 0
+    },
+    {
+     "gross_paisa": 83166,
+     "line_discount_paisa": 956,
+     "sale_discount_share_paisa": 23,
+     "tax_amount_paisa": 0,
+     "line_total_paisa": 82187,
+     "excise_paisa": 0,
+     "levy_paisa": 0
+    }
+   ]
+  }
+ }
+]

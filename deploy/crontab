@@ -1,0 +1,8 @@
+# Install for the app user on the backend host: crontab deploy/crontab
+* * * * *  cd /app && python manage.py expire_open_sales >> /var/log/ims/expire.log 2>&1
+* * * * *  cd /app && python manage.py cbms_sync >> /var/log/ims/cbms.log 2>&1
+30 2 * * * cd /app && python manage.py reconcile_fonepay >> /var/log/ims/reconcile.log 2>&1
+0 3 * * *  cd /app && python manage.py reconcile_stock >> /var/log/ims/stock.log 2>&1
+15 3 * * * cd /app && python manage.py refresh_auditor_views >> /var/log/ims/views.log 2>&1
+45 1 * * * /app/deploy/backup.sh >> /var/log/ims/backup.log 2>&1
+0 4 * * 0  /app/deploy/restore-drill.sh >> /var/log/ims/restore-drill.log 2>&1
