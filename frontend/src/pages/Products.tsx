@@ -5,7 +5,7 @@ import { Icon } from '../components/Icon'
 import { LabelPrint } from '../components/LabelPrint'
 import { Availability, ProductDetail } from '../components/ProductDetail'
 import { ProductThumb } from '../components/ProductThumb'
-import { Badge, Button, ErrorBox, Field, LoadMore, Modal, PageHead, Tabs, useLoad, usePaged } from '../components/ui'
+import { Badge, Button, ErrorBox, Field, LoadMore, Modal, PageHead, Tabs, useLoad, usePaged, Guide } from '../components/ui'
 import { api, qs } from '../lib/api'
 import { generateInStoreEan13, isValidEan13 } from '../lib/barcode'
 import { downscaleImage } from '../lib/images'
@@ -19,6 +19,7 @@ export default function Products() {
   const [q, setQ] = useState('')
   const [view, setView] = useState<'active' | 'archived'>('active')
   const [editing, setEditing] = useState<Product | 'new' | null>(null)
+  const [formKey, setFormKey] = useState(0) // a new key gives "Save & add another" a blank form
   const [pricing, setPricing] = useState<Product | null>(null)
   const [viewing, setViewing] = useState<Product | null>(null)
   const [selected, setSelected] = useState<Map<number, Product>>(new Map())
@@ -63,6 +64,13 @@ export default function Products() {
         )}
         {manage && <Button kind="primary" onClick={() => setEditing('new')}><Icon name="plus" size={16} /> Add product</Button>}
       </PageHead>
+      <Guide id="products" title="Your catalog">
+        <ul>
+          <li><strong>Add product</strong>: name, sale price and VAT are enough to start. For a new product you can enter its <strong>opening stock</strong> for this branch in the same form.</li>
+          <li>One catalog for the whole business. A branch can charge a different price: open the product → <strong>Branch price</strong>.</li>
+          <li>Stock counts live in <strong>Inventory</strong>, not here. Many products at once: <strong>Import</strong>.</li>
+        </ul>
+      </Guide>
       <Tabs value={view} onChange={setView} tabs={[['active', 'Active'], ['archived', 'Archived']]} />
       <ErrorBox error={error} />
       <div className="card flush">
@@ -114,36 +122,122 @@ export default function Products() {
         <LoadMore more={more} loading={loading} />
       </div>
       {viewing && <ProductDetail productId={viewing.id} onClose={() => setViewing(null)} actions={actionsFor(viewing)} />}
-      {editing && <ProductForm product={editing === 'new' ? null : editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); reload() }} />}
+      {editing && <ProductForm key={formKey} product={editing === 'new' ? null : editing} onClose={() => setEditing(null)}
+        onSaved={(again) => { reload(); if (again) setFormKey((k) => k + 1); else setEditing(null) }} />}
       {labels && <LabelPrint products={labels} onClose={() => setLabels(null)} />}
       {pricing && <BranchPriceForm product={pricing} onClose={() => setPricing(null)} onSaved={() => { setPricing(null); reload() }} />}
     </div>
   )
 }
 
-function ProductForm({ product, onClose, onSaved }: { product: Product | null; onClose: () => void; onSaved: () => void }) {
+const UNITS = ['pcs', 'pair', 'box', 'packet', 'kg', 'g', 'litre', 'ml', 'metre', 'dozen', 'set']
+
+/** A suggested SKU from the name: "Prada Slides" -> "PRASLI-4821". Editable;
+ *  the server rejects a duplicate. */
+function suggestSku(name: string) {
+  const letters = name.toUpperCase().split(/[^A-Z0-9]+/).filter(Boolean).map((w) => w.slice(0, 3)).join('').slice(0, 6) || 'ITEM'
+  return `${letters}-${String(Math.floor(1000 + Math.random() * 9000))}`
+}
+
+/** A select with "+ New" that creates the record in place and selects it. */
+function QuickSelect({ label, value, onChange, options, create, canCreate, placeholder }: {
+  label: string; value: string | number; onChange: (v: string) => void; options: Named[] | null
+  create: (name: string) => Promise<Named>; canCreate: boolean; placeholder: string
+}) {
+  const [adding, setAdding] = useState(false)
+  const [name, setName] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const add = async () => {
+    if (!name.trim()) return
+    setBusy(true)
+    setError(null)
+    try {
+      const made = await create(name.trim())
+      onChange(String(made.id))
+      setAdding(false)
+      setName('')
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <div className="field">
+      <span className="field-label">{label}</span>
+      {adding ? (
+        <div className="quick-add">
+          <input autoFocus placeholder={`New ${label.toLowerCase()} name`} value={name} onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void add() } if (e.key === 'Escape') setAdding(false) }} />
+          <Button kind="primary" busy={busy} onClick={() => void add()}>Add</Button>
+          <Button kind="ghost" onClick={() => { setAdding(false); setError(null) }}>Cancel</Button>
+        </div>
+      ) : (
+        <div className="quick-add">
+          <select value={value} onChange={(e) => onChange(e.target.value)}>
+            <option value="">{placeholder}</option>
+            {options?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          {canCreate && <Button kind="ghost" onClick={() => setAdding(true)}><Icon name="plus" size={16} /> New</Button>}
+        </div>
+      )}
+      {error && <span className="field-hint bad">{error}</span>}
+    </div>
+  )
+}
+
+function ProductForm({ product, onClose, onSaved }: { product: Product | null; onClose: () => void; onSaved: (addAnother: boolean) => void }) {
+  const { branch, can, canOrg } = useAuth()
   const cats = useLoad(() => api<Named[]>('categories/'), [])
   const taxCats = useLoad(() => api<{ id: number; code: string; name: string; current_vat_rate: string | null }[]>('compliance/tax-categories/'), [])
   const sups = useLoad(() => api<Named[]>('suppliers/'), [])
   const [f, setF] = useState({
     sku: product?.sku ?? '', name: product?.name ?? '', category: product?.category ?? '', supplier: product?.supplier ?? '',
-    unit: product?.unit ?? 'pcs', cost: toRupeesInput(product?.cost_price_paisa ?? 0), price: product ? toRupeesInput(product.sale_price_paisa) : '',
+    unit: product?.unit ?? 'pcs', cost: product ? toRupeesInput(product.cost_price_paisa ?? 0) : '', price: product ? toRupeesInput(product.sale_price_paisa) : '',
     tax_inclusive: product?.tax_inclusive ?? true, tax_category: product?.tax_category ?? '',
     hs_code: product?.hs_code ?? '', excise_rate: product?.excise_rate ?? '0', input_credit_blocked_pct: String(product?.input_credit_blocked_pct ?? 0),
+    opening: '',
   })
   const [barcodes, setBarcodes] = useState<Barcode[]>(product?.barcodes ?? [])
   const [camera, setCamera] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
+  const [busy, setBusy] = useState<false | 'save' | 'again'>(false)
   // Photo changes are sent after the product itself is saved.
   const [photo, setPhoto] = useState<Blob | null>(null)
   const [removePhoto, setRemovePhoto] = useState(false)
   const [savedId, setSavedId] = useState(product?.id ?? null) // a new product, once created, is updated on retry
+  const [stockDone, setStockDone] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const preview = useMemo(() => (photo ? URL.createObjectURL(photo) : null), [photo])
   useEffect(() => () => void (preview && URL.revokeObjectURL(preview)), [preview])
   const shownPhoto = preview ?? (removePhoto ? null : product?.image_url ?? null)
-  const set = (k: keyof typeof f, v: string | boolean) => setF({ ...f, [k]: v })
+  const set = (k: keyof typeof f, v: string | boolean) => setF((cur) => ({ ...cur, [k]: v }))
+  const isNew = !product
+  const canStock = isNew && !!branch && can('inventory.adjust')
+  const hasMoreTax = !!(product?.hs_code || Number(product?.excise_rate) || product?.input_credit_blocked_pct)
+
+  // New products start on standard VAT (13%), the usual case.
+  useEffect(() => {
+    if (isNew && !f.tax_category && taxCats.data) {
+      const std = taxCats.data.find((c) => c.code === 'VAT13') ?? taxCats.data.find((c) => Number(c.current_vat_rate) === 13)
+      if (std) set('tax_category', String(std.id))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taxCats.data])
+
+  // Live figures under the prices: VAT inside the price and the margin over cost (both before tax).
+  const figures = useMemo(() => {
+    const price = toPaisa(f.price)
+    const cost = toPaisa(f.cost)
+    const rate = Number(taxCats.data?.find((c) => String(c.id) === String(f.tax_category))?.current_vat_rate ?? 0) / 100
+    if (price == null || !f.price) return null
+    const net = f.tax_inclusive ? price / (1 + rate) : price
+    const vat = f.tax_inclusive ? price - net : price * rate
+    const margin = cost != null && f.cost ? net - cost : null
+    return { vat: Math.round(vat), gross: Math.round(f.tax_inclusive ? price : price + vat), margin: margin == null ? null : Math.round(margin),
+      pct: margin == null || net <= 0 ? null : (margin / net) * 100 }
+  }, [f.price, f.cost, f.tax_category, f.tax_inclusive, taxCats.data])
 
   async function pickPhoto(file: File | undefined) {
     if (!file) return
@@ -155,14 +249,19 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
     }
   }
 
-  async function save() {
+  async function save(addAnother: boolean) {
+    if (!f.name.trim()) return setError('Give the product a name')
+    if (!f.sku.trim()) return setError('Enter a SKU, or press "Suggest" next to it')
     const price = toPaisa(f.price)
-    const cost = toPaisa(f.cost)
-    if (price == null || cost == null) return setError('Prices must be numbers with up to 2 decimals')
-    setBusy(true)
+    const cost = toPaisa(f.cost || '0')
+    if (price == null || cost == null || !f.price) return setError('Enter the sale price (and cost, if known) as numbers with up to 2 decimals')
+    const opening = f.opening.trim() ? Number(f.opening) : 0
+    if (canStock && (!Number.isInteger(opening) || opening < 0)) return setError('Opening stock must be a whole number')
+    setBusy(addAnother ? 'again' : 'save')
+    setError(null)
     try {
       const body = {
-        sku: f.sku, name: f.name, category: f.category || null, supplier: f.supplier || null, unit: f.unit,
+        sku: f.sku.trim(), name: f.name.trim(), category: f.category || null, supplier: f.supplier || null, unit: f.unit.trim() || 'pcs',
         cost_price_paisa: cost, sale_price_paisa: price, tax_inclusive: f.tax_inclusive,
         tax_category: f.tax_category || null, hs_code: f.hs_code, excise_rate: f.excise_rate || '0',
         input_credit_blocked_pct: Number(f.input_credit_blocked_pct) || 0,
@@ -177,7 +276,12 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
       } else if (removePhoto && product?.image_url) {
         await api(`products/${saved.id}/remove-image/`, { method: 'POST' })
       }
-      onSaved()
+      // Opening stock: a logged stock movement at this branch, valued at the default cost.
+      if (canStock && opening > 0 && !stockDone) {
+        await api('inventory/adjust/', { body: { product: saved.id, qty: opening, reason: 'Opening stock' } })
+        setStockDone(true)
+      }
+      onSaved(addAnother)
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -186,56 +290,70 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
   }
 
   return (
-    <Modal title={product ? `Edit ${product.sku}` : 'New product'} onClose={onClose} wide>
+    <Modal title={product ? `Edit ${product.name}` : 'New product'} onClose={onClose} wide>
       <ErrorBox error={error} />
-      <h3 className="form-section">Photo</h3>
-      <div className="photo-edit">
-        <ProductThumb src={shownPhoto} large />
-        <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" hidden
-          onChange={(e) => { void pickPhoto(e.target.files?.[0]); e.target.value = '' }} />
-        <Button onClick={() => fileRef.current?.click()}><Icon name="upload" size={16} /> {shownPhoto ? 'Replace photo' : 'Add photo'}</Button>
-        {shownPhoto && <Button kind="ghost" onClick={() => { setPhoto(null); setRemovePhoto(true) }}>Remove</Button>}
-        <span className="muted small">JPEG, PNG or WebP. Resized automatically; the POS caches it for offline use.</span>
+      <div className="product-form-top">
+        <div className="photo-edit photo-edit-stack">
+          <ProductThumb src={shownPhoto} large />
+          <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" hidden
+            onChange={(e) => { void pickPhoto(e.target.files?.[0]); e.target.value = '' }} />
+          <Button kind="ghost" onClick={() => fileRef.current?.click()}><Icon name="upload" size={16} /> {shownPhoto ? 'Replace' : 'Photo'}</Button>
+          {shownPhoto && <Button kind="ghost" onClick={() => { setPhoto(null); setRemovePhoto(true) }}>Remove</Button>}
+        </div>
+        <div className="form-grid">
+          <Field label="Name"><input autoFocus={isNew} placeholder="e.g. Prada slides, black" value={f.name} onChange={(e) => set('name', e.target.value)} /></Field>
+          <div className="field">
+            <span className="field-label">SKU</span>
+            <div className="quick-add">
+              <input placeholder="Your item code" value={f.sku} onChange={(e) => set('sku', e.target.value)} />
+              {isNew && <Button kind="ghost" title="Make a code from the name" onClick={() => set('sku', suggestSku(f.name))}>Suggest</Button>}
+            </div>
+          </div>
+          <QuickSelect label="Category" placeholder="No category" value={f.category} onChange={(v) => set('category', v)} options={cats.data}
+            canCreate create={async (name) => { const c = await api<Named>('categories/', { body: { name } }); cats.reload(); return c }} />
+          <QuickSelect label="Supplier" placeholder="No supplier" value={f.supplier} onChange={(v) => set('supplier', v)} options={sups.data}
+            canCreate={canOrg('purchasing.manage') || can('purchasing.manage')}
+            create={async (name) => { const c = await api<Named>('suppliers/', { body: { name } }); sups.reload(); return c }} />
+          <Field label="Unit" hint="How it's counted and sold">
+            <input list="product-units" placeholder="pcs" value={f.unit} onChange={(e) => set('unit', e.target.value)} />
+          </Field>
+          <datalist id="product-units">{UNITS.map((u) => <option key={u} value={u} />)}</datalist>
+        </div>
       </div>
-      <h3 className="form-section">Primary details</h3>
+
+      <h3 className="form-section">Price</h3>
       <div className="form-grid">
-        <Field label="SKU"><input placeholder="Enter product SKU" value={f.sku} onChange={(e) => set('sku', e.target.value)} /></Field>
-        <Field label="Name"><input placeholder="Enter product name" value={f.name} onChange={(e) => set('name', e.target.value)} /></Field>
-        <Field label="Category">
-          <select value={f.category} onChange={(e) => set('category', e.target.value)}>
-            <option value="">—</option>
-            {cats.data?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-        </Field>
-        <Field label="Supplier">
-          <select value={f.supplier} onChange={(e) => set('supplier', e.target.value)}>
-            <option value="">—</option>
-            {sups.data?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-        </Field>
-        <Field label="Unit"><input placeholder="e.g. pcs, kg, packet" value={f.unit} onChange={(e) => set('unit', e.target.value)} /></Field>
-      </div>
-      <h3 className="form-section">Pricing &amp; tax</h3>
-      <div className="form-grid">
-        <Field label="Sale price (Rs)"><input inputMode="decimal" placeholder="Enter selling price" value={f.price} onChange={(e) => set('price', e.target.value)} /></Field>
-        <Field label="Default cost (Rs)" hint="Purchase default only; real cost is the weighted average"><input inputMode="decimal" placeholder="Enter buying price" value={f.cost} onChange={(e) => set('cost', e.target.value)} /></Field>
-        <Field label="Tax category" hint="Rates are effective-dated in Tax & IRD">
+        <Field label="Sale price (Rs)"><input inputMode="decimal" placeholder="0.00" value={f.price} onChange={(e) => set('price', e.target.value)} /></Field>
+        <Field label="Cost price (Rs)" hint="What you pay the supplier, before VAT"><input inputMode="decimal" placeholder="0.00" value={f.cost} onChange={(e) => set('cost', e.target.value)} /></Field>
+        <Field label="VAT">
           <select value={f.tax_category} onChange={(e) => set('tax_category', e.target.value)}>
             <option value="">Choose…</option>
-            {taxCats.data?.map((c) => <option key={c.id} value={c.id}>{c.code} — {c.name}{c.current_vat_rate != null ? ` (${Number(c.current_vat_rate)}%)` : ''}</option>)}
+            {taxCats.data?.map((c) => <option key={c.id} value={c.id}>{c.name}{c.current_vat_rate != null && !c.name.includes('%') ? ` (${Number(c.current_vat_rate)}%)` : ''}</option>)}
           </select>
         </Field>
-        <Field label="HS code" hint="Printed on full tax invoices"><input value={f.hs_code} onChange={(e) => set('hs_code', e.target.value)} /></Field>
-        <Field label="Excise (%)"><input value={f.excise_rate} onChange={(e) => set('excise_rate', e.target.value)} /></Field>
-        <Field label="Blocked input credit" hint="Purchase VAT that can't be claimed">
-          <select value={f.input_credit_blocked_pct} onChange={(e) => set('input_credit_blocked_pct', e.target.value)}>
-            <option value="0">None</option>
-            <option value="100">100% (petrol, alcohol/beverages, entertainment)</option>
-            <option value="60">60% (vehicles)</option>
-          </select>
-        </Field>
-        <label className="check"><input type="checkbox" checked={f.tax_inclusive} onChange={(e) => set('tax_inclusive', e.target.checked)} /> Price includes VAT</label>
       </div>
+      <label className="check"><input type="checkbox" checked={f.tax_inclusive} onChange={(e) => set('tax_inclusive', e.target.checked)} /> Sale price includes VAT</label>
+      {figures && (
+        <dl className="price-figures">
+          <div><dt>Customer pays</dt><dd className="fig">{npr(figures.gross)}</dd></div>
+          <div><dt>VAT in that</dt><dd className="fig">{npr(figures.vat)}</dd></div>
+          {figures.margin != null && (
+            <div><dt>Your margin</dt><dd className={`fig ${figures.margin < 0 ? 'bad' : ''}`}>{npr(figures.margin)}{figures.pct != null && ` · ${figures.pct.toFixed(1)}%`}</dd></div>
+          )}
+        </dl>
+      )}
+
+      {canStock && (
+        <>
+          <h3 className="form-section">Opening stock</h3>
+          <div className="form-grid">
+            <Field label={`Quantity at ${branch!.name}`} hint="Logged as a stock movement. Later stock comes in through Purchasing">
+              <input inputMode="numeric" placeholder="0" value={f.opening} onChange={(e) => set('opening', e.target.value.replace(/[^\d]/g, ''))} />
+            </Field>
+          </div>
+        </>
+      )}
+
       <h3 className="form-section">Barcodes</h3>
       {barcodes.map((b, i) => (
         <div key={i} className="inline-form">
@@ -249,12 +367,12 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
         </div>
       ))}
       <div className="flags">
-        <Button onClick={() => setBarcodes([...barcodes, { code: '', type: 'ean13', pack_qty: 1 }])}><Icon name="plus" size={16} /> Add barcode</Button>
+        <Button kind="ghost" onClick={() => setCamera(true)}><Icon name="qr" size={16} /> Scan</Button>
+        <Button kind="ghost" onClick={() => setBarcodes([...barcodes, { code: '', type: 'ean13', pack_qty: 1 }])}><Icon name="plus" size={16} /> Type a barcode</Button>
         <Button kind="ghost" title="For products without a manufacturer barcode: an EAN-13 in the in-store range (starts with 2)"
           onClick={() => setBarcodes([...barcodes, { code: generateInStoreEan13(), type: 'ean13', pack_qty: 1 }])}>
-          Generate in-store code
+          No barcode? Make one
         </Button>
-        <Button kind="ghost" onClick={() => setCamera(true)}><Icon name="qr" size={16} /> Scan with camera</Button>
       </div>
       {camera && (
         <CameraScanner title="Scan the product's barcode" onClose={() => setCamera(false)} onDetected={(code) => {
@@ -262,9 +380,26 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
           if (!barcodes.some((b) => b.code === code)) setBarcodes([...barcodes, { code, type: isValidEan13(code) ? 'ean13' : 'code128', pack_qty: 1 }])
         }} />
       )}
+
+      <details className="form-more" open={hasMoreTax}>
+        <summary>More tax details <span className="muted small">HS code, excise, blocked input credit</span></summary>
+        <div className="form-grid">
+          <Field label="HS code" hint="Printed on full tax invoices"><input value={f.hs_code} onChange={(e) => set('hs_code', e.target.value)} /></Field>
+          <Field label="Excise (%)"><input inputMode="decimal" value={f.excise_rate} onChange={(e) => set('excise_rate', e.target.value)} /></Field>
+          <Field label="Blocked input credit" hint="Purchase VAT that can't be claimed">
+            <select value={f.input_credit_blocked_pct} onChange={(e) => set('input_credit_blocked_pct', e.target.value)}>
+              <option value="0">None</option>
+              <option value="100">100% (petrol, alcohol/beverages, entertainment)</option>
+              <option value="60">60% (vehicles)</option>
+            </select>
+          </Field>
+        </div>
+      </details>
+
       <div className="modal-foot">
         <Button onClick={onClose}>Cancel</Button>
-        <Button kind="primary" busy={busy} onClick={() => void save()}>Save</Button>
+        {isNew && <Button busy={busy === 'again'} disabled={!!busy} onClick={() => void save(true)}>Save &amp; add another</Button>}
+        <Button kind="primary" busy={busy === 'save'} disabled={!!busy} onClick={() => void save(false)}>{isNew ? 'Save product' : 'Save'}</Button>
       </div>
     </Modal>
   )

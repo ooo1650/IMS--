@@ -13,7 +13,7 @@ import { CameraScanner } from '../components/CameraScanner'
 import { DeviceSettings } from '../components/DeviceSettings'
 import { Icon } from '../components/Icon'
 import { ProductThumb } from '../components/ProductThumb'
-import { Badge, Button, ErrorBox, Field, Modal, Status } from '../components/ui'
+import { Badge, Button, ErrorBox, Field, Modal, Status, Guide } from '../components/ui'
 import { ApiError, NetworkError, api, qs } from '../lib/api'
 import { patchDisplay, publishDisplay } from '../lib/devices/display'
 import { beep, useScannerInput } from '../lib/devices/scanner'
@@ -478,6 +478,14 @@ export default function Pos() {
         {shift && <Button onClick={() => setModal('close-shift')}><Icon name="lock" size={16} /> Close shift</Button>}
       </div>
       <ErrorBox error={error} />
+      <Guide id="pos" title="Selling at the till">
+        <ol>
+          <li>Open a shift on this till with the cash in the drawer.</li>
+          <li>Scan a barcode, or search with <strong>F2</strong>, and tap products to add them. The number on a product is the stock left here; 0 can't be sold.</li>
+          <li>Take payment: <strong>Cash (F9)</strong>, FonePay QR, or card / wallet / bank. The bill prints or can be reprinted from Sales.</li>
+          <li>At day end, <strong>Close shift</strong> and count the cash.</li>
+        </ol>
+      </Guide>
 
       {!shift ? (
         <OpenShift register={register!} online={online} onOpened={loadAll} />

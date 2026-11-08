@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../auth'
-import { Button, ErrorBox, Field, LoadMore, Modal, PageHead, Status, fmtDate, useLoad, usePaged } from '../components/ui'
+import { Button, ErrorBox, Field, LoadMore, Modal, PageHead, Status, fmtDate, useLoad, usePaged, Guide } from '../components/ui'
 import { api, qs } from '../lib/api'
 
 interface Stocktake { id: number; status: string; started_at: string; finished_at: string | null; by_name: string; scope: { category_name?: string }; line_count: number; counted_count: number }
@@ -16,6 +16,13 @@ export default function Stocktakes() {
       <PageHead title="Stocktakes">
         <Button kind="primary" onClick={() => setStarting(true)}>Start stocktake</Button>
       </PageHead>
+      <Guide id="stocktakes" title="Counting what's on the shelf">
+        <ol>
+          <li><strong>Start stocktake</strong> for the whole branch or a category.</li>
+          <li>Enter what you actually count and <strong>Save counts</strong> as you go.</li>
+          <li><strong>Finish &amp; post adjustments</strong>: differences become logged stock adjustments.</li>
+        </ol>
+      </Guide>
       <ErrorBox error={error} />
       <div className="card flush">
         <table className="table">

@@ -27,6 +27,7 @@ export const NAV: NavItem[] = [
   { to: '/compliance', label: 'Tax & IRD', icon: 'landmark', group: 'Insights', subtitle: 'VAT registers, CBMS and fiscal years', show: (a) => a.can('reports.view') || a.canOrg('reports.view') || a.canOrg('dashboard.view') },
   { to: '/import', label: 'Import', icon: 'upload', group: 'Admin', subtitle: 'Bulk-load products and stock', show: (a) => a.can('import.run') || a.canOrg('catalog.manage') },
   { to: '/admin', label: 'Users & access', icon: 'shield', group: 'Admin', subtitle: 'Users, roles, branches and audit log', show: (a) => a.canOrg('users.manage') || a.canOrg('branches.manage') || a.can('audit.view') },
+  { to: '/payments', label: 'Payments', icon: 'qr', group: 'Admin', subtitle: 'FonePay QR merchant for each branch', show: (a) => a.canOrg('branches.manage') },
   { to: '/account', label: 'My account', icon: 'user', group: 'Admin', subtitle: 'Password, email and sign-in code', show: () => true },
   { to: '/help', label: 'Help', icon: 'help', group: 'Admin', subtitle: 'User manual', show: () => true },
 ]

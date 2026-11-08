@@ -161,6 +161,7 @@ Rules: discounts need a reason. Discounts above `cashier_max_discount_bp` need `
 | Method & path | Perm | Notes |
 |---|---|---|
 | `GET reports/dashboard` | org:dashboard.view | Org KPIs per branch, trend, top products, slow movers, low stock, conflicts, FonePay mismatches |
+| `GET setup-status` | signed in, active business | `{products, stock, suppliers, staff, sale}` booleans for the dashboard's "Get your shop running" checklist |
 | `GET reports/analytics?days=7\|30\|90&branch=<id>` | org:dashboard.view (all branches or `branch`), else branch:reports.view (active branch only) | Period vs the previous period of the same length: `current`/`previous` totals (revenue, transactions, items, avg basket, net sales, cost, gross profit, margin_bp, discounts, returns), `daily` (revenue, sales, profit, previous-period revenue, per-branch revenue), `heatmap` (ISO weekday × hour), `payment_mix`, `categories` (top 7 + Other), `top_products` (with profit and margin), `branches` (ranked, org only). Local days per branch timezone. |
 | `GET reports/branch` | branch:reports.view | Same for the active branch |
 

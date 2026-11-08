@@ -1,7 +1,7 @@
 import { Fragment, useState } from 'react'
 import { Icon, initials } from '../components/Icon'
 import { useAuth } from '../auth'
-import { Badge, Button, ErrorBox, Field, LoadMore, Modal, PageHead, Tabs, fmtDate, useLoad, usePaged } from '../components/ui'
+import { Badge, Button, ErrorBox, Field, LoadMore, Modal, PageHead, Tabs, fmtDate, useLoad, usePaged, Guide } from '../components/ui'
 import { api, qs } from '../lib/api'
 import type { Branch } from '../lib/types'
 
@@ -35,6 +35,13 @@ export default function Admin() {
   return (
     <div>
       <PageHead title="Users & access" sub="Role-based access control: who can do what, at which branch" />
+      <Guide id="admin" title="Who can do what">
+        <ul>
+          <li><strong>Add user</strong>: give them a role in this business or at one branch. With an email address they can set their own password from the emailed code.</li>
+          <li>Roles: <strong>Cashier</strong> sells; <strong>Inventory clerk</strong> handles stock; <strong>Branch manager</strong> runs a branch; <strong>Org admin</strong> manages the whole business.</li>
+          <li>People are never deleted: deactivate them, so their sales history stays intact.</li>
+        </ul>
+      </Guide>
       <Tabs value={tab} onChange={setTab} tabs={tabs} />
       {tab === 'users' && <Users />}
       {tab === 'roles' && <RolesMatrix />}
@@ -338,6 +345,50 @@ function Branches() {
       {editReg && <RegisterForm reg={editReg} onClose={() => setEditReg(null)} onSaved={() => { setEditReg(null); registers.reload() }} />}
       {editMerchant && backend && <MerchantForm m={editMerchant} backend={backend} onClose={() => setEditMerchant(null)} onSaved={() => { setEditMerchant(null); merchants.reload() }} />}
     </>
+  )
+}
+
+/** FonePay QR set-up for the whole business: mode and API address, then the
+ *  merchant account each branch's payments settle into. */
+export function Payments() {
+  const merchants = useLoad(() => api<MerchantList>('fonepay-merchants/'), [])
+  const [edit, setEdit] = useState<Merchant | null>(null)
+  const backend = merchants.data?.backend
+  return (
+    <div>
+      <PageHead title="Payments" sub="FonePay QR: one merchant account per branch" />
+      <Guide id="payments" title="Setting up FonePay QR">
+        <ol>
+          <li>Get your merchant details from your bank's FonePay onboarding: <strong>merchant code, username, password and secret key</strong>, plus the API address.</li>
+          <li>Below, choose the mode. <strong>Live</strong> takes real payments (needs the API address). <strong>Demo</strong> lets you try the flow without money moving. <strong>Off</strong> hides FonePay at the tills.</li>
+          <li>For each branch press <strong>Set up</strong>, enter its merchant details and tick <strong>Take FonePay QR payments at this branch</strong>.</li>
+          <li>At that branch's till, a <strong>FonePay</strong> button appears next to Cash. The customer scans the QR and the bill completes when the bank confirms.</li>
+        </ol>
+      </Guide>
+      <ErrorBox error={merchants.error} />
+      {merchants.data && <FonepayServerCard server={merchants.data} onSaved={merchants.reload} />}
+      {merchants.data && (
+        <section className="card">
+          <h2>Branches</h2>
+          <table className="table">
+            <thead><tr><th>Branch</th><th>Merchant code</th><th>Status</th><th>Missing</th><th /></tr></thead>
+            <tbody>
+              {merchants.data.results.map((m) => (
+                <tr key={m.branch}>
+                  <td><strong>{m.branch_code}</strong> <span className="muted">{m.branch_name}</span></td>
+                  <td className="mono">{m.merchant_code || <span className="muted">—</span>}</td>
+                  <td><MerchantBadge m={m} /></td>
+                  <td className="muted small">{m.enabled && m.missing.length ? m.missing.join(', ') : ''}</td>
+                  <td className="num"><Button onClick={() => setEdit(m)}>{m.merchant_code ? 'Edit' : 'Set up'}</Button></td>
+                </tr>
+              ))}
+              {!merchants.data.results.length && <tr><td colSpan={5} className="empty">No branches yet: add one under Users &amp; access → Branches &amp; registers</td></tr>}
+            </tbody>
+          </table>
+        </section>
+      )}
+      {edit && backend && <MerchantForm m={edit} backend={backend} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); merchants.reload() }} />}
+    </div>
   )
 }
 

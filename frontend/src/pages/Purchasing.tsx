@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../auth'
 import { Icon, initials } from '../components/Icon'
 import { ProductPicker } from '../components/ProductPicker'
-import { Button, ErrorBox, Field, LoadMore, Modal, PageHead, Status, Tabs, fmtDate, useLoad, usePaged } from '../components/ui'
+import { Button, ErrorBox, Field, LoadMore, Modal, PageHead, Status, Tabs, fmtDate, useLoad, usePaged, Guide } from '../components/ui'
 import { api, qs } from '../lib/api'
 import { npr, toPaisa, toRupeesInput } from '../lib/money'
 
@@ -26,6 +26,14 @@ export default function Purchasing() {
       <PageHead title="Purchasing" sub="Purchase orders, receiving, returns and suppliers">
         {manage && tab !== 'suppliers' && <Button kind="primary" onClick={() => setEditing('new')}><Icon name="plus" size={16} /> New PO</Button>}
       </PageHead>
+      <Guide id="purchasing" title="Buying stock">
+        <ol>
+          <li>Add your suppliers on the <strong>Suppliers</strong> tab.</li>
+          <li>Create a purchase order with the items, quantities and costs, then <strong>Mark ordered</strong>.</li>
+          <li>When the goods arrive, <strong>Receive goods</strong>: stock goes up at this branch and the purchase VAT is recorded for your VAT return.</li>
+        </ol>
+        <p>Sending goods back? Open the order → <strong>Return goods to supplier</strong>.</p>
+      </Guide>
       <Tabs value={tab} onChange={setTab} tabs={[['open', 'Open orders'], ['all', 'All orders'], ['returns', 'Purchase returns'], ['suppliers', 'Suppliers']]} />
       {tab === 'suppliers' ? <Suppliers manage={manage || canOrg('catalog.manage')} /> : tab === 'returns' ? <PurchaseReturns manage={manage} /> : (<>
       <ErrorBox error={error} />

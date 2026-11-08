@@ -73,6 +73,7 @@ api = [
     path("pos/registers/<int:register_id>/receipt-gaps", sales.ReceiptGapsView.as_view()),
     path("fonepay-settings", sales.FonepaySettingsView.as_view()),
     path("reports/dashboard", reporting.DashboardView.as_view()),
+    path("setup-status", reporting.SetupStatusView.as_view()),
     path("reports/branch", reporting.BranchReportView.as_view()),
     path("reports/analytics", reporting.AnalyticsView.as_view()),
     path("compliance/settings", compliance.SettingsView.as_view()),

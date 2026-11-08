@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../auth'
-import { Button, ErrorBox, PageHead, Tabs } from '../components/ui'
+import { Button, ErrorBox, PageHead, Tabs, Guide } from '../components/ui'
 import { api } from '../lib/api'
 import { npr } from '../lib/money'
 
@@ -44,6 +44,13 @@ export default function Import() {
       <PageHead title="Data import">
         <a className="btn btn-default" href={`/api/v1/import/template/${kind}`}>Download template</a>
       </PageHead>
+      <Guide id="import" title="Loading many records at once">
+        <ol>
+          <li>Download the template and fill one row per product (or stock line).</li>
+          <li>Upload it and press <strong>Preview (dry run)</strong>: nothing is saved, you see what would change.</li>
+          <li>If it looks right, <strong>Commit import</strong>.</li>
+        </ol>
+      </Guide>
       <Tabs value={kind} onChange={(k) => { setKind(k); setResult(null) }} tabs={kinds} />
       <div className="card">
         <p className="muted">

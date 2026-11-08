@@ -41,11 +41,18 @@ class CheckoutError(ValidationError):
     pass
 
 
+STOCK_HINT = "Add stock in Inventory (Adjust) or receive it in Purchasing, then try again."
+
+
+def _stock_message(lines, branch_name):
+    parts = [f"{l.get('name') or l['sku']}: {l['available']} in stock, {l['qty']} needed" for l in lines]
+    return f"Not enough stock at {branch_name}. " + "; ".join(parts) + ". " + STOCK_HINT
+
+
 class StockUnavailable(CheckoutError):
-    def __init__(self, lines):
+    def __init__(self, lines, branch_name="this branch"):
         self.lines = lines
-        super().__init__("Insufficient stock: " + ", ".join(f"{l['sku']} (have {l['available']}, need {l['qty']})"
-                                                            for l in lines))
+        super().__init__(_stock_message(lines, branch_name))
 
 
 @dataclass
@@ -193,12 +200,13 @@ def _decrement_stock(sale, by, strict):
     items = lock_items(sale.branch, needed.keys())
     short = [
         {"product_id": pid, "sku": next(l.product.sku for l in lines if l.product_id == pid),
+         "name": next(l.product.name for l in lines if l.product_id == pid),
          "available": items[pid].quantity_on_hand, "qty": qty}
         for pid, qty in sorted(needed.items())
         if items[pid].quantity_on_hand < qty and not items[pid].allow_negative
     ]
     if short and strict:
-        raise StockUnavailable(short)
+        raise StockUnavailable(short, sale.branch.name)
     movements = []
     for l in sorted(lines, key=lambda l: l.product_id):
         item = items[l.product_id]
@@ -334,11 +342,13 @@ def initiate_fonepay(*, branch, register, cashier, cart: Cart, idempotency_key, 
             approver = check_discount_authority(branch, cashier, totals, cart)
             on_hand = {i.product_id: i for i in InventoryItem.objects.filter(
                 branch=branch, product_id__in=[l.product_id for l in cart.lines])}
-            short = [products[l.product_id].sku for l in cart.lines
+            short = [{"sku": products[l.product_id].sku, "name": products[l.product_id].name,
+                      "available": i.quantity_on_hand if i else 0, "qty": l.qty}
+                     for l in cart.lines
                      if (i := on_hand.get(l.product_id)) is None
                      or (i.quantity_on_hand < l.qty and not i.allow_negative)]
             if short:
-                raise CheckoutError(f"Insufficient stock: {', '.join(short)}")
+                raise CheckoutError(_stock_message(short, branch.name))
             expires = timezone.now() + timedelta(minutes=settings.IMS["FONEPAY_EXPIRY_MINUTES"])
             sale = Sale.objects.create(
                 **_sale_fields(branch, register, cashier, cart, totals, idempotency_key, Payment.FONEPAY),

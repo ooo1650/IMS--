@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth'
-import { Badge, Button, ErrorBox, Field, LoadMore, Modal, PageHead, Status, Tabs, fmtDate, useLoad, usePaged } from '../components/ui'
+import { Badge, Button, ErrorBox, Field, LoadMore, Modal, PageHead, Status, Tabs, fmtDate, useLoad, usePaged, Guide } from '../components/ui'
 import { api, qs } from '../lib/api'
 import { npr, toPaisa } from '../lib/money'
 import { printResult } from '../lib/printer'
@@ -34,6 +34,12 @@ export default function Sales() {
       <PageHead title="Sales & invoices">
         <input className="search" placeholder="Invoice no., buyer or PAN…" value={q} onChange={(e) => setQ(e.target.value)} />
       </PageHead>
+      <Guide id="sales" title="Every sale and invoice">
+        <ul>
+          <li>Search any bill to reprint it, return items or see how it was paid.</li>
+          <li>Issued invoices can't be edited (tax rules). To correct one, make a <strong>return</strong>: it issues a credit note and puts the stock back.</li>
+        </ul>
+      </Guide>
       <Tabs value={filter} onChange={setFilter} tabs={[['all', 'All'], ['unprinted', 'Unprinted'], ['conflicts', 'Stock conflicts'],
         ['review', 'Needs review'], ['offline', 'Offline'], ['cancelled', 'Cancelled']]} />
       <ErrorBox error={error} />

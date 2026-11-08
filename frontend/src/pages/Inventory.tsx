@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../auth'
 import { Icon } from '../components/Icon'
 import { Availability, ProductDetail } from '../components/ProductDetail'
-import { Badge, Button, ErrorBox, Field, LoadMore, Modal, PageHead, Tabs, fmtDate, useLoad, usePaged } from '../components/ui'
+import { Badge, Button, ErrorBox, Field, LoadMore, Modal, PageHead, Tabs, fmtDate, useLoad, usePaged, Guide } from '../components/ui'
 import { api, qs } from '../lib/api'
 import { npr } from '../lib/money'
 import { Tile } from './Dashboard'
@@ -45,6 +45,13 @@ export default function Inventory() {
           </span>
         )}
       </PageHead>
+      <Guide id="inventory" title="Stock at this branch">
+        <ul>
+          <li>Each row is what this branch has on hand. Every change is logged under <strong>Movements</strong>.</li>
+          <li>Stock comes in through <strong>Purchasing → Receive goods</strong>, or <strong>Adjust → In</strong> for opening stock and found items.</li>
+          <li>It goes out through sales, transfers and <strong>Adjust → Out</strong> (damage, loss). Set a reorder point with the gear icon to get low-stock warnings.</li>
+        </ul>
+      </Guide>
       <div className="tiles">
         <Tile label="Products tracked" value={s?.items ?? '—'} />
         <Tile label="Stock value" value={s ? npr(s.inventory_value_paisa) : '—'} sub="on hand × weighted-avg cost" />

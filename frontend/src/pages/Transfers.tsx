@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../auth'
 import { ProductPicker } from '../components/ProductPicker'
-import { Button, ErrorBox, Field, LoadMore, Modal, PageHead, Status, fmtDate, useLoad, usePaged } from '../components/ui'
+import { Button, ErrorBox, Field, LoadMore, Modal, PageHead, Status, fmtDate, useLoad, usePaged, Guide } from '../components/ui'
 import { api, qs } from '../lib/api'
 import { npr } from '../lib/money'
 
@@ -21,6 +21,13 @@ export default function Transfers() {
       <PageHead title="Stock transfers">
         {can('transfer.manage') && <Button kind="primary" onClick={() => setCreating(true)}>New transfer</Button>}
       </PageHead>
+      <Guide id="transfers" title="Moving stock between branches">
+        <ol>
+          <li><strong>New transfer</strong>: pick the branch it goes to and the items.</li>
+          <li><strong>Dispatch</strong>: the stock leaves this branch.</li>
+          <li>The other branch opens it and presses <strong>Receive</strong>: the stock arrives there. Any difference is recorded.</li>
+        </ol>
+      </Guide>
       <ErrorBox error={error} />
       <div className="card flush">
         <table className="table">

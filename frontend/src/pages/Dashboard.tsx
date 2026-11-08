@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { InlineBar } from '../components/charts'
 import SalesAnalytics from '../components/SalesAnalytics'
 import { Badge, ErrorBox, PageHead, fmtDate, useLoad } from '../components/ui'
+import { Icon } from '../components/Icon'
 import { api } from '../lib/api'
 import { TurnoverMeter } from './Compliance'
 import { npr } from '../lib/money'
@@ -107,6 +108,38 @@ export function ReportTables({ data }: { data: ReportLists }) {
   )
 }
 
+interface SetupStatus { products: boolean; stock: boolean; suppliers: boolean; staff: boolean; sale: boolean }
+
+const SETUP_STEPS: { key: keyof SetupStatus; title: string; why: string; to: string; action: string }[] = [
+  { key: 'products', title: 'Add your products', why: 'Name, price and VAT. Give opening stock in the same form', to: '/products', action: 'Products' },
+  { key: 'stock', title: 'Put stock in', why: "The till can't sell what a branch doesn't have: opening stock, Inventory → Adjust, or a purchase", to: '/inventory', action: 'Inventory' },
+  { key: 'suppliers', title: 'Add a supplier', why: 'So purchases record who you bought from and the VAT you can claim', to: '/purchasing', action: 'Purchasing' },
+  { key: 'staff', title: 'Add your staff', why: 'Each person gets their own login and a role per branch', to: '/admin', action: 'Users & access' },
+  { key: 'sale', title: 'Make your first sale', why: 'Open a shift on a till, scan or search, take payment', to: '/pos', action: 'Point of Sale' },
+]
+
+/** First-run checklist: ticks itself off from real data, disappears when done. */
+function SetupChecklist() {
+  const { data } = useLoad(() => api<SetupStatus>('setup-status'), [])
+  if (!data) return null
+  const done = SETUP_STEPS.filter((s) => data[s.key]).length
+  if (done === SETUP_STEPS.length) return null
+  return (
+    <section className="card setup">
+      <h2>Get your shop running <span className="muted small fig">{done} of {SETUP_STEPS.length} done</span></h2>
+      <ol className="setup-list">
+        {SETUP_STEPS.map((s) => (
+          <li key={s.key} className={data[s.key] ? 'done' : ''}>
+            <span className="setup-tick" aria-label={data[s.key] ? 'Done' : 'To do'}>{data[s.key] && <Icon name="check" size={14} />}</span>
+            <span><span className="setup-title">{s.title}</span><span className="setup-why">{s.why}</span></span>
+            {data[s.key] ? <span /> : <Link className="btn btn-default" to={s.to}>{s.action}</Link>}
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}
+
 export default function Dashboard() {
   const { data, error } = useLoad(() => api<DashboardData>('reports/dashboard'), [])
   if (error) return <ErrorBox error={error} />
@@ -115,6 +148,7 @@ export default function Dashboard() {
   return (
     <div>
       <PageHead title="Organization dashboard" sub={`${data.branches.length} branches · sales use each branch's local day`} />
+      <SetupChecklist />
       <div className="dash-row">
         <section className="card">
           <h2>Sales overview</h2>

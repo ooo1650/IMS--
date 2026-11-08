@@ -1,5 +1,6 @@
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
 from accounts.permissions import HasBranchPerm, HasOrgPerm, require_branch_perm
@@ -76,3 +77,27 @@ class AnalyticsView(APIView):
             require_branch_perm(request, "reports.view")
             branches = [request.branch]
         return Response(analytics.analytics(branches, days))
+
+
+class SetupStatusView(APIView):
+    """Which first steps the active business has done, for the "get started"
+    checklist: each is one cheap EXISTS query, nothing is stored."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from accounts.models import UserBranchRole
+        from catalog.models import Product, Supplier
+        from inventory.models import InventoryItem
+        from sales.models import Sale
+
+        org = getattr(request, "org", None)
+        if org is None:
+            raise NotFound("Pick a business first")
+        return Response({
+            "products": Product.objects.filter(org=org).exists(),
+            "stock": InventoryItem.objects.filter(branch__org=org, quantity_on_hand__gt=0).exists(),
+            "suppliers": Supplier.objects.filter(org=org).exists(),
+            "staff": UserBranchRole.objects.filter(org=org).values("user").distinct().count() > 1,
+            "sale": Sale.objects.filter(branch__org=org).exists(),
+        })

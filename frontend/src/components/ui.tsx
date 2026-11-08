@@ -149,3 +149,35 @@ export function Tabs<T extends string>({ value, onChange, tabs }: { value: T; on
     </div>
   )
 }
+
+/** "How this page works": a short note at the top of a page. Hidden per
+ *  browser once dismissed, and brought back with the small link it leaves. */
+export function Guide({ id, title, children }: { id: string; title: string; children: ReactNode }) {
+  const key = `ims.guide.${id}`
+  const [open, setOpen] = useState(() => {
+    try {
+      return localStorage.getItem(key) !== 'hidden'
+    } catch {
+      return true
+    }
+  })
+  const toggle = (v: boolean) => {
+    setOpen(v)
+    try {
+      if (v) localStorage.removeItem(key)
+      else localStorage.setItem(key, 'hidden')
+    } catch {
+      /* private mode: just this visit */
+    }
+  }
+  if (!open) return <button type="button" className="link guide-reopen" onClick={() => toggle(true)}>How this page works</button>
+  return (
+    <aside className="guide" aria-label={title}>
+      <div className="guide-head">
+        <strong>{title}</strong>
+        <button type="button" className="link" onClick={() => toggle(false)}>Hide</button>
+      </div>
+      <div className="guide-body">{children}</div>
+    </aside>
+  )
+}

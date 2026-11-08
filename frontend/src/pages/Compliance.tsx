@@ -2,7 +2,7 @@
  * sync dashboard, turnover meter, settings and effective-dated tax rates. */
 import { useState } from 'react'
 import { useAuth } from '../auth'
-import { Badge, Button, ErrorBox, Field, Modal, PageHead, Status, Tabs, fmtDate, useLoad } from '../components/ui'
+import { Badge, Button, ErrorBox, Field, Modal, PageHead, Status, Tabs, fmtDate, useLoad, Guide } from '../components/ui'
 import { api, qs } from '../lib/api'
 import { npr, plain, toPaisa, toRupeesInput } from '../lib/money'
 
@@ -35,6 +35,12 @@ export default function Compliance() {
   return (
     <div>
       <PageHead title="Tax & IRD" />
+      <Guide id="compliance" title="VAT and your accountant">
+        <ul>
+          <li>Sales and purchase registers here are what your monthly VAT return is built from. Export them for your accountant.</li>
+          <li>Issued bills are permanent; corrections are credit notes made from <strong>Sales</strong>.</li>
+        </ul>
+      </Guide>
       <Tabs value={tab} onChange={setTab} tabs={tabs} />
       {tab === 'reports' && <Reports />}
       {tab === 'cbms' && <Cbms />}
