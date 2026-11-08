@@ -6,7 +6,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://ims-341v.onrender.com/"
+      "destination": "https://ims-341v.onrender.com/api/:path*"
     },
     {
       "source": "/(.*)",
