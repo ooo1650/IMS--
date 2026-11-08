@@ -12,6 +12,7 @@ import zlib
 from dataclasses import dataclass
 from datetime import datetime
 
+from django.conf import settings
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.db import close_old_connections, connection
@@ -64,8 +65,11 @@ class Command(BaseCommand):
     def run(self, job: Job):
         close_old_connections()
         lock = zlib.crc32(job.command.encode())
+        # Session locks don't survive a transaction-mode pooler (the unlock may
+        # reach another server connection); there, run one scheduler only.
+        locking = connection.vendor == "postgresql" and not settings.IMS_DB_TRANSACTION_POOLER
         try:
-            if connection.vendor == "postgresql":
+            if locking:
                 with connection.cursor() as cur:
                     cur.execute("SELECT pg_try_advisory_lock(%s)", [lock])
                     if not cur.fetchone()[0]:
@@ -76,7 +80,7 @@ class Command(BaseCommand):
         except Exception as e:  # one failing job must not stop the others
             self.stderr.write(f"scheduler: {job.command} failed: {e!r}")
         finally:
-            if connection.vendor == "postgresql":
+            if locking:
                 try:
                     with connection.cursor() as cur:
                         cur.execute("SELECT pg_advisory_unlock(%s)", [lock])

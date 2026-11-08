@@ -86,6 +86,17 @@ DATABASES = {
         default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}", conn_max_age=60
     )
 }
+# Transaction-mode poolers (Supabase/Supavisor port 6543, PgBouncer
+# pool_mode=transaction) hand each transaction a different server connection:
+# no prepared statements, no server-side cursors, no session advisory locks
+# (run_scheduler skips them). Detected from port 6543, or set
+# IMS_DB_TRANSACTION_POOLER. Session mode (Supabase pooler port 5432) needs none of this.
+IMS_DB_TRANSACTION_POOLER = env_bool(
+    "IMS_DB_TRANSACTION_POOLER", str(DATABASES["default"].get("PORT")) == "6543")
+if IMS_DB_TRANSACTION_POOLER:
+    DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True
+    DATABASES["default"].setdefault("OPTIONS", {})["prepare_threshold"] = None
+    DATABASES["default"]["CONN_MAX_AGE"] = 0
 if DATABASES["default"]["ENGINE"].endswith("sqlite3"):
     # Dev only: wait for the write lock instead of failing on concurrent requests.
     DATABASES["default"].setdefault("OPTIONS", {})["timeout"] = 20

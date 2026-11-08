@@ -9,3 +9,4 @@ frontend/dist/
 console/dist/
 console/node_modules/
 .env
+backend/db/

@@ -83,7 +83,10 @@ to the Render service and send the same security headers as nginx. Replace
 
 **Supabase**
 * Use the **Session pooler** connection (Connect → Session pooler, port 5432, IPv4;
-  the direct host is IPv6-only and Render can't reach it). Not the transaction pooler (6543).
+  the direct host is IPv6-only and Render can't reach it). The transaction pooler
+  (port 6543) also works: the backend detects the port and turns off prepared
+  statements, server-side cursors and the scheduler's session locks (run only one
+  scheduler then). Run migrations over 5432 (`IMS_MIGRATE_DATABASE_URL`).
 * Pooler usernames carry the project ref: `postgres.<ref>` (owner) and `ims_app.<ref>` (app role).
 * Supabase's Data API exposes the `public` schema. `ensure_db_roles` removes the
   `anon`/`authenticated` grants on every deploy; also turn the Data API off
@@ -111,3 +114,10 @@ Limits of this setup:
 * No `pg_dump` backup service: use Supabase's backups.
 * `IMS_PLATFORM_ORIGINS`/`IMS_PLATFORM_ALLOW` keep browsers on the IMS address away from the console API, but a script calling Render directly can fake those headers. The real protection is the operator's password plus emailed code.
 * `/django-admin` isn't proxied and has no static files here; use the console.
+
+**Fresh database from one SQL file** (e.g. pasted into Supabase's SQL editor):
+`cd backend && .venv/bin/python scripts/export_schema.py --email you@example.com`
+writes `backend/db/ims-initial.sql` (git-ignored, contains a password hash): the
+full schema, triggers and auditor views, the seeded tax categories and default
+settings, and one operator account. No demo data. Load it into an empty
+database, then let `ensure_db_roles` run (Render: `IMS_MIGRATE_DATABASE_URL`).
