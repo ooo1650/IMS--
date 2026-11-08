@@ -8,10 +8,22 @@ set -eu
 
 case "${1:-web}" in
   web)
-    # Only nginx can reach this port (internal network), so trusting its
-    # forwarded headers is safe; Django reads X-Forwarded-Proto itself.
+    # Single-service hosts (e.g. Render, docs/DEPLOYMENT.md) have no separate
+    # migrate/worker containers:
+    #   IMS_MIGRATE_DATABASE_URL  the DB owner's URL: migrate + app role first
+    #   IMS_RUN_SCHEDULER=true    run the scheduled jobs in this container too
+    if [ -n "${IMS_MIGRATE_DATABASE_URL:-}" ]; then
+      DATABASE_URL="$IMS_MIGRATE_DATABASE_URL" python manage.py migrate --no-input
+      DATABASE_URL="$IMS_MIGRATE_DATABASE_URL" python manage.py ensure_db_roles
+    fi
+    if [ "${IMS_RUN_SCHEDULER:-false}" = "true" ]; then
+      python manage.py run_scheduler &
+    fi
+    # Only the proxy in front can reach this port, so trusting its forwarded
+    # headers is safe; Django reads X-Forwarded-Proto itself. PORT: set by
+    # hosts like Render; 8000 in Docker Compose.
     exec gunicorn ims.wsgi:application \
-      --bind 0.0.0.0:8000 \
+      --bind "0.0.0.0:${PORT:-8000}" \
       --workers "${GUNICORN_WORKERS:-3}" \
       --timeout 30 \
       --worker-tmp-dir /dev/shm \

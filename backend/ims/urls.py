@@ -112,5 +112,18 @@ urlpatterns = [
     path("django-admin/", admin.site.urls),
     path("api/v1/", include(api)),
 ]
-# Dev only (a no-op when DEBUG is off): nginx serve /media/ in production.
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+if settings.IMS_SERVE_MEDIA and not settings.DEBUG:
+    # No web server in front (e.g. Render): Django serves the product photos.
+    # Content-addressed names (catalog/images.py), so they can be cached forever.
+    from django.urls import re_path
+    from django.views.static import serve
+
+    def _media(request, path):
+        response = serve(request, path, document_root=settings.MEDIA_ROOT)
+        response["Cache-Control"] = "public, max-age=31536000, immutable"
+        return response
+
+    urlpatterns += [re_path(r"^media/(?P<path>.+)$", _media)]
+else:
+    # Dev only (a no-op when DEBUG is off): nginx serves /media/ in production.
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

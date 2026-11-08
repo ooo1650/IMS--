@@ -37,6 +37,7 @@ cd frontend && npm test && npx tsc -b && npm run build   # 94 tests
 cd console && npx tsc -b && npm run build              # console (src/shared/ = copies from frontend/src: `npm run sync-shared`)
 ```
 Last verified: all green on 2026-10-26 (SQLite and embedded Postgres).
+Hosted split (Vercel frontends + Render backend + Supabase DB): `docs/DEPLOYMENT.md` last section; `vercel.json` in `frontend/` and `console/`, backend guard `ims/platform_guard.py`.
 Docker: `cp .env.example .env && docker compose up -d --build` (see `docs/DEPLOYMENT.md`; not yet run on a real Docker host).
 
 ## Invariants (don't break these)

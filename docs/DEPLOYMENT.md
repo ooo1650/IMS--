@@ -70,3 +70,44 @@ The console is its own project (`console/`, own `docker-compose.yml`), so it can
 
 ## Without Docker
 `backend/.env.example`, `deploy/crontab`, `deploy/nginx/` (render `templates/ims.conf.template` with your values and provide the certificate yourself), and run `manage.py ensure_db_roles` as the DB owner after each `migrate`, with the app connecting as the role it creates.
+
+## Hosted split: Vercel (frontends) + Render (backend) + Supabase (database)
+
+No nginx here, so the backend and `vercel.json` take over its jobs.
+
+**Why the frontends proxy `/api`:** sign-in uses a session cookie and CSRF, so
+the browser must see the app and its API on one origin. `frontend/vercel.json`
+and `console/vercel.json` rewrite `/api/*` (and `/media/*` for product photos)
+to the Render service and send the same security headers as nginx. Replace
+`https://YOUR-BACKEND.onrender.com` in both files with the Render URL.
+
+**Supabase**
+* Use the **Session pooler** connection (Connect → Session pooler, port 5432, IPv4;
+  the direct host is IPv6-only and Render can't reach it). Not the transaction pooler (6543).
+* Pooler usernames carry the project ref: `postgres.<ref>` (owner) and `ims_app.<ref>` (app role).
+* Supabase's Data API exposes the `public` schema. `ensure_db_roles` removes the
+  `anon`/`authenticated` grants on every deploy; also turn the Data API off
+  (Project Settings → Data API) since IMS never uses it.
+
+**Render** (Web Service, Docker, root directory `backend`, health check path `/api/v1/health`):
+
+| Variable | Value |
+|---|---|
+| `DJANGO_SECRET_KEY` | long random string |
+| `DJANGO_ALLOWED_HOSTS` | `<service>.onrender.com,<app>.vercel.app,<console>.vercel.app` |
+| `DJANGO_CSRF_TRUSTED_ORIGINS` | `https://<app>.vercel.app,https://<console>.vercel.app` |
+| `DATABASE_URL` | `postgresql://ims_app.<ref>:<IMS_APP_DB_PASSWORD>@<pooler-host>:5432/postgres?sslmode=require` |
+| `IMS_MIGRATE_DATABASE_URL` | same, with `postgres.<ref>` and the Supabase database password: migrations + `ensure_db_roles` run at start |
+| `IMS_APP_DB_PASSWORD` | 16+ random characters (sets the `ims_app` password) |
+| `CBMS_ENCRYPTION_KEY` | Fernet key; keep it forever |
+| `IMS_PLATFORM_ORIGINS` | `https://<console>.vercel.app`: only the console may call `/api/v1/platform/` |
+| `IMS_PLATFORM_ALLOW` | optional: operators' IPs/CIDRs |
+| `IMS_TRUSTED_PROXIES` | `2` (Vercel, then Render). Check the IPs in the console's audit log are real visitor IPs |
+| `IMS_SERVE_MEDIA` | `true` (Django serves product photos) |
+| `IMS_RUN_SCHEDULER` | `true` (scheduled jobs run inside the web service) |
+
+Limits of this setup:
+* Render's free plan sleeps after 15 idle minutes (first request ~1 min; jobs don't run while asleep) and its disk is wiped on every deploy, so **product photos are lost** unless a Render persistent disk is mounted at `/srv/media` (paid).
+* No `pg_dump` backup service: use Supabase's backups.
+* `IMS_PLATFORM_ORIGINS`/`IMS_PLATFORM_ALLOW` keep browsers on the IMS address away from the console API, but a script calling Render directly can fake those headers. The real protection is the operator's password plus emailed code.
+* `/django-admin` isn't proxied and has no static files here; use the console.

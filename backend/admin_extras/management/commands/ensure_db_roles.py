@@ -60,9 +60,34 @@ class Command(BaseCommand):
             ]
             for st in statements:
                 cur.execute(st.as_string(connection.connection))
+            self._close_hosted_api(cur, owner)
             cur.execute("SELECT matviewname FROM pg_matviews WHERE schemaname = 'public' AND matviewname = ANY(%s)",
                         [list(MATVIEWS)])
             for (name,) in cur.fetchall():
                 cur.execute(sql.SQL("ALTER MATERIALIZED VIEW {} OWNER TO {}")
                             .format(sql.Identifier(name), role).as_string(connection.connection))
         self.stdout.write(self.style.SUCCESS(f"App role {user!r} ready (row access only; owner stays {owner!r})."))
+
+    def _close_hosted_api(self, cur, owner):
+        """Supabase: its Data API (PostgREST) serves the public schema to the
+        ``anon``/``authenticated`` roles, and by default they get every new
+        table. IMS doesn't use that API, so take those grants away; otherwise
+        anyone with the project's public key could read or change the data."""
+        from psycopg import sql
+
+        cur.execute("SELECT rolname FROM pg_roles WHERE rolname IN ('anon', 'authenticated')")
+        api_roles = [r for (r,) in cur.fetchall()]
+        conn = connection.connection
+        for name in api_roles:
+            r = sql.Identifier(name)
+            for st in (
+                sql.SQL("REVOKE ALL ON ALL TABLES IN SCHEMA public FROM {}").format(r),
+                sql.SQL("REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM {}").format(r),
+                sql.SQL("REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM {}").format(r),
+                sql.SQL("ALTER DEFAULT PRIVILEGES FOR ROLE {} IN SCHEMA public REVOKE ALL ON TABLES FROM {}").format(sql.Identifier(owner), r),
+                sql.SQL("ALTER DEFAULT PRIVILEGES FOR ROLE {} IN SCHEMA public REVOKE ALL ON SEQUENCES FROM {}").format(sql.Identifier(owner), r),
+                sql.SQL("ALTER DEFAULT PRIVILEGES FOR ROLE {} IN SCHEMA public REVOKE ALL ON FUNCTIONS FROM {}").format(sql.Identifier(owner), r),
+            ):
+                cur.execute(st.as_string(conn))
+        if api_roles:
+            self.stdout.write(f"Removed hosted data-API access for: {', '.join(api_roles)}.")

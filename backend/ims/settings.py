@@ -48,6 +48,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "ims.platform_guard.PlatformGuardMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -151,6 +152,14 @@ X_FRAME_OPTIONS = "DENY"
 
 # Reverse proxies in front of Django that append to X-Forwarded-For (ims/net.py).
 IMS_TRUSTED_PROXIES = int(os.environ.get("IMS_TRUSTED_PROXIES", 0 if DEBUG else 1))
+
+# Hosting without the bundled nginx (e.g. Vercel + Render; docs/DEPLOYMENT.md):
+# the console's address(es) and, optionally, the operators' networks. Only
+# these may use /api/v1/platform/ (ims/platform_guard.py). Empty = nginx does it.
+IMS_PLATFORM_ORIGINS = env_list("IMS_PLATFORM_ORIGINS", "")
+IMS_PLATFORM_ALLOW = env_list("IMS_PLATFORM_ALLOW", "")
+# Serve product photos (/media/) from Django when no web server does it.
+IMS_SERVE_MEDIA = env_bool("IMS_SERVE_MEDIA", False)
 
 # TESTING PHASE ONLY: one-click sign-in as any active user, no password or
 # emailed code (accounts.views.TestLoginView). Off by default; only answers
