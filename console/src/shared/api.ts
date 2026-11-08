@@ -71,7 +71,10 @@ export async function api<T = unknown>(
   try {
     data = text ? JSON.parse(text) : null
   } catch {
-    data = { detail: text.slice(0, 200) }
+    // Not JSON: an HTML error page from a proxy or the server (e.g. Django's
+    // "Bad Request (400)" for a host it doesn't allow). Show its title, not markup.
+    const title = /<title>([^<]*)<\/title>/i.exec(text)?.[1]?.trim()
+    data = { detail: `The server answered ${res.status}${title ? ` (${title})` : ''}. If this persists, check the server's settings and logs` }
   }
   if (!res.ok) throw new ApiError(res.status, (data as Record<string, unknown>) ?? {})
   return data as T

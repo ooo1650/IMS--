@@ -24,7 +24,13 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-insecure-key-change-me" if
 if not SECRET_KEY:
     raise RuntimeError("DJANGO_SECRET_KEY must be set when DJANGO_DEBUG is false")
 
-ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
+# Host names only. Forgiving about pasted URLs ("https://x.com/", quotes).
+ALLOWED_HOSTS = [h.strip("'\"").split("://")[-1].split("/")[0]
+                 for h in env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")]
+# Render sets this to the service's own *.onrender.com name; the Vercel
+# frontends' /api rewrites also arrive with that Host.
+if os.environ.get("RENDER_EXTERNAL_HOSTNAME"):
+    ALLOWED_HOSTS.append(os.environ["RENDER_EXTERNAL_HOSTNAME"])
 
 INSTALLED_APPS = [
     "django.contrib.admin",
