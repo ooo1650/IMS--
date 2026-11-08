@@ -21,6 +21,10 @@ def lock_items(branch, product_ids):
     Returns {product_id: InventoryItem}.
     """
     ids = sorted(set(product_ids))
+    # Stock only moves for this branch's own business's products.
+    own = set(Product.objects.filter(id__in=ids, org_id=branch.org_id).values_list("id", flat=True))
+    if len(own) != len(ids):
+        raise ValidationError(f"Unknown products: {sorted(set(ids) - own)}")
     existing = set(
         InventoryItem.objects.filter(branch=branch, product_id__in=ids).values_list("product_id", flat=True)
     )
@@ -173,7 +177,7 @@ def cancel_transfer(transfer, by):
 # --- Stocktakes (§9.8) --------------------------------------------------------
 
 def start_stocktake(branch, by, category=None):
-    products = Product.objects.active()
+    products = Product.objects.active().filter(org_id=branch.org_id)
     scope = {}
     if category is not None:
         products = products.filter(category_id__in=category.descendant_ids())
@@ -194,7 +198,9 @@ def finish_stocktake(stocktake, by):
     Variance is measured against the snapshot taken at start (count freeze)."""
     if stocktake.status != Stocktake.COUNTING:
         raise ValidationError("Stocktake is not in counting state")
-    threshold = settings.IMS["STOCKTAKE_VARIANCE_REASON_THRESHOLD"]
+    from tenancy.models import rules_for
+
+    threshold = rules_for(stocktake.branch.org).stocktake_variance_threshold
     counted = [l for l in stocktake.lines.select_related("product") if l.counted_qty is not None]
     for line in counted:
         line.variance = line.counted_qty - line.system_qty

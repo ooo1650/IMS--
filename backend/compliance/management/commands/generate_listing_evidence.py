@@ -122,5 +122,5 @@ class Command(BaseCommand):
                                           tendered_paisa=10 ** 8, idempotency_key=f"evidence-{uuid.uuid4()}")
         services.record_print("invoice", third, user)
         services.void_sale(third, user, "IRD test cancellation")
-        if get_settings().cbms_enabled:
-            cbms.sync_pending(force=True)
+        if get_settings(branch.org).cbms_enabled:
+            cbms.sync_pending(force=True, org=branch.org)

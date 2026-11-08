@@ -90,10 +90,23 @@ if DATABASES["default"]["ENGINE"].endswith("sqlite3"):
     DATABASES["default"].setdefault("OPTIONS", {})["timeout"] = 20
 
 AUTH_USER_MODEL = "accounts.User"
+AUTHENTICATION_BACKENDS = ["accounts.backends.EmailOrUsernameBackend"]
+
+# --- Email (sign-in codes, password resets) ---
+# The SMTP server, user, password and sender are set in the operator console
+# (admin_extras.SystemSettings) and read on every send by this backend; with
+# no server configured, codes are written to the backend log.
+EMAIL_BACKEND = "admin_extras.mail.DatabaseSmtpBackend"
+EMAIL_TIMEOUT = 15
+DEFAULT_FROM_EMAIL = "IMS <no-reply@localhost>"  # used when the console has no sender set
+# Send mail on a background thread so replies don't wait on SMTP (tests turn it off).
+IMS_EMAIL_ASYNC = env_bool("IMS_EMAIL_ASYNC", True)
 
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 10}},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
 LANGUAGE_CODE = "en-us"
@@ -103,6 +116,10 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+# Product photos (catalog/images.py). Content-addressed file names, so the web
+# server can cache /media/ forever. Docker mounts the `media` volume here.
+MEDIA_URL = "/media/"
+MEDIA_ROOT = Path(os.environ.get("IMS_MEDIA_ROOT", BASE_DIR / "media"))
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # --- Sessions + CSRF (not JWT; see design doc §7) ---
@@ -114,13 +131,49 @@ CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SECURE = not DEBUG
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS", "http://localhost:5173")
 
-CORS_ALLOWED_ORIGINS = env_list("DJANGO_CORS_ORIGINS", "http://localhost:5173")
+# Production serves SPA + API from one origin, so CORS stays off unless configured.
+CORS_ALLOWED_ORIGINS = env_list("DJANGO_CORS_ORIGINS", "http://localhost:5173" if DEBUG else "")
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_HEADERS = ["content-type", "x-csrftoken", "x-branch-id", "idempotency-key"]
+CORS_ALLOW_HEADERS = ["content-type", "x-csrftoken", "x-branch-id", "x-org-id", "idempotency-key"]
 
 if not DEBUG:
+    # Behind nginx, which terminates TLS and sets X-Forwarded-Proto.
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = env_bool("DJANGO_SSL_REDIRECT", True)
+    SECURE_REDIRECT_EXEMPT = [r"^api/v1/health$"]  # container health checks talk plain HTTP
     SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool("DJANGO_HSTS_SUBDOMAINS", True)
+    SECURE_HSTS_PRELOAD = env_bool("DJANGO_HSTS_PRELOAD", False)
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "same-origin"
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin"
+X_FRAME_OPTIONS = "DENY"
+
+# Reverse proxies in front of Django that append to X-Forwarded-For (ims/net.py).
+IMS_TRUSTED_PROXIES = int(os.environ.get("IMS_TRUSTED_PROXIES", 0 if DEBUG else 1))
+
+# TESTING PHASE ONLY: one-click sign-in as any active user, no password or
+# emailed code (accounts.views.TestLoginView). Off by default; only answers
+# requests from private/loopback addresses; every use is audit-logged and the
+# app shows a warning banner while it is on. Never enable on a live server.
+IMS_TEST_LOGIN = env_bool("IMS_TEST_LOGIN", False)
+# Operator console: "Load demo businesses" only where this is on (dev/demo boxes).
+IMS_ALLOW_DEMO_SEED = env_bool("IMS_ALLOW_DEMO_SEED", DEBUG)
+if IMS_TEST_LOGIN:
+    import logging as _logging
+    _logging.getLogger("ims").warning("IMS_TEST_LOGIN is ON: anyone on the local network can sign in as any user")
+
+# Sign-in lockout limits and the roles that need an emailed code are in the
+# console (SystemSettings); business rules are per business (tenancy.BusinessRules).
+
+# Containers log to stdout; security warnings (bad hosts, CSRF failures) included.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "root": {"handlers": ["console"], "level": os.environ.get("IMS_LOG_LEVEL", "INFO")},
+    "loggers": {"django.security": {"handlers": ["console"], "level": "WARNING", "propagate": False}},
+}
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework.authentication.SessionAuthentication"],
@@ -131,31 +184,28 @@ REST_FRAMEWORK = {
 }
 
 # --- Domain configuration ---
+# Cash rounding, discount limit, return approval and stocktake variance are
+# per business (tenancy.BusinessRules, edited in the operator console).
 IMS = {
-    # Returns with a total above this (paisa) need manager approval.
-    "RETURN_APPROVAL_THRESHOLD_PAISA": int(os.environ.get("IMS_RETURN_APPROVAL_THRESHOLD", 500000)),
-    # Stocktake variances (absolute units) above this require a reason.
-    "STOCKTAKE_VARIANCE_REASON_THRESHOLD": int(os.environ.get("IMS_STOCKTAKE_VARIANCE_THRESHOLD", 5)),
     "FONEPAY_EXPIRY_MINUTES": 10,
-    # Cash totals round to this many paisa (100 = nearest rupee); 1 = no rounding.
-    # The difference is stored in Sale.round_adjust_paisa.
-    "CASH_ROUNDING_PAISA": int(os.environ.get("IMS_CASH_ROUNDING_PAISA", 1)),
-    # Cashiers may discount up to this share of the gross (basis points) without approval.
-    "CASHIER_MAX_DISCOUNT_BP": int(os.environ.get("IMS_CASHIER_MAX_DISCOUNT_BP", 500)),
     # Offline login is refused once the cached session is older than this.
     "OFFLINE_LOGIN_MAX_AGE_HOURS": 24,
 }
 
-# FonePay — the official API is not confirmed (design doc §14). The "mock"
-# backend simulates a sandbox; swap in the real client once docs are in hand.
-FONEPAY = {
-    "BACKEND": os.environ.get("FONEPAY_BACKEND", "mock"),
-    "MERCHANT_CODE": os.environ.get("FONEPAY_MERCHANT_CODE", ""),
-    "USERNAME": os.environ.get("FONEPAY_USERNAME", ""),
-    "PASSWORD": os.environ.get("FONEPAY_PASSWORD", ""),
-    "SECRET": os.environ.get("FONEPAY_SECRET", "dev-fonepay-secret"),
-    "BASE_URL": os.environ.get("FONEPAY_BASE_URL", ""),
-}
+# FonePay configuration lives in the DATABASE (Admin → Branches & registers →
+# FonePay): the mode and API address in sales.FonepaySettings, merchant code,
+# username, password and secret per branch in sales.FonepayMerchant (secrets
+# encrypted with CBMS_ENCRYPTION_KEY). Only guard rails stay here, so an admin
+# account cannot weaken them:
+# * demo ("mock") mode lets anyone with pos.sell mark a QR paid, so it is only
+#   selectable on dev servers unless IMS_ALLOW_FONEPAY_MOCK=true;
+# * the live API address must be https on one of these domains, so merchant
+#   credentials can't be sent anywhere else.
+FONEPAY_MOCK_ALLOWED = env_bool("IMS_ALLOW_FONEPAY_MOCK", DEBUG)
+FONEPAY_ALLOWED_HOSTS = env_list("IMS_FONEPAY_HOSTS", "fonepay.com")
+# Signs callbacks from the in-process mock gateway (dev/tests only).
+FONEPAY_MOCK_SECRET = "dev-fonepay-secret"
 
 if len(__import__("sys").argv) > 1 and __import__("sys").argv[1] == "test":
     PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
+

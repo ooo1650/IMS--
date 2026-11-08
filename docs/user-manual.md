@@ -51,5 +51,17 @@ Count the drawer and enter the counted cash. The variance is recorded.
 - **Settings** (org admin): seller name and PAN, invoice series, invoice limits, CBMS login, digital-payment VAT discount (keep it off until IRD publishes the procedure).
 - **Tax categories**: VAT 13%, 5%, zero-rated, exempt, HST… When the budget changes a rate, **add a new rate with its effective date**. Don't edit the old one, because history must stay correct.
 
+## Hardware (per till)
+Set up on each till in **POS → Devices**. Settings are saved in that computer's browser, not on the server. Everything runs in **Chrome or Edge**, over the app's **https** address (or localhost); no extra software is installed.
+
+- **Receipt printer**: choose *USB thermal printer* or *Serial printer* and click **Pair printer**, then **Print test page**. Pick 58 or 80 mm paper. Abbreviated invoices print on the thermal printer with the invoice number as a barcode; full tax invoices and credit notes still open the print dialog (they need Devanagari). To print those without the dialog, start Chrome with `--kiosk-printing`.
+  - *Linux*: if pairing says the printer is in use, run `echo "<bus-port>:1.0" | sudo tee /sys/bus/usb/drivers/usblp/unbind` (or blacklist `usblp`) and add a udev rule giving your user access to the printer.
+  - *Windows*: install the WinUSB driver for the printer with Zadig. The printer then disappears from Windows printers but works from the POS.
+- **Cash drawer**: plug it into the printer's drawer (RJ11/DK) port. It opens after cash sales. Use **Test drawer** to check.
+- **Barcode scanner**: USB or Bluetooth scanners in keyboard mode need no setup. Set the scanner to send **Enter** after each code. Scans work anywhere on the POS screen; a high beep means found, a low beep means the code is unknown. Tap the camera icon in the search box to scan with a phone or tablet camera.
+- **Barcode labels**: Products → tick products → **Print labels**. Choose A4 sticker sheets (65 or 24 per page; *Skip used labels* for part-used sheets) or a label-printer roll. In the print dialog set margins to *None* and scale to *100%*. Products without a manufacturer barcode: edit → **Generate in-store code** (EAN-13 starting with 2).
+- **Customer display**: Devices → **Open customer display**, drag the window to the customer-facing monitor and press F11. It shows the items, total, the FonePay QR while paying, and the change. A serial 2×20 **pole display** can be paired in the same place.
+- Camera scanning works offline only after it has been used once online on that till.
+
 ## Dates
 Every document shows **BS and AD** dates. The fiscal year runs Shrawan 1 – Asar end (FY 2083/84 = 17 Jul 2026 – 16 Jul 2027).

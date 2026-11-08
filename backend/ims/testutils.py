@@ -19,7 +19,7 @@ class World:
     """Two branches, a register each, users per role, three products in stock."""
 
     def __init__(self):
-        self.org = Organization.objects.create(name="Org")
+        self.org = Organization.objects.create(name="Org", code="org")
         self.a = Branch.objects.create(org=self.org, name="A", code="A")
         self.b = Branch.objects.create(org=self.org, name="B", code="B")
         self.reg_a = Register.objects.create(branch=self.a, code="R1", name="Till 1")
@@ -42,11 +42,11 @@ class World:
         u.set_password(PASSWORD)
         u.save()
         for branch, role in roles:
-            UserBranchRole.objects.create(user=u, branch=branch, role=role)
+            UserBranchRole.objects.create(user=u, org=self.org, branch=branch, role=role)
         return u
 
     def product(self, sku, price, rate, inclusive, cost=0, barcode=None):
-        p = Product.objects.create(sku=sku, name=f"Product {sku}", sale_price_paisa=price, cost_price_paisa=cost,
+        p = Product.objects.create(org=self.org, sku=sku, name=f"Product {sku}", sale_price_paisa=price, cost_price_paisa=cost,
                                    tax_rate=rate, tax_inclusive=inclusive)
         if barcode:
             Barcode.objects.create(product=p, code=barcode)

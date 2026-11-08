@@ -113,14 +113,14 @@ def invoice_context(sale, print_log=None):
         "offline": sale.offline, "provisional_ref": sale.provisional_ref,
         "stamp": _stamp(print_log),
         "open_drawer": bool(payment and payment.method == "cash") and (print_log is None or print_log.kind == "original"),
-        "delivery_copy_available": sale.total_paisa > _delivery_limit(),
+        "delivery_copy_available": sale.total_paisa > _delivery_limit(sale.branch.org),
     }
 
 
-def _delivery_limit():
+def _delivery_limit(org):
     from .models import get_settings
 
-    return get_settings().delivery_copy_limit_paisa
+    return get_settings(org).delivery_copy_limit_paisa
 
 
 def credit_note_context(cn, print_log=None):

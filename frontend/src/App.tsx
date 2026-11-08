@@ -17,15 +17,19 @@ const Import = lazy(() => import('./pages/Import'))
 const Admin = lazy(() => import('./pages/Admin'))
 const Compliance = lazy(() => import('./pages/Compliance'))
 const Help = lazy(() => import('./pages/Help'))
+const Account = lazy(() => import('./pages/Account'))
+const CustomerDisplay = lazy(() => import('./pages/CustomerDisplay'))
 
 const PAGES: Record<string, React.ComponentType> = {
   '/pos': Pos, '/dashboard': Dashboard, '/reports': BranchReport, '/sales': Sales, '/products': Products,
   '/inventory': Inventory, '/transfers': Transfers, '/stocktakes': Stocktakes, '/purchasing': Purchasing,
-  '/import': Import, '/admin': Admin, '/compliance': Compliance, '/help': Help,
+  '/import': Import, '/admin': Admin, '/compliance': Compliance, '/help': Help, '/account': Account,
 }
 
 export default function App() {
   const auth = useAuth()
+  // Customer-facing window: no login, it only mirrors the POS in this browser.
+  if (window.location.pathname === '/customer-display') return <Suspense fallback={null}><CustomerDisplay /></Suspense>
   if (auth.loading) return <div className="splash">Loading…</div>
   if (!auth.me) return <Login />
   // Route guards mirror backend permissions for UX only; the API is the authority.

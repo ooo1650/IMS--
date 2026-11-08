@@ -11,9 +11,17 @@ DISCOUNT_TYPES = [(NONE, "none"), (AMOUNT, "amount"), (PERCENT, "percent")]
 
 
 class Customer(models.Model):
-    """Minimal reference entity (§11). branch=NULL means org-wide."""
+    """Minimal reference entity (§11). branch=NULL means the whole business."""
 
+    org = models.ForeignKey("tenancy.Organization", on_delete=models.PROTECT, related_name="customers")
     branch = models.ForeignKey("tenancy.Branch", null=True, blank=True, on_delete=models.PROTECT)
+
+    def save(self, *args, **kwargs):
+        if self.branch_id is not None and not self.org_id:
+            from tenancy.models import Branch
+
+            self.org_id = Branch.objects.filter(pk=self.branch_id).values_list("org_id", flat=True).first()
+        super().save(*args, **kwargs)
     name = models.CharField(max_length=200)
     phone = models.CharField(max_length=40, db_index=True)
     email = models.EmailField(blank=True)
@@ -195,11 +203,6 @@ class SaleLine(AppendOnlyModel):
     def is_issued(self):
         return Sale.objects.filter(pk=self.sale_id).exclude(receipt_number="").exists()
 
-    @property
-    def taxable_value_paisa(self):
-        """Line value before VAT/excise/levy (what the invoice calls the amount)."""
-        return self.line_total_paisa - self.tax_amount_paisa - self.excise_paisa - self.levy_paisa
-
 
 class Payment(AppendOnlyModel):
     CASH, FONEPAY, CARD, WALLET, BANK = "cash", "fonepay", "card", "wallet", "bank"
@@ -369,3 +372,73 @@ class MockFonepayTransaction(models.Model):
     status = models.CharField(max_length=16, default="pending")
     trx_id = models.CharField(max_length=64, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class FonepaySettings(models.Model):
+    """Server-wide FonePay switch and API address (one row per organization).
+    Per-branch credentials are in FonepayMerchant."""
+
+    DISABLED, MOCK, LIVE = "disabled", "mock", "http"
+    MODES = [(DISABLED, "Off"), (MOCK, "Demo (simulated payments)"), (LIVE, "Live")]
+
+    org = models.OneToOneField("tenancy.Organization", on_delete=models.CASCADE, primary_key=True,
+                               related_name="fonepay_settings")
+    mode = models.CharField(max_length=8, choices=MODES, default=DISABLED)
+    base_url = models.URLField(blank=True, help_text="FonePay merchant API address (https)")
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+                                   related_name="+")
+
+
+class FonepayMerchant(models.Model):
+    """FonePay merchant account for one branch. Each branch settles into its
+    own merchant account, so QR payments use that branch's credentials.
+    The password and signing secret are stored encrypted (compliance.crypto)
+    and are never sent back to the browser."""
+
+    branch = models.OneToOneField("tenancy.Branch", on_delete=models.CASCADE, primary_key=True,
+                                  related_name="fonepay_merchant")
+    enabled = models.BooleanField(default=False)
+    merchant_code = models.CharField(max_length=64, blank=True)
+    username = models.CharField(max_length=128, blank=True)
+    password_enc = models.TextField(blank=True)
+    secret_enc = models.TextField(blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+                                   related_name="+")
+
+    def __str__(self):
+        return f"FonePay {self.merchant_code or '-'} @ branch {self.branch_id}"
+
+    @property
+    def password(self):
+        from compliance import crypto
+
+        return crypto.decrypt(self.password_enc)
+
+    @password.setter
+    def password(self, value):
+        from compliance import crypto
+
+        self.password_enc = crypto.encrypt(value)
+
+    @property
+    def secret(self):
+        from compliance import crypto
+
+        return crypto.decrypt(self.secret_enc)
+
+    @secret.setter
+    def secret(self, value):
+        from compliance import crypto
+
+        self.secret_enc = crypto.encrypt(value)
+
+    def missing(self):
+        """Fields still needed before live (http) FonePay can be switched on."""
+        need = {"merchant code": self.merchant_code, "username": self.username,
+                "password": self.password_enc, "secret key": self.secret_enc}
+        return [name for name, value in need.items() if not value]
+
+    def is_complete(self):
+        return not self.missing()

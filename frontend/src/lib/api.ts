@@ -1,11 +1,13 @@
-/** Thin fetch wrapper: session cookie + CSRF header + active branch header. */
+/** Thin fetch wrapper: session cookie + CSRF header + active branch / business headers. */
 
 let activeBranchId: number | null = null
+let activeOrgId: number | null = null
 export function setActiveBranch(id: number | null) {
   activeBranchId = id
 }
-export function getActiveBranch() {
-  return activeBranchId
+/** The active business (a user may work for several). The branch, when set, wins on the server. */
+export function setActiveOrg(id: number | null) {
+  activeOrgId = id
 }
 
 export class ApiError extends Error {
@@ -48,6 +50,7 @@ export async function api<T = unknown>(
   const headers: Record<string, string> = {}
   const branch = opts.branch ?? activeBranchId
   if (branch) headers['X-Branch-Id'] = String(branch)
+  if (activeOrgId) headers['X-Org-Id'] = String(activeOrgId)
   if (method !== 'GET') headers['X-CSRFToken'] = csrfToken()
   let body: BodyInit | undefined
   if (opts.form) body = opts.form

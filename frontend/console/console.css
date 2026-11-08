@@ -1,0 +1,17 @@
+/* Console-only additions on top of the IMS tokens (src/index.css). */
+.console-denied .login-main { grid-column: 1 / -1; align-items: center; }
+.biz-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+.biz-card { display: flex; flex-direction: column; gap: 8px; padding: 20px; text-decoration: none; color: inherit; }
+.biz-card:hover { border-color: var(--border-strong); background: var(--surface-2); }
+.biz-card h2 { margin: 0; }
+.biz-facts { display: flex; gap: 16px; flex-wrap: wrap; font-size: 14px; color: var(--text-secondary); }
+.biz-facts strong { color: var(--text-primary); }
+.job-output { font-family: var(--mono); font-size: 13px; white-space: pre-wrap; background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 12px; max-height: 360px; overflow: auto; margin: 12px 0 0; }
+.role-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.role-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(0, 2fr) auto; gap: 8px; align-items: center; }
+.branch-block { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 16px; margin-bottom: 12px; }
+.branch-block-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.branch-block-head h3 { margin: 0; color: var(--text-primary); }
+.check-grid { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+@media (max-width: 760px) { .role-row { grid-template-columns: 1fr; } }

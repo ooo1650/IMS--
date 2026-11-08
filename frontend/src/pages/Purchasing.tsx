@@ -43,7 +43,7 @@ export default function Purchasing() {
                 <td>{po.expected_at ?? '—'}</td>
               </tr>
             ))}
-            {!items.length && !loading && <tr><td colSpan={6} className="empty">No purchase orders.</td></tr>}
+            {!items.length && !loading && <tr><td colSpan={6} className="empty">No purchase orders</td></tr>}
           </tbody>
         </table>
         <LoadMore more={more} loading={loading} />
@@ -221,7 +221,7 @@ function PurchaseReturns({ manage }: { manage: boolean }) {
       <ErrorBox error={error} />
       <div className="card flush">
         <table className="table">
-          <thead><tr><th>Return no.</th><th>Date (BS)</th><th>Supplier</th><th>Items</th><th className="num">Taxable</th><th className="num">VAT reversed</th><th>Reason</th></tr></thead>
+          <thead><tr><th>Return number</th><th>Date (BS)</th><th>Supplier</th><th>Items</th><th className="num">Taxable</th><th className="num">VAT reversed</th><th>Reason</th></tr></thead>
           <tbody>
             {items.map((r) => (
               <tr key={r.id}>
@@ -230,7 +230,7 @@ function PurchaseReturns({ manage }: { manage: boolean }) {
                 <td className="num">{npr(r.taxable_paisa)}</td><td className="num">{npr(r.vat_paisa)}</td><td>{r.reason}</td>
               </tr>
             ))}
-            {!items.length && !loading && <tr><td colSpan={7} className="empty">No purchase returns.</td></tr>}
+            {!items.length && !loading && <tr><td colSpan={7} className="empty">No purchase returns</td></tr>}
           </tbody>
         </table>
         <LoadMore more={more} loading={loading} />

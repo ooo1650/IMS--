@@ -27,14 +27,16 @@ def HasBranchPerm(*perms):
 
 
 def HasOrgPerm(*perms):
-    """DRF permission: the user holds ``perms`` through an org-scoped role."""
+    """DRF permission: the user holds ``perms`` through a business-wide role in
+    the active business (``request.org``)."""
 
     class _HasOrgPerm(BasePermission):
-        message = "This action needs an org-level role."
+        message = "This action needs a business-wide role in the active business."
 
         def has_permission(self, request, view):
             user = request.user
-            return bool(user and user.is_authenticated and all(user.has_org_perm(p) for p in perms))
+            org = getattr(request._request, "org", None)
+            return bool(user and user.is_authenticated and all(user.has_org_perm(p, org) for p in perms))
 
     _HasOrgPerm.__name__ = f"HasOrgPerm({','.join(perms)})"
     return _HasOrgPerm
@@ -53,12 +55,13 @@ class PerActionPermissionMixin:
 
 
 def can(request, perm, org=False):
-    """Safe for anonymous users. org=True checks org-scoped roles only."""
+    """Safe for anonymous users. org=True checks business-wide roles in the
+    active business only."""
     user = request.user
     if not (user and user.is_authenticated):
         return False
     if org:
-        return user.has_org_perm(perm)
+        return user.has_org_perm(perm, getattr(request, "org", None))
     return user.has_branch_perm(perm, getattr(request, "branch", None))
 
 
@@ -78,3 +81,13 @@ def verify_approver(branch, username, password, perm):
     if approver is None or not approver.has_branch_perm(perm, branch):
         raise PermissionDenied("Approver credentials invalid or lack permission")
     return approver
+
+
+class IsPlatformAdmin(BasePermission):
+    """The operator console: platform admins only (accounts.User.is_platform_admin)."""
+
+    message = "Platform admins only."
+
+    def has_permission(self, request, view):
+        u = request.user
+        return bool(u and u.is_authenticated and u.is_active and u.is_platform_admin)

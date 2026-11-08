@@ -118,7 +118,7 @@ def stock_conflicts(branches, limit=50):
     )
 
 
-def fonepay_mismatches(limit=50):
-    return list(FonepayMismatch.objects.filter(resolved=False)
+def fonepay_mismatches(org, limit=50):
+    return list(FonepayMismatch.objects.filter(resolved=False, branch__org=org)
                 .values("id", "branch__code", "prn", "kind", "detail", "found_at").order_by("-found_at")[:limit])
 

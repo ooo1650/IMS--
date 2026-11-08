@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
-import { DailyBars, InlineBar } from '../components/charts'
-import { Icon, type IconName } from '../components/Icon'
+import { InlineBar } from '../components/charts'
+import SalesAnalytics from '../components/SalesAnalytics'
 import { Badge, ErrorBox, PageHead, fmtDate, useLoad } from '../components/ui'
 import { api } from '../lib/api'
 import { TurnoverMeter } from './Compliance'
@@ -26,13 +26,11 @@ interface DashboardData extends ReportLists {
   fonepay_mismatches: { id: number; branch__code: string | null; prn: string; kind: string; found_at: string }[]
 }
 
-export function Tile({ label, value, sub, tone, icon, iconTone }: {
+export function Tile({ label, value, sub, tone }: {
   label: string; value: string | number; sub?: string; tone?: 'bad' | 'warn'
-  icon?: IconName; iconTone?: 'info' | 'warn' | 'bad' | 'violet'
 }) {
   return (
     <div className={`tile ${tone ? `tile-${tone}` : ''}`}>
-      {icon && <div className={`tile-icon ${iconTone ? `tone-${iconTone}` : ''}`}><Icon name={icon} size={20} /></div>}
       <div className="tile-label">{label}</div>
       <div className="tile-value">{value}</div>
       {sub && <div className="tile-sub">{sub}</div>}
@@ -40,36 +38,35 @@ export function Tile({ label, value, sub, tone, icon, iconTone }: {
   )
 }
 
-function OverviewStat({ icon, tone, label, value }: { icon: IconName; tone?: 'info' | 'warn' | 'bad' | 'violet'; label: string; value: string | number }) {
+export function OverviewStat({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
     <div>
-      <div className={`tile-icon ${tone ? `tone-${tone}` : ''}`}><Icon name={icon} size={18} /></div>
       <div className="overview-row"><strong>{value}</strong><span>{label}</span></div>
+      {sub && <span className="muted small">{sub}</span>}
     </div>
   )
 }
 
-export function trendSeries(trend: Record<string, number | string>[]) {
-  return trend.map((row) => ({
-    date: String(row.date),
-    value: Object.entries(row).reduce((a, [k, v]) => (k === 'date' ? a : a + Number(v)), 0),
-  }))
+/** Exceptions as a quiet list: a number per row, and a status dot only when it needs action. */
+export function AttentionList({ rows }: { rows: { label: string; value: number; tone?: 'warn' | 'bad'; hint?: string }[] }) {
+  return (
+    <ul className="attention">
+      {rows.map((r) => {
+        const flagged = r.value > 0 && r.tone
+        return (
+          <li key={r.label} className={flagged ? `attention-${r.tone}` : ''}>
+            <span>{flagged && <span className="status-dot" aria-hidden />}{r.label}{r.hint && <span className="muted small"> · {r.hint}</span>}</span>
+            <strong className="fig">{r.value}</strong>
+          </li>
+        )
+      })}
+    </ul>
+  )
 }
 
 export function ReportTables({ data }: { data: ReportLists }) {
   return (
     <div className="grid-2">
-      <section className="card">
-        <h2>Top products · 30 days</h2>
-        <table className="table">
-          <thead><tr><th>Product</th><th className="num">Qty</th><th className="num">Revenue</th></tr></thead>
-          <tbody>
-            {data.top_products.map((p) => (
-              <tr key={p.product_id}><td>{p.product__name} <span className="muted small">{p.product__sku}</span></td><td className="num">{p.qty}</td><td className="num">{npr(p.revenue_paisa)}</td></tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
       <section className="card">
         <h2>Low &amp; out of stock</h2>
         <table className="table">
@@ -78,7 +75,7 @@ export function ReportTables({ data }: { data: ReportLists }) {
             {data.low_stock.slice(0, 15).map((i) => (
               <tr key={`${i.branch}-${i.sku}`}><td>{i.branch}</td><td>{i.name}</td><td className={`num ${i.on_hand <= 0 ? 'text-bad' : ''}`}>{i.on_hand}</td><td className="num">{i.reorder_point}</td></tr>
             ))}
-            {!data.low_stock.length && <tr><td colSpan={4} className="empty">All stocked.</td></tr>}
+            {!data.low_stock.length && <tr><td colSpan={4} className="empty">All stocked</td></tr>}
           </tbody>
         </table>
       </section>
@@ -90,7 +87,7 @@ export function ReportTables({ data }: { data: ReportLists }) {
             {data.slow_movers.map((i) => (
               <tr key={`${i.branch}-${i.sku}`}><td>{i.branch}</td><td>{i.name}</td><td className="num">{i.on_hand}</td><td className="num">{npr(i.value_paisa)}</td></tr>
             ))}
-            {!data.slow_movers.length && <tr><td colSpan={4} className="empty">Nothing stale.</td></tr>}
+            {!data.slow_movers.length && <tr><td colSpan={4} className="empty">Nothing stale</td></tr>}
           </tbody>
         </table>
       </section>
@@ -102,7 +99,7 @@ export function ReportTables({ data }: { data: ReportLists }) {
             {data.stock_conflicts.map((s) => (
               <tr key={s.id}><td>{s.branch__code}</td><td><Link to={`/sales?id=${s.id}`}>{s.receipt_number}</Link> {s.offline && <Badge>offline</Badge>}</td><td className="num">{npr(s.total_paisa)}</td><td>{fmtDate(s.paid_at)}</td></tr>
             ))}
-            {!data.stock_conflicts.length && <tr><td colSpan={4} className="empty">None.</td></tr>}
+            {!data.stock_conflicts.length && <tr><td colSpan={4} className="empty">None</td></tr>}
           </tbody>
         </table>
       </section>
@@ -122,28 +119,26 @@ export default function Dashboard() {
         <section className="card">
           <h2>Sales overview</h2>
           <div className="overview">
-            <OverviewStat icon="coins" label="Today" value={npr(data.totals.today)} />
-            <OverviewStat icon="trending" tone="info" label="This week" value={npr(data.totals.week)} />
-            <OverviewStat icon="chart" tone="violet" label="This month" value={npr(data.totals.month)} />
-            <OverviewStat icon="boxes" tone="warn" label="Inventory value" value={npr(data.totals.inventory_value_paisa)} />
+            <OverviewStat label="Today" value={npr(data.totals.today)} />
+            <OverviewStat label="This week" value={npr(data.totals.week)} />
+            <OverviewStat label="This month" value={npr(data.totals.month)} />
+            <OverviewStat label="Inventory value" value={npr(data.totals.inventory_value_paisa)} />
           </div>
         </section>
         <section className="card">
           <h2>Needs attention</h2>
-          <div className="overview">
-            <OverviewStat icon="alert" tone="warn" label="Low stock" value={data.totals.low_stock} />
-            <OverviewStat icon="truck" tone="info" label="POs pending" value={data.totals.pending_pos} />
-          </div>
+          <AttentionList rows={[
+            { label: 'Stock conflicts', value: data.totals.stock_conflicts, tone: 'bad', hint: 'oversold' },
+            { label: 'FonePay mismatches', value: data.fonepay_mismatches.length, tone: 'bad' },
+            { label: 'Sales to review', value: data.branches.reduce((a, b) => a + b.needs_review, 0), tone: 'warn' },
+            { label: 'Low stock', value: data.totals.low_stock, tone: 'warn' },
+            { label: 'Purchase orders pending', value: data.totals.pending_pos },
+          ]} />
         </section>
       </div>
-      <div className="tiles">
-        <Tile icon="x" iconTone="bad" label="Stock conflicts" value={data.totals.stock_conflicts} tone={data.totals.stock_conflicts ? 'bad' : undefined} sub="sales that oversold stock" />
-        <Tile icon="qr" iconTone="violet" label="FonePay mismatches" value={data.fonepay_mismatches.length} tone={data.fonepay_mismatches.length ? 'bad' : undefined} sub="reconciliation" />
-        <Tile icon="store" label="Branches" value={data.branches.length} sub={`${data.branches.reduce((a, b) => a + b.needs_review, 0)} sales need review`} />
-      </div>
-      <section className="card">
-        <DailyBars data={trendSeries(data.trend)} label="Sales per day · last 14 days" />
-      </section>
+      <h2 className="section-title">Sales analytics</h2>
+      <SalesAnalytics branches={data.branches.map((b) => ({ id: b.branch_id, code: b.code, name: b.name }))} />
+      <h2 className="section-title">Branches &amp; stock</h2>
       <TurnoverMeter />
       <section className="card">
         <h2>Branch comparison</h2>
@@ -152,7 +147,7 @@ export default function Dashboard() {
             <thead>
               <tr>
                 <th>Branch</th><th className="num">Today</th><th className="num">Week</th><th>Month</th>
-                <th className="num">Inventory</th><th className="num">Low</th><th className="num">Neg.</th><th className="num">Conflicts</th><th className="num">Review</th>
+                <th className="num">Inventory</th><th className="num">Low</th><th className="num">Negative</th><th className="num">Conflicts</th><th className="num">Review</th>
               </tr>
             </thead>
             <tbody>

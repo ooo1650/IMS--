@@ -7,7 +7,7 @@ Money is integer paisa everywhere; every document carries BS and AD dates.
 ```
 backend/   Django 5.2 + DRF       accounts · tenancy · catalog · inventory · sales · purchasing · reporting · admin_extras · compliance
 frontend/  React 19 + TS + Vite   POS (online + offline PWA) · dashboard · inventory · purchasing · admin
-deploy/    Caddyfile, nginx.conf, crontab, backup.sh, restore-drill.sh
+deploy/    nginx/, certbot-loop.sh, web.Dockerfile, crontab, backup.sh, restore-drill.sh
 docs/      IRD questions, compliance checklist, onboarding, templates, user manual
 ```
 
@@ -123,8 +123,8 @@ These are still **open questions** from §25 of the doc, and the code is built s
 1. **FonePay API is unverified.** `sales/fonepay.py::HttpFonepayGateway` follows the
    community-library shape (HMAC-SHA512, poll by PRN). Field names, URLs and the
    callback signature format (`prn,status,amount,trx_id`) are **placeholders**:
-   confirm them against the bank's official docs and sandbox before you set
-   `FONEPAY_BACKEND=http`. `settlement_report` isn't implemented yet.
+   confirm them against the bank's official docs and sandbox before you switch FonePay
+   to Live (Admin → Branches & registers → FonePay). `settlement_report` isn't implemented yet.
 2. **IRD receipt numbering.** Now per branch + fiscal year (payment.md). Offline tills print
    a provisional slip and the invoice is issued on sync — confirm with IRD (ird-questions D),
    or switch to per-register series in Settings.
@@ -146,11 +146,6 @@ These are still **open questions** from §25 of the doc, and the code is built s
 
 ## Deploy
 
-- `backend/.env.example` → `backend/.env` (secrets never go in the repo).
-- `cd frontend && npm run build`, then `docker compose --profile release run --rm migrate && docker compose up -d`.
-- Caddy serves the SPA + proxies `/api`. `deploy/nginx.conf` is an alternative and includes login/POS rate limits.
-- Install `deploy/crontab` (expiry every minute, FonePay reconciliation daily, stock reconciliation nightly).
-- **Backups:** the compose file turns on WAL archiving. Add nightly `pg_basebackup` and
-  a **weekly restore drill**: restore into a throwaway instance, boot it, ring up
-  a sale. Targets are RPO < 15 min and RTO < 1 h.
+Docker: `cp .env.example .env`, fill it in, `docker compose up -d --build`. Full guide in `docs/DEPLOYMENT.md`; security controls in `docs/SECURITY.md`.
+
 - Measure checkout P95 (< 500 ms) with a load test before launch.

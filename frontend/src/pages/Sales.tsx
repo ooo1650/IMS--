@@ -46,7 +46,7 @@ export default function Sales() {
             {items.map((s) => (
               <tr key={s.id} className="clickable" onClick={() => setParams({ id: String(s.id) })}>
                 <td className="mono">{s.receipt_number || <span className="muted">—</span>}</td>
-                <td>{s.invoice_type === 'full' ? <Badge tone="info">Tax invoice</Badge> : s.invoice_type ? <Badge>Abbreviated</Badge> : ''}</td>
+                <td>{s.invoice_type === 'full' ? 'Tax invoice' : s.invoice_type ? 'Abbreviated' : ''}</td>
                 <td><Status value={s.status === 'voided' && s.receipt_number ? 'cancelled' : s.status} /></td>
                 <td>{s.issued_bs || fmtDate(s.paid_at ?? s.opened_at)}</td>
                 <td>{s.buyer_name}</td>
@@ -62,7 +62,7 @@ export default function Sales() {
                 </td>
               </tr>
             ))}
-            {!items.length && !loading && <tr><td colSpan={9} className="empty">No sales.</td></tr>}
+            {!items.length && !loading && <tr><td colSpan={9} className="empty">No sales</td></tr>}
           </tbody>
         </table>
         <LoadMore more={more} loading={loading} />

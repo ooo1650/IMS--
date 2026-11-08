@@ -10,7 +10,7 @@ from purchasing.models import PurchaseOrder, PurchaseOrderLine
 class PurchasingTests(TestCase):
     def setUp(self):
         self.w = World()
-        self.po = PurchaseOrder.objects.create(branch=self.w.a, supplier=Supplier.objects.create(name="S"),
+        self.po = PurchaseOrder.objects.create(branch=self.w.a, supplier=Supplier.objects.create(org=self.w.org, name="S"),
                                                created_by=self.w.manager_a)
         self.line = PurchaseOrderLine.objects.create(po=self.po, product=self.w.p1, qty_ordered=10,
                                                      unit_cost_paisa=8000)

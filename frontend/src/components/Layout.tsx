@@ -27,6 +27,7 @@ export const NAV: NavItem[] = [
   { to: '/compliance', label: 'Tax & IRD', icon: 'landmark', group: 'Insights', subtitle: 'VAT registers, CBMS and fiscal years', show: (a) => a.can('reports.view') || a.canOrg('reports.view') || a.canOrg('dashboard.view') },
   { to: '/import', label: 'Import', icon: 'upload', group: 'Admin', subtitle: 'Bulk-load products and stock', show: (a) => a.can('import.run') || a.canOrg('catalog.manage') },
   { to: '/admin', label: 'Users & access', icon: 'shield', group: 'Admin', subtitle: 'Users, roles, branches and audit log', show: (a) => a.canOrg('users.manage') || a.canOrg('branches.manage') || a.can('audit.view') },
+  { to: '/account', label: 'My account', icon: 'user', group: 'Admin', subtitle: 'Password, email and sign-in code', show: () => true },
   { to: '/help', label: 'Help', icon: 'help', group: 'Admin', subtitle: 'User manual', show: () => true },
 ]
 
@@ -40,16 +41,41 @@ export function Layout() {
   const pending = queue.length
   const errors = queue.filter((q) => q.status === 'error').length
   const items = NAV.filter((n) => n.show(auth))
-  const current = items.find((n) => location.pathname.startsWith(n.to))
   const roleLabel = auth.me?.org_role ?? auth.branch?.role ?? ''
 
   return (
     <div className="shell">
       <aside className="sidebar">
         <div className="brand">
-          <span className="brand-mark" aria-hidden><Icon name="layers" size={20} /></span>
-          <span className="brand-text">IMS<span className="brand-sub">Inventory &amp; POS</span></span>
+          <span className="brand-mark" aria-hidden><Icon name="receipt" size={20} /></span>
+          <span className="brand-text">IMS<span className="brand-sub">{auth.me?.active_org_name ?? 'Inventory & POS'}</span></span>
         </div>
+        {(auth.me?.businesses.length ?? 0) > 1 && (
+          <label className="branch-pick">
+            <Icon name="landmark" size={16} />
+            <select className="branch-select" aria-label="Business" value={auth.me?.active_org_id ?? ''}
+              onChange={(e) => void auth.selectBusiness(Number(e.target.value))}>
+              {!auth.me?.active_org_id && <option value="">Select business</option>}
+              {auth.me?.businesses.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+          </label>
+        )}
+        <label className="branch-pick">
+          <Icon name="store" size={16} />
+          <select
+            className="branch-select"
+            aria-label="Active branch"
+            value={auth.branch?.id ?? ''}
+            onChange={(e) => void auth.selectBranch(Number(e.target.value))}
+          >
+            {!auth.branch && <option value="">Select branch</option>}
+            {auth.me?.branches.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.code} — {b.name}
+              </option>
+            ))}
+          </select>
+        </label>
         {GROUPS.map((g) => {
           const links = items.filter((n) => n.group === g)
           if (!links.length) return null
@@ -59,7 +85,7 @@ export function Layout() {
               <nav>
                 {links.map((n) => (
                   <NavLink key={n.to} to={n.to} className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
-                    <Icon name={n.icon} /> {n.label}
+                    <Icon name={n.icon} size={16} /> {n.label}
                   </NavLink>
                 ))}
               </nav>
@@ -67,52 +93,35 @@ export function Layout() {
           )
         })}
         <div className="sidebar-foot">
-          <span className="avatar">{initials(auth.me?.name || auth.me?.username)}</span>
-          <div className="sidebar-user">
-            <strong>{auth.me?.name || auth.me?.username}</strong>
-            <span>{roleLabel.replace(/([a-z])([A-Z])/g, '$1 $2')}</span>
+          <div className="status-line" role="status">
+            <span className={`status-dot ${online ? '' : 'off'}`} aria-hidden />
+            {online ? 'Online' : 'Offline'}
+            {pending > 0 && <span className={errors ? 'bad' : 'warn'} title="Offline sales waiting to sync">· {pending} queued{errors ? `, ${errors} failed` : ''}</span>}
+            {auth.offlineSession && <span className="warn">· offline sign-in</span>}
           </div>
-          <button className="icon-btn" title="Log out" aria-label="Log out" onClick={() => void auth.logout()}>
-            <Icon name="logout" />
-          </button>
+          <div className="sidebar-me">
+            <span className="avatar">{initials(auth.me?.name || auth.me?.username)}</span>
+            <NavLink to="/account" className="sidebar-user" title="My account">
+              <strong>{auth.me?.name || auth.me?.username}</strong>
+              <span>{roleLabel.replace(/([a-z])([A-Z])/g, '$1 $2')}</span>
+            </NavLink>
+            <button className="icon-btn" title="Log out" aria-label="Log out" onClick={() => void auth.logout()}>
+              <Icon name="logout" size={16} />
+            </button>
+          </div>
         </div>
       </aside>
       <div className="main">
-        <header className="topbar">
-          <div className="topbar-title">
-            <strong>{current?.label ?? 'IMS'}</strong>
-            {current && <span>{current.subtitle}</span>}
-          </div>
-          <div className="topbar-right">
-            {pending > 0 && (
-              <span className={`pill ${errors ? 'pill-bad' : 'pill-warn'}`} title="Offline sales waiting to sync">
-                <Icon name="sync" size={13} /> {pending} queued{errors ? ` · ${errors} failed` : ''}
-              </span>
-            )}
-            <span className={`pill ${online ? 'pill-good' : 'pill-bad'}`}>
-              <span className="dot" /> {online ? 'Online' : 'Offline'}
-            </span>
-            {auth.offlineSession && <span className="pill pill-warn">Offline login</span>}
-            <label className="branch-pick">
-              <Icon name="store" size={16} />
-              <select
-                className="branch-select"
-                aria-label="Active branch"
-                value={auth.branch?.id ?? ''}
-                onChange={(e) => void auth.selectBranch(Number(e.target.value))}
-              >
-                {!auth.branch && <option value="">Select branch…</option>}
-                {auth.me?.branches.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.code} — {b.name} ({b.role})
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-        </header>
         <main className="content">
-          {auth.branch || auth.me?.org_role ? <ErrorBoundary key={location.pathname}><Outlet /></ErrorBoundary> : <div className="empty">Select a branch to continue.</div>}
+          {auth.me?.test_login && (
+            <div className="alert alert-warn test-login-banner" role="status">
+              Test sign-in is on: anyone on this network can sign in as any user. Set <code>IMS_TEST_LOGIN=false</code> before real use
+            </div>
+          )}
+          {auth.branch || auth.me?.org_role ? <ErrorBoundary key={location.pathname}><Outlet /></ErrorBoundary>
+            : auth.me?.is_platform_admin && !auth.me.businesses.length
+              ? <div className="empty">This is an operator account. Businesses, branches and admin accounts are managed in the operator console</div>
+              : <div className="empty">Select a branch to continue</div>}
         </main>
       </div>
     </div>

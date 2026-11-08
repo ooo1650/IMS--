@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.db import transaction
 from django.db.models import Prefetch, Q
 from django.http import Http404
 from rest_framework import mixins, serializers, status, viewsets
@@ -8,16 +9,19 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.permissions import HasBranchPerm, can, require_branch_perm
+from accounts.permissions import HasBranchPerm, HasOrgPerm, can, require_branch_perm
 from admin_extras.models import log_action
 from ims.api import BranchScopedMixin
-from tenancy.models import Register
+from tenancy.models import Branch, Register, rules_for
 
 from compliance import documents
 from compliance.models import get_settings
 
 from . import fonepay, services
-from .models import CashierShift, CreditNote, Customer, DebitNote, HeldCart, Payment, PrintLog, Sale, SaleLine
+from .models import (
+    CashierShift, CreditNote, Customer, DebitNote, FonepayMerchant, FonepaySettings, HeldCart, Payment, PrintLog, Sale,
+    SaleLine,
+)
 from .numbering import fiscal_year_for, local_today, next_number, receipt_gaps, series_mode
 from .serializers import (
     CashCheckoutIn, CreditNoteSerializer, CustomerSerializer, DebitNoteSerializer, FonepayInitiateIn,
@@ -56,24 +60,25 @@ class PosConfigView(APIView):
         registers = Register.objects.filter(branch=branch, is_active=True)
         fy = fiscal_year_for(local_today(branch))
         shifts = {s.register_id: s for s in CashierShift.objects.filter(branch=branch, status=CashierShift.OPEN)}
-        cfg = get_settings()
         org = branch.org
+        cfg = get_settings(org)
+        rules = rules_for(org)
         return Response({
             "branch": {"id": branch.id, "code": branch.code, "name": branch.name, "address": branch.address,
                        "timezone": branch.timezone},
             "seller": {"name": org.name, "name_np": org.name_np, "pan": org.pan},
             "fiscal_year": fy,
-            "invoice_series": series_mode(),
+            "invoice_series": series_mode(branch),
             "abbreviated_invoice_limit_paisa": cfg.abbreviated_invoice_limit_paisa,
             "delivery_copy_limit_paisa": cfg.delivery_copy_limit_paisa,
             "digital_vat_discount_bp": cfg.digital_vat_discount_bp if cfg.digital_vat_discount_enabled else 0,
             "digital_vat_discount_methods": (cfg.digital_vat_discount_methods or ["fonepay", "card", "wallet", "bank"])
             if cfg.digital_vat_discount_enabled else [],
-            "cash_rounding_paisa": settings.IMS["CASH_ROUNDING_PAISA"],
-            "cashier_max_discount_bp": settings.IMS["CASHIER_MAX_DISCOUNT_BP"],
-            "return_approval_threshold_paisa": settings.IMS["RETURN_APPROVAL_THRESHOLD_PAISA"],
+            "cash_rounding_paisa": rules.cash_rounding_paisa,
+            "cashier_max_discount_bp": rules.cashier_max_discount_bp,
+            "return_approval_threshold_paisa": rules.return_approval_threshold_paisa,
             "offline_login_max_age_hours": settings.IMS["OFFLINE_LOGIN_MAX_AGE_HOURS"],
-            "fonepay_backend": settings.FONEPAY["BACKEND"],
+            "fonepay_backend": fonepay.branch_backend(branch),
             "registers": [
                 {
                     "id": r.id, "code": r.code, "name": r.name, "printer_driver": r.printer_driver,
@@ -181,12 +186,14 @@ class FonepayCallbackView(APIView):
     authentication_classes = []
 
     def post(self, request):
-        prn = request.data.get("prn", "")
+        prn = str(request.data.get("prn", ""))
         message = ",".join(str(request.data.get(k, "")) for k in ("prn", "status", "amount", "trx_id"))
-        if not fonepay.verify_signature(message, request.data.get("signature", "")):
+        # Each branch has its own merchant, so the signing key depends on whose payment this is.
+        payment = Payment.objects.filter(fonepay_prn=prn).select_related("sale__branch").first() if prn else None
+        secret = fonepay.callback_secret(payment.sale.branch if payment else None)
+        if not fonepay.verify_signature(message, request.data.get("signature", ""), secret):
             log_action(None, "fonepay.callback_bad_signature", request=request, prn=prn)
             return Response({"detail": "bad signature"}, status=400)
-        payment = Payment.objects.filter(fonepay_prn=prn).first()
         if payment is None:
             return Response({"detail": "unknown prn"}, status=404)
         sale = services.refresh_fonepay_status(payment.sale)
@@ -199,7 +206,7 @@ class FonepayMockPayView(APIView):
     permission_classes = [HasBranchPerm("pos.sell")]
 
     def post(self, request, prn):
-        if settings.FONEPAY["BACKEND"] != "mock":
+        if request.branch is None or fonepay.server_mode(request.branch.org) != "mock":
             raise Http404
         payment = Payment.objects.filter(fonepay_prn=prn, sale__branch=request.branch).first()
         if payment is None:
@@ -227,7 +234,7 @@ class OfflineSyncView(APIView):
             client_total_paisa=d.get("client_total_paisa"), offline_discount_approved=d["offline_discount_approved"],
             provisional_ref=d["provisional_ref"], request=request,
         )
-        gaps = receipt_gaps(request.branch, register, d["fiscal_year"]) if series_mode() == "register" else []
+        gaps = receipt_gaps(request.branch, register, d["fiscal_year"]) if series_mode(request.branch) == "register" else []
         return sale_response(sale, created, receipt_gaps=gaps)
 
 
@@ -370,15 +377,18 @@ class CustomerViewSet(BranchScopedMixin, viewsets.ModelViewSet):
     http_method_names = ["get", "post", "patch"]
 
     def get_queryset(self):
-        qs = Customer.objects.filter(Q(branch=self.request.branch) | Q(branch__isnull=True))
         if self.request.branch is None:
-            return qs.none()
+            return Customer.objects.none()
+        # This branch's customers and the business-wide ones; never another business's.
+        qs = Customer.objects.filter(org_id=self.request.branch.org_id).filter(
+            Q(branch=self.request.branch) | Q(branch__isnull=True))
         if q := self.request.query_params.get("q"):
             qs = qs.filter(Q(name__icontains=q) | Q(phone__icontains=q))
         return qs
 
     def perform_create(self, serializer):
-        serializer.save(branch=self.request.branch if not self.request.data.get("org_wide") else None)
+        serializer.save(org=self.request.branch.org,
+                        branch=self.request.branch if not self.request.data.get("org_wide") else None)
 
 
 class HeldCartViewSet(BranchScopedMixin, mixins.CreateModelMixin, mixins.ListModelMixin, mixins.DestroyModelMixin,
@@ -407,3 +417,200 @@ class ReceiptGapsView(APIView):
         fy = request.query_params.get("fiscal_year") or fiscal_year_for(local_today(request.branch))
         return Response({"register": register.code, "fiscal_year": fy,
                          "gaps": receipt_gaps(request.branch, register, fy)})
+
+
+class FonepayMerchantSerializer(serializers.ModelSerializer):
+    """Secrets are write-only: blank keeps the stored value, ``clear_*`` removes it."""
+
+    branch_code = serializers.CharField(source="branch.code", read_only=True)
+    branch_name = serializers.CharField(source="branch.name", read_only=True)
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True, max_length=256,
+                                     trim_whitespace=False)
+    secret = serializers.CharField(write_only=True, required=False, allow_blank=True, max_length=512,
+                                   trim_whitespace=False)
+    clear_password = serializers.BooleanField(write_only=True, required=False, default=False)
+    clear_secret = serializers.BooleanField(write_only=True, required=False, default=False)
+    password_set = serializers.SerializerMethodField()
+    secret_set = serializers.SerializerMethodField()
+    missing = serializers.SerializerMethodField()
+    status = serializers.SerializerMethodField()
+    updated_by_name = serializers.CharField(source="updated_by.username", read_only=True, default=None)
+
+    class Meta:
+        model = FonepayMerchant
+        fields = ["branch", "branch_code", "branch_name", "enabled", "merchant_code", "username", "password",
+                  "secret", "clear_password", "clear_secret", "password_set", "secret_set", "missing", "status",
+                  "updated_at", "updated_by_name"]
+        read_only_fields = ["branch", "updated_at"]
+
+    def get_password_set(self, obj):
+        return bool(obj.password_enc)
+
+    def get_secret_set(self, obj):
+        return bool(obj.secret_enc)
+
+    def get_missing(self, obj):
+        return obj.missing()
+
+    def get_status(self, obj):
+        """What the till sees at this branch: disabled / mock / http."""
+        return fonepay.branch_backend(obj.branch)
+
+    def validate_merchant_code(self, v):
+        v = v.strip()
+        if v and not v.replace("-", "").replace("_", "").isalnum():
+            raise serializers.ValidationError("Use letters, digits, - and _ only.")
+        return v
+
+    def validate_username(self, v):
+        return v.strip()
+
+    def validate(self, data):
+        m = self.instance
+        merged = FonepayMerchant(
+            merchant_code=data.get("merchant_code", m.merchant_code if m else ""),
+            username=data.get("username", m.username if m else ""),
+            password_enc="" if data.get("clear_password") else ("x" if data.get("password") or (m and m.password_enc) else ""),
+            secret_enc="" if data.get("clear_secret") else ("x" if data.get("secret") or (m and m.secret_enc) else ""),
+        )
+        enabled = data.get("enabled", m.enabled if m else False)
+        org = self.context.get("org")
+        if enabled and fonepay.server_mode(org) == "http" and merged.missing():
+            raise serializers.ValidationError(
+                {"enabled": f"Fill in {', '.join(merged.missing())} before switching FonePay on."})
+        return data
+
+    def save_to(self, merchant, user):
+        d = dict(self.validated_data)
+        password, secret = d.pop("password", ""), d.pop("secret", "")
+        clear_password, clear_secret = d.pop("clear_password", False), d.pop("clear_secret", False)
+        for k, v in d.items():
+            setattr(merchant, k, v)
+        changed = []
+        if clear_password:
+            merchant.password_enc, changed = "", changed + ["password cleared"]
+        elif password:
+            merchant.password, changed = password, changed + ["password"]
+        if clear_secret:
+            merchant.secret_enc, changed = "", changed + ["secret cleared"]
+        elif secret:
+            merchant.secret, changed = secret, changed + ["secret"]
+        merchant.updated_by = user
+        merchant.save()
+        return merchant, changed
+
+
+# --- FonePay per business. The helpers take the business explicitly so the IMS
+# admin screen (request.org) and the operator console (any business) share them.
+
+def merchant_rows(org):
+    branches = Branch.objects.filter(org=org).order_by("name")
+    saved = {m.branch_id: m for m in FonepayMerchant.objects.filter(branch__org=org).select_related("branch", "updated_by")}
+    return [saved.get(b.id) or FonepayMerchant(branch=b) for b in branches]
+
+
+def merchant_for_branch(org, branch_pk):
+    branch = Branch.objects.filter(org=org, pk=branch_pk).first()
+    if branch is None:
+        raise Http404
+    return FonepayMerchant.objects.select_related("branch", "updated_by").filter(branch=branch).first() \
+        or FonepayMerchant(branch=branch)
+
+
+def save_merchant(request, org, branch_pk, partial):
+    with transaction.atomic():
+        merchant = merchant_for_branch(org, branch_pk)
+        s = FonepayMerchantSerializer(merchant if merchant.pk and not merchant._state.adding else None,
+                                      data=request.data, partial=partial, context={"org": org})
+        s.is_valid(raise_exception=True)
+        merchant, changed = s.save_to(merchant, request.user)
+        if changed:  # the audit trail masks secrets, so record that they changed
+            log_action(request.user, "fonepay.credentials_changed", merchant, merchant.branch, request, fields=changed)
+    return merchant
+
+
+def fonepay_settings_payload(org):
+    mode, base_url = fonepay.server_settings(org)
+    row = FonepaySettings.objects.select_related("updated_by").filter(org=org).first()
+    return {
+        "backend": mode, "base_url": base_url, "base_url_set": bool(base_url),
+        "mock_allowed": settings.FONEPAY_MOCK_ALLOWED, "allowed_hosts": settings.FONEPAY_ALLOWED_HOSTS,
+        "updated_at": row.updated_at if row else None,
+        "updated_by_name": row.updated_by.username if row and row.updated_by else None,
+    }
+
+
+class FonepaySettingsIn(serializers.Serializer):
+    mode = serializers.ChoiceField([c for c, _ in FonepaySettings.MODES], required=False)
+    base_url = serializers.CharField(required=False, allow_blank=True, max_length=200, trim_whitespace=True)
+
+    def validate_base_url(self, v):
+        if v and not fonepay.allowed_api_url(v):
+            raise serializers.ValidationError(
+                f"Use an https address on {', '.join(settings.FONEPAY_ALLOWED_HOSTS)} "
+                "(the server's IMS_FONEPAY_HOSTS setting).")
+        return v.rstrip("/")
+
+    def validate(self, data):
+        current = FonepaySettings.objects.filter(org=self.context["org"]).first()
+        mode = data.get("mode", current.mode if current else FonepaySettings.DISABLED)
+        base_url = data.get("base_url", current.base_url if current else "")
+        if mode == FonepaySettings.MOCK and not settings.FONEPAY_MOCK_ALLOWED:
+            raise serializers.ValidationError(
+                {"mode": "Demo mode lets anyone at the till mark a QR as paid, so this server doesn't allow it "
+                         "(IMS_ALLOW_FONEPAY_MOCK)."})
+        if mode == FonepaySettings.LIVE and not base_url:
+            raise serializers.ValidationError({"base_url": "Enter the FonePay API address before going live."})
+        return data
+
+
+def save_fonepay_settings(request, org):
+    s = FonepaySettingsIn(data=request.data, context={"org": org})
+    s.is_valid(raise_exception=True)
+    with transaction.atomic():
+        row, _ = FonepaySettings.objects.select_for_update().get_or_create(org=org)
+        for k, v in s.validated_data.items():
+            setattr(row, k, v)
+        row.updated_by = request.user
+        row.save()
+    return fonepay_settings_payload(org)
+
+
+class FonepayMerchantViewSet(viewsets.ViewSet):
+    """Business admins: one FonePay merchant account per branch of the active business.
+
+    GET  fonepay-merchants/        every branch, with its merchant (or blanks)
+    GET  fonepay-merchants/<branch>/
+    PUT/PATCH fonepay-merchants/<branch>/   create or update (partial)
+    """
+
+    def get_permissions(self):
+        return [HasOrgPerm("branches.manage")()]
+
+    def list(self, request):
+        return Response({**fonepay_settings_payload(request.org),
+                         "results": FonepayMerchantSerializer(merchant_rows(request.org), many=True).data})
+
+    def retrieve(self, request, pk=None):
+        return Response(FonepayMerchantSerializer(merchant_for_branch(request.org, pk)).data)
+
+    def update(self, request, pk=None, partial=False):
+        return Response(FonepayMerchantSerializer(save_merchant(request, request.org, pk, partial)).data)
+
+    def partial_update(self, request, pk=None):
+        return self.update(request, pk, partial=True)
+
+
+class FonepaySettingsView(APIView):
+    """Business admins: FonePay on/off/demo and its API address for the active business.
+
+    GET fonepay-settings · PATCH fonepay-settings {mode?, base_url?}
+    """
+
+    permission_classes = [HasOrgPerm("branches.manage")]
+
+    def get(self, request):
+        return Response(fonepay_settings_payload(request.org))
+
+    def patch(self, request):
+        return Response(save_fonepay_settings(request, request.org))

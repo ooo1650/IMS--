@@ -5,7 +5,7 @@
 ```
  Browser (React + TS PWA)                        Server (one VM, Nepal)
  ┌──────────────────────────────┐   HTTPS        ┌─────────────────────────────────────────┐
- │ POS · Sales · Inventory ·    │  same origin   │ Caddy / nginx                            │
+ │ POS · Sales · Inventory ·    │  same origin   │ nginx (+ certbot)                        │
  │ Purchasing · Tax & IRD ·     │ ─────────────▶ │  /        → static SPA (frontend/dist)   │
  │ Dashboard · Admin · Help     │  session +     │  /api/*   → gunicorn → Django + DRF      │
  │                              │  CSRF cookie   │                                         │
@@ -67,7 +67,7 @@ idempotency check → open shift? → price_cart (tax_profile on today's date, b
 Then the frontend calls `POST /sales/{id}/print/`. `record_print` writes a PrintLog (original or copy n), and the server returns the HTML.
 
 ### 4.2 FonePay QR — `initiate_fonepay` → `commit_fonepay`
-Initiate creates an *open* Sale and an *initiated* Payment and asks the gateway for a QR. **No stock locks during the wait.** The POS polls `payment-status`, which polls FonePay by PRN (a callback is also supported). On success: amount check (a mismatch marks it `payment_orphan`) → decrement stock (a shortage sets `stock_conflict`, it's not rejected) → `_issue`. `expire_open_sales` (cron) does a final poll, then voids. The real FonePay API is unconfirmed; `FONEPAY_BACKEND=mock` is the default.
+Initiate creates an *open* Sale and an *initiated* Payment and asks the gateway for a QR. **No stock locks during the wait.** The POS polls `payment-status`, which polls FonePay by PRN (a callback is also supported). On success: amount check (a mismatch marks it `payment_orphan`) → decrement stock (a shortage sets `stock_conflict`, it's not rejected) → `_issue`. `expire_open_sales` (cron) does a final poll, then voids. The real FonePay API is unconfirmed. The mode (off/demo/live), API address and per-branch merchant credentials are stored in the database (`FonepaySettings`, `FonepayMerchant`) and edited under Admin → Branches & registers; demo mode is the default only where `IMS_ALLOW_FONEPAY_MOCK` (dev).
 
 ### 4.3 Offline cash — `frontend/src/lib/{offline,sync}.ts` + `sync_offline_sale`
 - The PWA caches the catalog (no cost prices), the POS config and a PBKDF2 login hash (valid 24 h).
@@ -104,7 +104,7 @@ Outbox row created in the document's transaction → cron `cbms_sync` every minu
 - `pages/*`: one file per screen. `Pos.tsx` is the largest (cart, buyer, payments, offline, returns, shifts).
 
 ## 6. Deployment
-`docker-compose.yml` runs `db` (Postgres 16 with WAL archiving), `backend` (gunicorn) and `web` (Caddy serving the SPA and proxying the API). Migrations run as a release step (`--profile release`). Cron jobs live in `deploy/crontab`: CBMS sync, expiry, FonePay reconciliation, stock reconciliation, auditor view refresh, backup, weekly restore drill. Secrets go in `backend/.env` (see `.env.example`).
+`docker-compose.yml` runs `db` (Postgres 16 with WAL archiving), `backend` (gunicorn) and `web` (nginx serving the SPA and proxying the API; `certbot` keeps its Let's Encrypt certificate renewed). Migrations run as a release step (`--profile release`). Cron jobs live in `deploy/crontab`: CBMS sync, expiry, FonePay reconciliation, stock reconciliation, auditor view refresh, backup, weekly restore drill. Secrets go in `backend/.env` (see `.env.example`).
 
 ## 7. Decisions worth knowing
 - Session auth instead of JWT: one first-party SPA, and revocation is instant (`is_active=False` takes effect on the next request).

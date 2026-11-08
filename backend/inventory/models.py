@@ -21,10 +21,6 @@ class InventoryItem(models.Model):
         unique_together = [("branch", "product")]
         indexes = [models.Index(fields=["branch", "product"])]
 
-    @property
-    def is_low(self):
-        return self.quantity_on_hand <= self.reorder_point
-
 
 class StockMovement(models.Model):
     PURCHASE_IN = "purchase_in"

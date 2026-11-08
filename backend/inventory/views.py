@@ -128,6 +128,9 @@ class TransferSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Cannot transfer to the same branch")
         if not branch.is_active:
             raise serializers.ValidationError("Destination branch is inactive")
+        if branch.org_id != self.context["request"].branch.org_id:
+            # Moving stock to another business is a sale between businesses, not a transfer.
+            raise serializers.ValidationError("Transfers stay within one business")
         return branch
 
     def validate_lines(self, lines):
@@ -229,7 +232,9 @@ class StocktakeViewSet(BranchScopedMixin, mixins.ListModelMixin, mixins.Retrieve
     def create(self, request):
         category = None
         if cid := request.data.get("category"):
-            category = Category.objects.get(pk=cid)
+            category = Category.objects.filter(pk=cid, org_id=request.branch.org_id).first()
+            if category is None:
+                raise serializers.ValidationError({"category": "Unknown category"})
         with transaction.atomic():
             st = services.start_stocktake(request.branch, request.user, category)
         log_action(request.user, "stocktake.started", st, request.branch, request, scope=st.scope)

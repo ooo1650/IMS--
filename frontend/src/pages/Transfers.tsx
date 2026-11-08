@@ -36,7 +36,7 @@ export default function Transfers() {
                 <td>{t.by_name}</td>
               </tr>
             ))}
-            {!items.length && !loading && <tr><td colSpan={6} className="empty">No transfers.</td></tr>}
+            {!items.length && !loading && <tr><td colSpan={6} className="empty">No transfers</td></tr>}
           </tbody>
         </table>
         <LoadMore more={more} loading={loading} />

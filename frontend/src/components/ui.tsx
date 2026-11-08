@@ -101,8 +101,12 @@ const STATUS_TONES: Record<string, 'neutral' | 'good' | 'warn' | 'bad' | 'info'>
   open: 'info', ordered: 'info', in_transit: 'info', counting: 'info', partial: 'warn', draft: 'neutral',
   voided: 'bad', cancelled: 'bad', payment_orphan: 'bad', failed: 'bad', expired: 'bad',
 }
+// Normal, finished states read as plain text; a badge marks something to look at.
+const QUIET_STATUSES = new Set(['paid', 'received', 'finished', 'closed', 'success', 'draft'])
 export function Status({ value }: { value: string }) {
-  return <Badge tone={STATUS_TONES[value] ?? 'neutral'}>{value.replace(/_/g, ' ')}</Badge>
+  const label = value.replace(/_/g, ' ')
+  if (QUIET_STATUSES.has(value)) return <span className="status-quiet">{label.charAt(0).toUpperCase() + label.slice(1)}</span>
+  return <Badge tone={STATUS_TONES[value] ?? 'neutral'}>{label}</Badge>
 }
 
 export function PageHead({ title, sub, children }: { title: string; sub?: string; children?: ReactNode }) {
@@ -115,10 +119,6 @@ export function PageHead({ title, sub, children }: { title: string; sub?: string
       <div className="page-actions">{children}</div>
     </div>
   )
-}
-
-export function Empty({ children }: { children: ReactNode }) {
-  return <div className="empty">{children}</div>
 }
 
 export function LoadMore({ more, loading }: { more: (() => void) | null; loading: boolean }) {

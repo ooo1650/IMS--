@@ -1,9 +1,9 @@
-import { DailyBars } from '../components/charts'
+import SalesAnalytics from '../components/SalesAnalytics'
 import { ErrorBox, PageHead, useLoad } from '../components/ui'
 import { useAuth } from '../auth'
 import { api } from '../lib/api'
 import { npr } from '../lib/money'
-import { ReportTables, Tile, trendSeries, type BranchSummary, type ReportLists } from './Dashboard'
+import { AttentionList, OverviewStat, ReportTables, type BranchSummary, type ReportLists } from './Dashboard'
 
 export default function BranchReport() {
   const { branch } = useAuth()
@@ -14,19 +14,30 @@ export default function BranchReport() {
   return (
     <div>
       <PageHead title={`${s.code} — ${s.name}`} sub={`Branch performance · ${s.timezone}`} />
-      <div className="tiles">
-        <Tile icon="coins" label="Sales today" value={npr(s.today.total_paisa)} sub={`${s.today.count} sales`} />
-        <Tile icon="trending" iconTone="info" label="This week" value={npr(s.week.total_paisa)} sub={`${s.week.count} sales`} />
-        <Tile icon="chart" iconTone="violet" label="This month" value={npr(s.month.total_paisa)} sub={`${s.month.count} sales`} />
-        <Tile icon="boxes" iconTone="warn" label="Inventory value" value={npr(s.inventory_value_paisa)} />
-        <Tile icon="alert" iconTone="warn" label="Low stock" value={s.low_stock} tone={s.low_stock ? 'warn' : undefined} />
-        <Tile icon="minus" iconTone="bad" label="Negative stock" value={s.negative_stock} sub="needs recount" tone={s.negative_stock ? 'bad' : undefined} />
-        <Tile icon="x" iconTone="bad" label="Stock conflicts" value={s.stock_conflicts} tone={s.stock_conflicts ? 'bad' : undefined} />
-        <Tile icon="clipboard" iconTone="info" label="Needs review" value={s.needs_review} tone={s.needs_review ? 'warn' : undefined} />
+      <div className="dash-row">
+        <section className="card">
+          <h2>Sales overview</h2>
+          <div className="overview">
+            <OverviewStat label="Today" value={npr(s.today.total_paisa)} sub={`${s.today.count} sales`} />
+            <OverviewStat label="This week" value={npr(s.week.total_paisa)} sub={`${s.week.count} sales`} />
+            <OverviewStat label="This month" value={npr(s.month.total_paisa)} sub={`${s.month.count} sales`} />
+            <OverviewStat label="Inventory value" value={npr(s.inventory_value_paisa)} />
+          </div>
+        </section>
+        <section className="card">
+          <h2>Needs attention</h2>
+          <AttentionList rows={[
+            { label: 'Stock conflicts', value: s.stock_conflicts, tone: 'bad', hint: 'oversold' },
+            { label: 'Negative stock', value: s.negative_stock, tone: 'bad', hint: 'recount' },
+            { label: 'Sales to review', value: s.needs_review, tone: 'warn' },
+            { label: 'Low stock', value: s.low_stock, tone: 'warn' },
+            { label: 'Purchase orders pending', value: s.pending_pos },
+          ]} />
+        </section>
       </div>
-      <section className="card">
-        <DailyBars data={trendSeries(data.trend)} label="Sales per day · last 14 days" />
-      </section>
+      <h2 className="section-title">Sales analytics</h2>
+      <SalesAnalytics key={branch?.id} />
+      <h2 className="section-title">Stock</h2>
       <ReportTables data={data} />
     </div>
   )

@@ -1,7 +1,10 @@
 backend/.venv/
-backend/db.sqlite3
+backend/db.sqlite3*
 backend/staticfiles/
+backend/media/
 backend/.env
 **/__pycache__/
 frontend/node_modules/
 frontend/dist/
+frontend/dist-console/
+.env

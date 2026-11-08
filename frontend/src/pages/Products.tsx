@@ -1,9 +1,14 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../auth'
+import { CameraScanner } from '../components/CameraScanner'
 import { Icon } from '../components/Icon'
+import { LabelPrint } from '../components/LabelPrint'
 import { Availability, ProductDetail } from '../components/ProductDetail'
+import { ProductThumb } from '../components/ProductThumb'
 import { Badge, Button, ErrorBox, Field, LoadMore, Modal, PageHead, Tabs, useLoad, usePaged } from '../components/ui'
 import { api, qs } from '../lib/api'
+import { generateInStoreEan13, isValidEan13 } from '../lib/barcode'
+import { downscaleImage } from '../lib/images'
 import { npr, toPaisa, toRupeesInput } from '../lib/money'
 import type { Barcode, Product } from '../lib/types'
 
@@ -16,18 +21,30 @@ export default function Products() {
   const [editing, setEditing] = useState<Product | 'new' | null>(null)
   const [pricing, setPricing] = useState<Product | null>(null)
   const [viewing, setViewing] = useState<Product | null>(null)
+  const [selected, setSelected] = useState<Map<number, Product>>(new Map())
+  const [labels, setLabels] = useState<Product[] | null>(null)
+  const toggle = (p: Product) => setSelected((m) => {
+    const n = new Map(m)
+    if (n.has(p.id)) n.delete(p.id)
+    else n.set(p.id, p)
+    return n
+  })
   const { items, loading, error, reload, more } = usePaged<Product>(
     `products/${qs({ q, archived: view === 'archived' ? 1 : null, b: branch?.id })}`,
   )
+  const allShown = items.length > 0 && items.every((p) => selected.has(p.id))
   const manage = canOrg('catalog.manage')
   const showCost = manage || can('inventory.view')
 
   const archive = (p: Product) => void api(`products/${p.id}/${p.archived_at ? 'restore' : 'archive'}/`, { method: 'POST' }).then(reload)
-  const actionsFor = (p: Product) => manage && (
+  const actionsFor = (p: Product) => (
     <>
+      <Button kind="ghost" onClick={() => { setViewing(null); setLabels([p]) }}><Icon name="tag" size={16} /> Labels</Button>
+      {manage && <>
       <Button kind="ghost" onClick={() => { setViewing(null); setEditing(p) }}>Edit</Button>
       <Button kind="ghost" onClick={() => { setViewing(null); setPricing(p) }}>Branch price</Button>
       <Button kind="ghost" onClick={() => { setViewing(null); archive(p) }}>{p.archived_at ? 'Restore' : 'Archive'}</Button>
+      </>}
     </>
   )
 
@@ -38,6 +55,12 @@ export default function Products() {
           <Icon name="search" size={16} />
           <input placeholder="Search name, SKU or barcode" value={q} onChange={(e) => setQ(e.target.value)} />
         </span>
+        {selected.size > 0 && (
+          <>
+            <Button onClick={() => setLabels([...selected.values()])}><Icon name="tag" size={16} /> Print labels ({selected.size})</Button>
+            <Button kind="ghost" onClick={() => setSelected(new Map())}>Clear selection</Button>
+          </>
+        )}
         {manage && <Button kind="primary" onClick={() => setEditing('new')}><Icon name="plus" size={16} /> Add product</Button>}
       </PageHead>
       <Tabs value={view} onChange={setView} tabs={[['active', 'Active'], ['archived', 'Archived']]} />
@@ -46,6 +69,13 @@ export default function Products() {
         <table className="table">
           <thead>
             <tr>
+              <th className="col-check">
+                <input type="checkbox" aria-label="Select all shown" checked={allShown} onChange={() => setSelected((m) => {
+                  const n = new Map(m)
+                  items.forEach((p) => (allShown ? n.delete(p.id) : n.set(p.id, p)))
+                  return n
+                })} />
+              </th>
               <th>Product</th><th>Category</th>
               {showCost && <th className="num">Cost (default)</th>}
               <th className="num">Price</th><th className="num">Branch price</th><th>Tax</th><th className="num">On hand</th><th>Availability</th><th />
@@ -54,9 +84,12 @@ export default function Products() {
           <tbody>
             {items.map((p) => (
               <tr key={p.id} className="clickable" onClick={() => setViewing(p)}>
+                <td className="col-check" onClick={(e) => e.stopPropagation()}>
+                  <input type="checkbox" aria-label={`Select ${p.name}`} checked={selected.has(p.id)} onChange={() => toggle(p)} />
+                </td>
                 <td>
                   <div className="cell-user">
-                    <span className="prod-thumb"><Icon name="package" size={18} /></span>
+                    <ProductThumb src={p.thumb_url} />
                     <div>
                       <div className="cell-strong">{p.name}</div>
                       <div className="mono muted small">{[p.sku, ...p.barcodes.map((b) => b.code + (b.pack_qty > 1 ? ` ×${b.pack_qty}` : ''))].join(' · ')}</div>
@@ -75,13 +108,14 @@ export default function Products() {
                 </td>
               </tr>
             ))}
-            {!items.length && !loading && <tr><td colSpan={9} className="empty">No products.</td></tr>}
+            {!items.length && !loading && <tr><td colSpan={10} className="empty">No products</td></tr>}
           </tbody>
         </table>
         <LoadMore more={more} loading={loading} />
       </div>
       {viewing && <ProductDetail productId={viewing.id} onClose={() => setViewing(null)} actions={actionsFor(viewing)} />}
       {editing && <ProductForm product={editing === 'new' ? null : editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); reload() }} />}
+      {labels && <LabelPrint products={labels} onClose={() => setLabels(null)} />}
       {pricing && <BranchPriceForm product={pricing} onClose={() => setPricing(null)} onSaved={() => { setPricing(null); reload() }} />}
     </div>
   )
@@ -98,9 +132,28 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
     hs_code: product?.hs_code ?? '', excise_rate: product?.excise_rate ?? '0', input_credit_blocked_pct: String(product?.input_credit_blocked_pct ?? 0),
   })
   const [barcodes, setBarcodes] = useState<Barcode[]>(product?.barcodes ?? [])
+  const [camera, setCamera] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  // Photo changes are sent after the product itself is saved.
+  const [photo, setPhoto] = useState<Blob | null>(null)
+  const [removePhoto, setRemovePhoto] = useState(false)
+  const [savedId, setSavedId] = useState(product?.id ?? null) // a new product, once created, is updated on retry
+  const fileRef = useRef<HTMLInputElement>(null)
+  const preview = useMemo(() => (photo ? URL.createObjectURL(photo) : null), [photo])
+  useEffect(() => () => void (preview && URL.revokeObjectURL(preview)), [preview])
+  const shownPhoto = preview ?? (removePhoto ? null : product?.image_url ?? null)
   const set = (k: keyof typeof f, v: string | boolean) => setF({ ...f, [k]: v })
+
+  async function pickPhoto(file: File | undefined) {
+    if (!file) return
+    try {
+      setPhoto(await downscaleImage(file))
+      setRemovePhoto(false)
+    } catch {
+      setError('Could not read that image. Use a JPEG, PNG or WebP file.')
+    }
+  }
 
   async function save() {
     const price = toPaisa(f.price)
@@ -115,7 +168,15 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
         input_credit_blocked_pct: Number(f.input_credit_blocked_pct) || 0,
         barcodes: barcodes.filter((b) => b.code.trim()),
       }
-      await api(product ? `products/${product.id}/` : 'products/', { method: product ? 'PATCH' : 'POST', body })
+      const saved = await api<Product>(savedId ? `products/${savedId}/` : 'products/', { method: savedId ? 'PATCH' : 'POST', body })
+      setSavedId(saved.id)
+      if (photo) {
+        const form = new FormData()
+        form.append('image', photo, 'photo')
+        await api(`products/${saved.id}/image/`, { form })
+      } else if (removePhoto && product?.image_url) {
+        await api(`products/${saved.id}/remove-image/`, { method: 'POST' })
+      }
       onSaved()
     } catch (e) {
       setError((e as Error).message)
@@ -127,6 +188,15 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
   return (
     <Modal title={product ? `Edit ${product.sku}` : 'New product'} onClose={onClose} wide>
       <ErrorBox error={error} />
+      <h3 className="form-section">Photo</h3>
+      <div className="photo-edit">
+        <ProductThumb src={shownPhoto} large />
+        <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" hidden
+          onChange={(e) => { void pickPhoto(e.target.files?.[0]); e.target.value = '' }} />
+        <Button onClick={() => fileRef.current?.click()}><Icon name="upload" size={16} /> {shownPhoto ? 'Replace photo' : 'Add photo'}</Button>
+        {shownPhoto && <Button kind="ghost" onClick={() => { setPhoto(null); setRemovePhoto(true) }}>Remove</Button>}
+        <span className="muted small">JPEG, PNG or WebP. Resized automatically; the POS caches it for offline use.</span>
+      </div>
       <h3 className="form-section">Primary details</h3>
       <div className="form-grid">
         <Field label="SKU"><input placeholder="Enter product SKU" value={f.sku} onChange={(e) => set('sku', e.target.value)} /></Field>
@@ -178,7 +248,20 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
           <Button kind="ghost" onClick={() => setBarcodes(barcodes.filter((_, j) => j !== i))}>Remove</Button>
         </div>
       ))}
-      <Button onClick={() => setBarcodes([...barcodes, { code: '', type: 'ean13', pack_qty: 1 }])}><Icon name="plus" size={16} /> Add barcode</Button>
+      <div className="flags">
+        <Button onClick={() => setBarcodes([...barcodes, { code: '', type: 'ean13', pack_qty: 1 }])}><Icon name="plus" size={16} /> Add barcode</Button>
+        <Button kind="ghost" title="For products without a manufacturer barcode: an EAN-13 in the in-store range (starts with 2)"
+          onClick={() => setBarcodes([...barcodes, { code: generateInStoreEan13(), type: 'ean13', pack_qty: 1 }])}>
+          Generate in-store code
+        </Button>
+        <Button kind="ghost" onClick={() => setCamera(true)}><Icon name="qr" size={16} /> Scan with camera</Button>
+      </div>
+      {camera && (
+        <CameraScanner title="Scan the product's barcode" onClose={() => setCamera(false)} onDetected={(code) => {
+          setCamera(false)
+          if (!barcodes.some((b) => b.code === code)) setBarcodes([...barcodes, { code, type: isValidEan13(code) ? 'ean13' : 'code128', pack_qty: 1 }])
+        }} />
+      )}
       <div className="modal-foot">
         <Button onClick={onClose}>Cancel</Button>
         <Button kind="primary" busy={busy} onClick={() => void save()}>Save</Button>

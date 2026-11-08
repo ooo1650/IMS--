@@ -6,39 +6,39 @@
  * delivers what the server returned:
  *  - full tax invoices and credit/debit notes always print as HTML (A5, with
  *    the Devanagari title "कर बीजक") via the browser print dialog;
- *  - abbreviated invoices can go to a thermal printer as ESC/POS text, if the
- *    register has a network/USB bridge configured;
+ *  - abbreviated invoices and offline slips go to a thermal printer as ESC/POS
+ *    when this till has one: WebUSB / WebSerial (paired in POS → Devices) or
+ *    the register's HTTP print endpoint;
  *  - the cash drawer pulse is an ESC/POS command on the printer's DK port.
  */
+import { EscPos, drawerPulse, padLine } from './devices/escpos'
+import { columnsFor, deviceSettings } from './devices/settings'
+import { httpSink, serialSink, usbSink, type ByteSink } from './devices/transport'
 import type { DocumentCtx, PrintResult, RegisterCfg } from './types'
 
 const WIDTH = 42 // characters on 80mm paper
 
-function pad(left: string, right: string, width = WIDTH) {
-  const space = Math.max(1, width - left.length - right.length)
-  return left + ' '.repeat(space) + right
-}
-
 /** Plain-text layout for thermal printers (Latin only — thermal fonts lack Devanagari). */
-export function receiptText(d: DocumentCtx): string[] {
+export function receiptText(d: DocumentCtx, width = WIDTH): string[] {
+  const pad = (left: string, right: string) => padLine(left, right, width)
   const out: string[] = []
-  const center = (s: string) => ' '.repeat(Math.max(0, Math.floor((WIDTH - s.length) / 2))) + s
+  const center = (s: string) => ' '.repeat(Math.max(0, Math.floor((width - s.length) / 2))) + s
   out.push(center(d.seller.name), center(d.seller.address), center(`PAN/VAT: ${d.seller.pan || '-'}`))
   out.push(center(d.title_en))
   if (d.stamp.label) out.push(center(`*** ${d.stamp.label} ***`))
   if (d.cancelled) out.push(center('*** CANCELLED ***'))
-  out.push('-'.repeat(WIDTH))
+  out.push('-'.repeat(width))
   // Offline slips have no BS date (the BS calendar lives on the server).
   out.push(`No: ${d.number}`, d.issued.bs ? pad(`Date: ${d.issued.bs} BS`, d.issued.ad) : `Date: ${d.issued.ad} ${d.issued.time}`)
   if (d.transaction && d.transaction.bs !== d.issued.bs) out.push(`Transaction: ${d.transaction.bs} BS`)
   if (d.buyer.name) out.push(`Buyer: ${d.buyer.name}${d.buyer.pan ? ` PAN ${d.buyer.pan}` : ''}`)
   if (d.payment_method) out.push(pad(`Payment: ${d.payment_method}`, d.register ? `Till ${d.register}` : ''))
-  out.push('-'.repeat(WIDTH))
+  out.push('-'.repeat(width))
   for (const l of d.lines) {
-    out.push(`${l.sno}. ${l.description}`.slice(0, WIDTH))
+    out.push(`${l.sno}. ${l.description}`.slice(0, width))
     out.push(pad(`   ${l.qty} x ${l.rate ?? ''}`, l.amount))
   }
-  out.push('-'.repeat(WIDTH))
+  out.push('-'.repeat(width))
   if (d.subtotal) out.push(pad('Total', d.subtotal))
   if (d.discount && d.discount !== '0.00') out.push(pad('Discount', `-${d.discount}`))
   out.push(pad('Taxable value', d.taxable_value), pad(d.vat_label ?? 'VAT', d.vat))
@@ -49,7 +49,7 @@ export function receiptText(d: DocumentCtx): string[] {
   out.push(pad('GRAND TOTAL', `Rs ${d.total}`))
   if (d.tendered) out.push(pad('Tendered', d.tendered))
   if (d.change) out.push(pad('Change', d.change))
-  out.push('', ...wrap(d.in_words), '', center('Thank you!'))
+  out.push('', ...wrap(d.in_words, width), '', center('Thank you!'))
   return out
 }
 
@@ -72,7 +72,7 @@ export interface PrinterDriver {
 }
 
 /** Prints server-rendered HTML through the browser dialog (kiosk mode prints silently). */
-async function printHtml(html: string, title: string) {
+export async function printHtml(html: string, title: string) {
   const w = window.open('', 'ims-print', 'width=520,height=720')
   if (!w) throw new Error('Pop-up blocked: allow pop-ups for this site to print invoices')
   w.document.write(html)
@@ -92,48 +92,73 @@ class BrowserPrintDriver implements PrinterDriver {
   }
 }
 
-const ESC = 0x1b
-const GS = 0x1d
-
-function escposBytes(lines: string[], drawer: boolean): Uint8Array {
-  const enc = new TextEncoder()
-  const parts: number[] = [ESC, 0x40] // init
-  for (const l of lines) parts.push(...enc.encode(l + '\n'))
-  parts.push(0x0a, 0x0a, 0x0a, GS, 0x56, 0x42, 0x00) // feed + partial cut
-  if (drawer) parts.push(ESC, 0x70, 0x00, 0x19, 0xfa) // pulse pin 2 (DK port)
-  return new Uint8Array(parts)
-}
-
-class HttpEscPosDriver implements PrinterDriver {
-  url: string
-  constructor(url: string) {
-    this.url = url
+/** ESC/POS printer behind any byte transport (WebUSB, WebSerial or an HTTP endpoint). */
+class EscPosDriver implements PrinterDriver {
+  sink: ByteSink
+  width: number
+  barcode: boolean
+  drawerEnabled: boolean
+  constructor(sink: ByteSink, width: number, barcode: boolean, drawerEnabled: boolean) {
+    this.sink = sink
+    this.width = width
+    this.barcode = barcode
+    this.drawerEnabled = drawerEnabled
   }
-  private async send(bytes: Uint8Array) {
-    const res = await fetch(this.url, { method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: bytes as BodyInit })
-    if (!res.ok) throw new Error(`Printer responded ${res.status}`)
-  }
+
   async print({ html, document }: { html: string; document: DocumentCtx }) {
     // Full invoices and notes need Devanagari and the Rule 17 layout: browser print.
     if (document.kind !== 'abbreviated' && document.kind !== 'provisional') return printHtml(html, document.number)
-    await this.send(escposBytes(receiptText(document), !!document.open_drawer))
+    const job = new EscPos()
+    for (const l of receiptText(document, this.width)) job.line(l)
+    if (this.barcode && document.number) job.line().barcode128(document.number)
+    job.cut()
+    // The drawer pulse rides on the same job so it opens as the receipt cuts.
+    if (document.open_drawer && this.drawerEnabled) job.drawer()
+    await this.sink.write(job.build())
+    printedDrawer.add(document)
   }
+
   async openDrawer() {
-    await this.send(new Uint8Array([ESC, 0x70, 0x00, 0x19, 0xfa]))
+    if (this.drawerEnabled) await this.sink.write(drawerPulse())
+  }
+
+  async testPage(storeName: string) {
+    const job = new EscPos().align('center').bold(true).line(storeName).bold(false).line('Printer test').align('left')
+    job.line('-'.repeat(this.width)).line(padLine('Paper width', `${this.width} chars`, this.width))
+    job.line(padLine('Time', new Date().toLocaleString(), this.width)).line('0123456789'.repeat(Math.ceil(this.width / 10)).slice(0, this.width))
+    if (this.barcode) job.line().barcode128('TEST-12345')
+    await this.sink.write(job.cut().build())
   }
 }
 
-export function driverFor(register: RegisterCfg | undefined): PrinterDriver {
-  if (register && register.printer_driver !== 'browser' && register.printer_config?.url)
-    return new HttpEscPosDriver(register.printer_config.url)
-  return new BrowserPrintDriver()
+/** Documents whose drawer pulse already went out with the receipt bytes. */
+const printedDrawer = new WeakSet<DocumentCtx>()
+
+function sinkFor(register: RegisterCfg | undefined): ByteSink | null {
+  const s = deviceSettings().printer
+  if (s.connection === 'usb' && s.device) return usbSink(s.device)
+  if (s.connection === 'serial' && s.device) return serialSink(s.device, s.baudRate)
+  if (s.connection === 'register' && register && register.printer_driver !== 'browser' && register.printer_config?.url)
+    return httpSink(register.printer_config.url)
+  return null
 }
 
-export async function printResult(register: RegisterCfg | undefined, result: PrintResult) {
-  const driver = driverFor(register)
-  await driver.print(result)
-  if (result.document.open_drawer) await driver.openDrawer()
+export function driverFor(register: RegisterCfg | undefined): PrinterDriver & { testPage?: (store: string) => Promise<void> } {
+  const s = deviceSettings()
+  const sink = sinkFor(register)
+  if (!sink) return new BrowserPrintDriver()
+  return new EscPosDriver(sink, columnsFor(s.printer.paper), s.printer.receiptBarcode, s.drawer.enabled)
 }
+
+/** Print a document and open the drawer once (with the receipt when it went to ESC/POS). */
+export async function printDocument(register: RegisterCfg | undefined, job: { html: string; document: DocumentCtx }) {
+  const driver = driverFor(register)
+  await driver.print(job)
+  // Full invoices print via the dialog, so the drawer still needs its own pulse.
+  if (job.document.open_drawer && !printedDrawer.has(job.document)) await driver.openDrawer()
+}
+
+export const printResult = (register: RegisterCfg | undefined, result: PrintResult) => printDocument(register, result)
 
 /** Offline (per-branch series): NOT a tax invoice — the invoice is issued on sync. */
 export function provisionalSlipHtml(d: DocumentCtx): string {

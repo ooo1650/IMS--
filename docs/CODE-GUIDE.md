@@ -9,8 +9,8 @@ IMS/
 ├── README.md                 run/deploy overview
 ├── ims-design-doc (3).md     original architecture spec
 ├── payment.md                Nepal IRD / VAT / CBMS requirements
-├── docker-compose.yml        Postgres + gunicorn + Caddy
-├── deploy/                   Caddyfile, nginx.conf, crontab, backup.sh, restore-drill.sh
+├── docker-compose.yml        Postgres + gunicorn + nginx + certbot
+├── deploy/                   nginx/ (config templates, TLS setup), certbot-loop.sh, crontab, backup.sh, restore-drill.sh
 ├── docs/                     these docs + IRD questions, templates, user manual
 ├── backend/
 │   ├── ims/                  settings.py, urls.py (all routes), api.py (error handler, BranchScopedMixin), testutils.py
@@ -29,7 +29,7 @@ IMS/
 ## Backend, file by file
 
 ### `ims/`
-- `settings.py`: env-driven config. `IMS = {...}` holds business knobs (cash rounding, discount limit, return threshold). `FONEPAY = {...}`.
+- `settings.py`: env-driven config. `IMS = {...}` holds business knobs (cash rounding, discount limit, return threshold). FonePay guard rails only (`FONEPAY_MOCK_ALLOWED`, `FONEPAY_ALLOWED_HOSTS`); its real configuration is in the database.
 - `urls.py`: **every API route** (router + explicit paths) under `/api/v1/`.
 - `api.py`: `exception_handler` (ValidationError → 400, adds `short_lines` for stock errors) and `BranchScopedMixin` (filters querysets to `request.branch`, stamps branch on create).
 - `testutils.py`: `World` test fixture (2 branches, a register each, users per role, 3 products with stock).
@@ -82,7 +82,10 @@ IMS/
 - `lib/pricing.ts`: port of `sales/pricing.py`. **Keep in sync.**
 - `lib/offline.ts`: IndexedDB stores (`kv`, `catalog`, `queue`), offline login, `queueOfflineSale` (atomic with the local counter).
 - `lib/sync.ts`: online state (`useOnline`), queue sync loop, offline shift-close posting.
-- `lib/printer.ts`: `printResult(register, result)`. HTML via the browser, or ESC/POS text for abbreviated invoices on thermal printers.
+- `lib/printer.ts`: `printDocument(register, job)` / `printResult`. Full invoices and notes → HTML print dialog (Devanagari). Abbreviated invoices and offline slips → ESC/POS when the till has a thermal printer; the drawer pulse rides on the same job (sent once).
+- `lib/devices/`: browser-only hardware. `settings.ts` (per-till settings in IndexedDB, `useDeviceSettings`), `transport.ts` (WebUSB / WebSerial / HTTP byte sinks), `escpos.ts` (+test: command builder, ASCII transliteration, pole display bytes), `scanner.ts` (+test: keyboard-wedge detection, beep), `display.ts` (customer display over BroadcastChannel + pole display).
+- `lib/barcode.ts` (+test, round-tripped through ZXing's readers): EAN-13/UPC-A check digits, in-store `2…` codes, EAN-13 and Code 128 SVG for labels.
+- `components/DeviceSettings.tsx` (POS → Devices), `CameraScanner.tsx` (native BarcodeDetector, lazy ZXing fallback), `LabelPrint.tsx` (Products → select → Print labels), `ProductDetail.tsx`. `pages/CustomerDisplay.tsx` is served at `/customer-display` without login.
 - `components/ui.tsx`: `useLoad(fn, deps)`, `usePaged(path)` (cursor pages), Button/Modal/Field/Badge/Status/Tabs.
 - `pages/Pos.tsx`: cart, invoice-type logic (mirrors the server), payment modals, offline sale, returns, held carts, shifts, register tools.
 - `pages/Compliance.tsx`: Tax & IRD (reports + export, CBMS, turnover, settings, tax categories).

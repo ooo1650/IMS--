@@ -12,11 +12,17 @@ def validate_timezone(value):
 
 
 class Organization(models.Model):
-    """The seller printed on every tax invoice (Rule 17)."""
+    """A separately registered business (its own PAN, catalog, invoices and
+    reports) and the seller printed on its tax invoices (Rule 17). One owner may
+    run several, e.g. a shoe shop and a clothing shop; each has its own branches."""
 
     GOODS, SERVICES, MIXED = "goods", "services", "mixed"
 
     name = models.CharField(max_length=200)
+    # Short unique handle used in the console and URLs, e.g. "himalaya-shoes".
+    code = models.SlugField(max_length=40, unique=True, null=True, blank=True)
+    trade = models.CharField(max_length=100, blank=True, help_text="What it sells, e.g. Footwear")
+    is_active = models.BooleanField(default=True)
     name_np = models.CharField(max_length=200, blank=True, help_text="Name in Nepali for the invoice face")
     pan = models.CharField(max_length=9, blank=True, help_text="Seller PAN/VAT number (9 digits)")
     address = models.TextField(blank=True)
@@ -28,6 +34,27 @@ class Organization(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class BusinessRules(models.Model):
+    """Per-business shop rules (formerly IMS_* environment variables)."""
+
+    org = models.OneToOneField(Organization, on_delete=models.CASCADE, primary_key=True, related_name="rules")
+    # Cash totals round to this many paisa (100 = nearest rupee); 1 = no rounding.
+    cash_rounding_paisa = models.PositiveIntegerField(default=1)
+    # Cashiers may discount up to this share of the gross (basis points) without approval.
+    cashier_max_discount_bp = models.PositiveIntegerField(default=500)
+    # Returns with a total above this (paisa) need manager approval.
+    return_approval_threshold_paisa = models.BigIntegerField(default=500000)
+    # Stocktake variances (absolute units) above this require a reason.
+    stocktake_variance_threshold = models.PositiveIntegerField(default=5)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+def rules_for(org) -> "BusinessRules":
+    """The business's rules, created with defaults on first use."""
+    rules, _ = BusinessRules.objects.get_or_create(org_id=org.pk if hasattr(org, "pk") else org)
+    return rules
 
 
 class Branch(models.Model):

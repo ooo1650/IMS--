@@ -1,0 +1,13 @@
+# Security headers for every https response (included per location).
+add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+add_header X-Content-Type-Options "nosniff" always;
+add_header X-Frame-Options "DENY" always;
+add_header Referrer-Policy "same-origin" always;
+add_header Cross-Origin-Opener-Policy "same-origin" always;
+# Camera: barcode scanning. USB/serial: receipt printers and pole displays.
+add_header Permissions-Policy "camera=(self), usb=(self), serial=(self), microphone=(), geolocation=(), payment=()" always;
+# No inline scripts or eval in the build. Inline styles: React style attributes
+# and printed invoices/labels. connect-src localhost: an optional local print
+# service on the till (LAN http addresses are blocked as mixed content; add
+# https ones with IMS_CSP_CONNECT_EXTRA).
+add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' http://localhost:* http://127.0.0.1:* ${IMS_CSP_CONNECT_EXTRA}; media-src 'self' blob:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'" always;

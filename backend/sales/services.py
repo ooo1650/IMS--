@@ -24,6 +24,7 @@ from admin_extras.models import log_action
 from catalog.models import Product, effective_prices, tax_profile
 from compliance import bs, cbms
 from compliance.models import get_settings
+from tenancy.models import rules_for
 from inventory.models import InventoryItem, StockMovement
 from inventory.services import lock_items
 
@@ -75,13 +76,13 @@ class Cart:
     extra: dict = field(default_factory=dict)
 
 
-def cash_rounding():
-    return settings.IMS.get("CASH_ROUNDING_PAISA", 1)
+def cash_rounding(branch):
+    return rules_for(branch.org).cash_rounding_paisa
 
 
-def digital_discount_bp(method):
+def digital_discount_bp(method, org):
     """Digital-payment VAT discount (payment.md Step 3) — OFF by default."""
-    cfg = get_settings()
+    cfg = get_settings(org)
     if not cfg.digital_vat_discount_enabled or method not in DIGITAL_METHODS:
         return 0
     methods = cfg.digital_vat_discount_methods or sorted(DIGITAL_METHODS)
@@ -90,7 +91,8 @@ def digital_discount_bp(method):
 
 def price_cart(branch, cart: Cart, rounding=1, use_client_prices=False, on_date=None, digital_bp=0):
     ids = [l.product_id for l in cart.lines]
-    products = Product.objects.select_related("tax_category").in_bulk(ids)
+    # Only this branch's business's products: an ID from another business is "unknown".
+    products = Product.objects.filter(org_id=branch.org_id).select_related("tax_category").in_bulk(ids)
     missing = set(ids) - set(products)
     if missing:
         raise CheckoutError(f"Unknown products: {sorted(missing)}")
@@ -116,9 +118,9 @@ def price_cart(branch, cart: Cart, rounding=1, use_client_prices=False, on_date=
     return products, inputs, totals, price_drift
 
 
-def decide_invoice_type(cart: Cart, total_paisa):
+def decide_invoice_type(cart: Cart, total_paisa, org):
     """Rule 17/18: abbreviated only up to the limit and only without a buyer PAN."""
-    cfg = get_settings()
+    cfg = get_settings(org)
     pan = (cart.buyer_pan or "").strip()
     if pan and not (pan.isdigit() and len(pan) == 9):
         raise CheckoutError("Buyer PAN must be 9 digits")
@@ -142,7 +144,7 @@ def check_discount_authority(branch, cashier, totals, cart, offline=False):
     own, or a manager typing credentials at the register."""
     gross = sum(l.gross_paisa for l in totals.lines)
     given = sum(l.line_discount_paisa + l.sale_discount_share_paisa for l in totals.lines)
-    limit_bp = settings.IMS.get("CASHIER_MAX_DISCOUNT_BP", 500)
+    limit_bp = rules_for(branch.org).cashier_max_discount_bp
     if not given or given * 10000 <= gross * limit_bp or cashier.has_branch_perm("discount.approve", branch):
         return None
     if offline:
@@ -286,9 +288,9 @@ def checkout_cash(*, branch, register, cashier, cart: Cart, tendered_paisa, idem
         if shift is None:
             raise CheckoutError("Open a cashier shift on this register first")
         with transaction.atomic():
-            rounding = cash_rounding() if method == Payment.CASH else 1
-            products, inputs, totals, _ = price_cart(branch, cart, rounding, digital_bp=digital_discount_bp(method))
-            invoice_type = decide_invoice_type(cart, totals.total_paisa)
+            rounding = cash_rounding(branch) if method == Payment.CASH else 1
+            products, inputs, totals, _ = price_cart(branch, cart, rounding, digital_bp=digital_discount_bp(method, branch.org))
+            invoice_type = decide_invoice_type(cart, totals.total_paisa, branch.org)
             approver = check_discount_authority(branch, cashier, totals, cart)
             tendered = tendered_paisa if method == Payment.CASH else totals.total_paisa
             if tendered < totals.total_paisa:
@@ -324,10 +326,11 @@ def initiate_fonepay(*, branch, register, cashier, cart: Cart, idempotency_key, 
         shift = open_shift_for(register)
         if shift is None:
             raise CheckoutError("Open a cashier shift on this register first")
+        gateway = fonepay.get_gateway(branch)  # FonePay off at this branch: refuse before creating anything
         with transaction.atomic():
             products, inputs, totals, _ = price_cart(branch, cart, rounding=1,
-                                                     digital_bp=digital_discount_bp(Payment.FONEPAY))
-            decide_invoice_type(cart, totals.total_paisa)  # fail fast before the customer pays
+                                                     digital_bp=digital_discount_bp(Payment.FONEPAY, branch.org))
+            decide_invoice_type(cart, totals.total_paisa, branch.org)  # fail fast before the customer pays
             approver = check_discount_authority(branch, cashier, totals, cart)
             on_hand = {i.product_id: i for i in InventoryItem.objects.filter(
                 branch=branch, product_id__in=[l.product_id for l in cart.lines])}
@@ -351,7 +354,7 @@ def initiate_fonepay(*, branch, register, cashier, cart: Cart, idempotency_key, 
             sale.payment_ref = prn
             sale.save(update_fields=["payment_ref"])
         # External call outside the transaction; if it fails the open sale just expires.
-        qr = fonepay.get_gateway().create_qr(prn, sale.total_paisa, f"{branch.code}-{sale.id}")
+        qr = gateway.create_qr(prn, sale.total_paisa, f"{branch.code}-{sale.id}")
         log_action(cashier, "sale.fonepay_initiated", sale, branch, request, prn=prn, total=sale.total_paisa)
         sale._qr_payload = qr.qr_payload
         return sale
@@ -395,7 +398,7 @@ def commit_fonepay(sale_id, status: fonepay.StatusResult, by=None):
         sale.stock_conflict = _decrement_stock(sale, sale.cashier, strict=False)
         sale.status, sale.paid_at = Sale.PAID, timezone.now()
         sale.save(update_fields=["stock_conflict", "status", "paid_at"])
-        _issue(sale, decide_invoice_type(_cart_of(sale), sale.total_paisa), transaction_at=sale.opened_at)
+        _issue(sale, decide_invoice_type(_cart_of(sale), sale.total_paisa, sale.branch.org), transaction_at=sale.opened_at)
         log_action(by, "sale.paid", sale, sale.branch, total=sale.total_paisa, method="fonepay",
                    stock_conflict=sale.stock_conflict, invoice=sale.receipt_number)
         return sale
@@ -408,7 +411,7 @@ def refresh_fonepay_status(sale, by=None):
     payment = sale.payments.filter(method=Payment.FONEPAY).first()
     if payment is None:
         return sale
-    return commit_fonepay(sale.id, fonepay.get_gateway().check_status(payment.fonepay_prn), by)
+    return commit_fonepay(sale.id, fonepay.get_gateway(sale.branch).check_status(payment.fonepay_prn), by)
 
 
 def expire_open_sales(now=None):
@@ -438,10 +441,10 @@ def sync_offline_sale(*, branch, register, cashier, cart: Cart, tendered_paisa, 
     def run():
         with transaction.atomic():
             tx_date = bs.local_date(created_at, branch.tz) if created_at else None
-            products, inputs, totals, price_drift = price_cart(branch, cart, cash_rounding(), use_client_prices=True,
+            products, inputs, totals, price_drift = price_cart(branch, cart, cash_rounding(branch), use_client_prices=True,
                                                                on_date=tx_date)
             try:
-                invoice_type = decide_invoice_type(cart, totals.total_paisa)
+                invoice_type = decide_invoice_type(cart, totals.total_paisa, branch.org)
             except CheckoutError:
                 # The customer has gone; issue full with what we have and flag it.
                 invoice_type, needs_buyer = Sale.FULL, True
@@ -465,7 +468,7 @@ def sync_offline_sale(*, branch, register, cashier, cart: Cart, tendered_paisa, 
                 tendered_paisa=max(tendered_paisa, sale.total_paisa),
                 change_paisa=max(tendered_paisa - sale.total_paisa, 0), status=Payment.SUCCESS,
             )
-            register_mode = series_mode() == "register"
+            register_mode = series_mode(branch) == "register"
             _issue(sale, invoice_type, transaction_at=created_at,
                    offline_seq=receipt_seq if register_mode else None,
                    offline_fy=fiscal_year if register_mode else None)
@@ -575,7 +578,7 @@ def create_return(*, sale, register, cashier, items, reason, refund_method="cash
             }))
         total = sum(p["total"] for _, _, p in planned)
         approver = None
-        threshold = settings.IMS["RETURN_APPROVAL_THRESHOLD_PAISA"]
+        threshold = rules_for(sale.branch.org).return_approval_threshold_paisa
         if total > threshold and not cashier.has_branch_perm("returns.approve", sale.branch):
             from rest_framework.exceptions import PermissionDenied
 

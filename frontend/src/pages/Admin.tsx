@@ -9,8 +9,21 @@ const ORG_ROLES = ['SuperAdmin', 'OrgAdmin', 'Viewer']
 const BRANCH_ROLES = ['BranchManager', 'Cashier', 'InventoryClerk', 'Viewer']
 
 interface Role { id?: number; branch: number | null; branch_name?: string | null; role: string }
-interface User { id: number; username: string; first_name: string; last_name: string; email: string; is_active: boolean; last_login: string | null; roles: Role[] }
+interface User {
+  id: number; username: string; first_name: string; last_name: string; email: string; email_verified: boolean
+  otp_enabled: boolean; otp_required: boolean; is_active: boolean; last_login: string | null; roles: Role[]
+}
 interface Register { id: number; branch: number; branch_code: string; code: string; name: string; printer_driver: string; printer_config: { url?: string }; is_active: boolean }
+interface Merchant {
+  branch: number; branch_code: string; branch_name: string; enabled: boolean; merchant_code: string; username: string
+  password_set: boolean; secret_set: boolean; missing: string[]; status: 'disabled' | 'mock' | 'http'
+  updated_at: string | null; updated_by_name: string | null
+}
+interface FonepayServer {
+  backend: 'disabled' | 'mock' | 'http'; base_url: string; base_url_set: boolean; mock_allowed: boolean
+  allowed_hosts: string[]; updated_at: string | null; updated_by_name: string | null
+}
+interface MerchantList extends FonepayServer { results: Merchant[] }
 
 export default function Admin() {
   const { canOrg, can } = useAuth()
@@ -93,7 +106,7 @@ function Users() {
                 </tr>
               )
             })}
-            {!shown.length && !users.loading && <tr><td colSpan={5} className="empty">No users match.</td></tr>}
+            {!shown.length && !users.loading && <tr><td colSpan={5} className="empty">No users match</td></tr>}
           </tbody>
         </table>
       </div>
@@ -186,9 +199,20 @@ function RolesMatrix() {
 }
 
 function UserForm({ user, branches, onClose, onSaved }: { user: User | null; branches: Branch[]; onClose: () => void; onSaved: () => void }) {
-  const [f, setF] = useState({ username: user?.username ?? '', first_name: user?.first_name ?? '', last_name: user?.last_name ?? '', email: user?.email ?? '', password: '', is_active: user?.is_active ?? true })
+  const [f, setF] = useState({ username: user?.username ?? '', first_name: user?.first_name ?? '', last_name: user?.last_name ?? '', email: user?.email ?? '', password: '', is_active: user?.is_active ?? true, otp_enabled: user?.otp_enabled ?? false })
   const [roles, setRoles] = useState<Role[]>(user?.roles ?? [])
   const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  const act = async (path: string, done: string) => {
+    setError(null)
+    setNotice(null)
+    try {
+      const r = await api<{ detail?: string }>(`users/${user!.id}/${path}/`, { method: 'POST' })
+      setNotice(r.detail ?? done)
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
   const orgRole = roles.find((r) => r.branch === null)?.role ?? ''
   const setOrgRole = (role: string) => setRoles([...roles.filter((r) => r.branch !== null), ...(role ? [{ branch: null, role }] : [])])
   const branchRole = (id: number) => roles.find((r) => r.branch === id)?.role ?? ''
@@ -197,14 +221,27 @@ function UserForm({ user, branches, onClose, onSaved }: { user: User | null; bra
   return (
     <Modal title={user ? `Edit ${user.username}` : 'New user'} onClose={onClose} wide>
       <ErrorBox error={error} />
+      {notice && <div className="alert alert-good">{notice}</div>}
       <div className="form-grid">
         <Field label="Username"><input value={f.username} onChange={(e) => setF({ ...f, username: e.target.value })} /></Field>
         <Field label={user ? 'New password (leave blank to keep)' : 'Password'}><input type="password" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} /></Field>
         <Field label="First name"><input value={f.first_name} onChange={(e) => setF({ ...f, first_name: e.target.value })} /></Field>
         <Field label="Last name"><input value={f.last_name} onChange={(e) => setF({ ...f, last_name: e.target.value })} /></Field>
-        <Field label="Email"><input value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></Field>
+        <Field label="Email" hint={user?.email ? (user.email_verified ? 'Verified' : 'Not verified yet: confirmed by the next code sent there') : 'Needed for sign-in codes and password resets'}>
+          <input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />
+        </Field>
         <label className="check"><input type="checkbox" checked={f.is_active} onChange={(e) => setF({ ...f, is_active: e.target.checked })} /> Active (unchecking revokes access immediately)</label>
+        <label className="check" title="Admins and branch managers always need a code">
+          <input type="checkbox" checked={f.otp_enabled || !!(user?.otp_required && !user.otp_enabled)} disabled={!!(user?.otp_required && !user.otp_enabled)}
+            onChange={(e) => setF({ ...f, otp_enabled: e.target.checked })} /> Require an emailed sign-in code{user?.otp_required && !user.otp_enabled ? ' (required by role)' : ''}
+        </label>
       </div>
+      {user && (
+        <div className="flags">
+          <Button kind="ghost" disabled={!user.email} title={user.email ? '' : 'Add an email first'} onClick={() => void act('send-reset', 'Reset code sent.')}>Email a password reset code</Button>
+          <Button kind="ghost" onClick={() => void act('sign-out', 'Signed out of every device.')}>Sign out of every device</Button>
+        </div>
+      )}
       <h3>Roles</h3>
       <p className="muted small">A role applies only at its branch. Org roles apply everywhere.</p>
       <Field label="Org-wide role">
@@ -244,8 +281,11 @@ function UserForm({ user, branches, onClose, onSaved }: { user: User | null; bra
 function Branches() {
   const branches = useLoad(() => api<Branch[]>('branches/'), [])
   const registers = useLoad(() => api<Register[]>('registers/'), [])
+  const merchants = useLoad(() => api<MerchantList>('fonepay-merchants/'), [])
   const [editBranch, setEditBranch] = useState<Branch | 'new' | null>(null)
   const [editReg, setEditReg] = useState<Register | { branch: number } | null>(null)
+  const [editMerchant, setEditMerchant] = useState<Merchant | null>(null)
+  const backend = merchants.data?.backend
   return (
     <>
       <div className="toolbar">
@@ -253,9 +293,11 @@ function Branches() {
         <span className="spacer" />
         <Button kind="primary" onClick={() => setEditBranch('new')}><Icon name="plus" size={16} /> Add branch</Button>
       </div>
-      <ErrorBox error={branches.error || registers.error} />
+      {merchants.data && <FonepayServerCard server={merchants.data} onSaved={merchants.reload} />}
+      <ErrorBox error={branches.error || registers.error || merchants.error} />
       {branches.data?.map((b) => {
         const regs = registers.data?.filter((r) => r.branch === b.id) ?? []
+        const merchant = merchants.data?.results.find((m) => m.branch === b.id)
         return (
           <section key={b.id} className="store-card">
             <div className="store-badge">
@@ -268,12 +310,14 @@ function Branches() {
                 <h2>{b.name}</h2>
                 <span className="flags">
                   <Button onClick={() => setEditBranch(b)}>Edit</Button>
+                  {merchant && <Button kind="ghost" onClick={() => setEditMerchant(merchant)}><Icon name="qr" size={16} /> FonePay</Button>}
                   <Button kind="ghost" onClick={() => setEditReg({ branch: b.id })}><Icon name="plus" size={16} /> Register</Button>
                 </span>
               </div>
               <div className="store-meta">
                 <span><Icon name="store" size={14} /> {b.address || 'No address'}</span>
                 <span><Icon name="clock" size={14} /> {b.timezone}</span>
+                {merchant && <span><Icon name="qr" size={14} /> FonePay {merchant.merchant_code ? <span className="mono">{merchant.merchant_code}</span> : 'no merchant'} <MerchantBadge m={merchant} /></span>}
               </div>
               <div className="register-list">
                 {regs.map((r) => (
@@ -284,7 +328,7 @@ function Branches() {
                     {!r.is_active && <Badge tone="bad">inactive</Badge>}
                   </button>
                 ))}
-                {!regs.length && <span className="muted small">No registers yet.</span>}
+                {!regs.length && <span className="muted small">No registers yet</span>}
               </div>
             </div>
           </section>
@@ -292,7 +336,70 @@ function Branches() {
       })}
       {editBranch && <BranchForm branch={editBranch === 'new' ? null : editBranch} onClose={() => setEditBranch(null)} onSaved={() => { setEditBranch(null); branches.reload() }} />}
       {editReg && <RegisterForm reg={editReg} onClose={() => setEditReg(null)} onSaved={() => { setEditReg(null); registers.reload() }} />}
+      {editMerchant && backend && <MerchantForm m={editMerchant} backend={backend} onClose={() => setEditMerchant(null)} onSaved={() => { setEditMerchant(null); merchants.reload() }} />}
     </>
+  )
+}
+
+/** What the tills at this branch will do with FonePay right now. */
+function MerchantBadge({ m }: { m: Merchant }) {
+  if (m.status === 'http') return <Badge tone="good">Live</Badge>
+  if (m.status === 'mock') return <Badge tone="info">Demo</Badge>
+  if (m.enabled && m.missing.length) return <Badge tone="warn">Incomplete</Badge>
+  return <Badge tone="neutral">Off</Badge>
+}
+
+function MerchantForm({ m, backend, onClose, onSaved }: { m: Merchant; backend: MerchantList['backend']; onClose: () => void; onSaved: () => void }) {
+  const [f, setF] = useState({ enabled: m.enabled, merchant_code: m.merchant_code, username: m.username, password: '', secret: '' })
+  const [clear, setClear] = useState({ password: false, secret: false })
+  const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const secretHint = (isSet: boolean, what: string) =>
+    isSet ? `A ${what} is saved. Leave blank to keep it.` : `No ${what} saved yet.`
+  return (
+    <Modal title={`FonePay merchant · ${m.branch_code} — ${m.branch_name}`} onClose={onClose}>
+      <ErrorBox error={error} />
+      <p className="muted small">QR payments at this branch settle into this merchant account. Get these details from the bank's FonePay merchant onboarding. The password and secret key are stored encrypted and are never shown again.</p>
+      <label className="check"><input type="checkbox" checked={f.enabled} onChange={(e) => setF({ ...f, enabled: e.target.checked })} /> Take FonePay QR payments at this branch</label>
+      <div className="form-grid">
+        <Field label="Merchant code"><input className="mono" autoComplete="off" value={f.merchant_code} onChange={(e) => setF({ ...f, merchant_code: e.target.value.trim() })} /></Field>
+        <Field label="API username"><input autoComplete="off" value={f.username} onChange={(e) => setF({ ...f, username: e.target.value })} /></Field>
+        <Field label="API password" hint={clear.password ? 'Will be removed on save.' : secretHint(m.password_set, 'password')}>
+          <input type="password" autoComplete="new-password" disabled={clear.password} placeholder={m.password_set ? '••••••••' : ''} value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} />
+        </Field>
+        <Field label="Secret key (for signing)" hint={clear.secret ? 'Will be removed on save.' : secretHint(m.secret_set, 'secret key')}>
+          <input type="password" autoComplete="new-password" disabled={clear.secret} placeholder={m.secret_set ? '••••••••' : ''} value={f.secret} onChange={(e) => setF({ ...f, secret: e.target.value })} />
+        </Field>
+      </div>
+      {(m.password_set || m.secret_set) && (
+        <div className="flags">
+          {m.password_set && <label className="check"><input type="checkbox" checked={clear.password} onChange={(e) => setClear({ ...clear, password: e.target.checked })} /> Remove saved password</label>}
+          {m.secret_set && <label className="check"><input type="checkbox" checked={clear.secret} onChange={(e) => setClear({ ...clear, secret: e.target.checked })} /> Remove saved secret key</label>}
+        </div>
+      )}
+      {backend === 'mock' && <p className="muted small">Demo mode: these credentials are saved but not used until the server runs live FonePay.</p>}
+      {m.updated_at && <p className="muted small">Last changed {fmtDate(m.updated_at)}{m.updated_by_name ? ` by ${m.updated_by_name}` : ''}.</p>}
+      <div className="modal-foot">
+        <Button onClick={onClose}>Cancel</Button>
+        <Button kind="primary" disabled={saving} onClick={async () => {
+          setSaving(true)
+          setError(null)
+          try {
+            const body: Record<string, unknown> = { enabled: f.enabled, merchant_code: f.merchant_code, username: f.username }
+            if (clear.password) body.clear_password = true
+            else if (f.password) body.password = f.password
+            if (clear.secret) body.clear_secret = true
+            else if (f.secret) body.secret = f.secret
+            await api(`fonepay-merchants/${m.branch}/`, { method: 'PATCH', body })
+            onSaved()
+          } catch (e) {
+            setError((e as Error).message)
+          } finally {
+            setSaving(false)
+          }
+        }}>Save</Button>
+      </div>
+    </Modal>
   )
 }
 
@@ -331,14 +438,14 @@ function RegisterForm({ reg, onClose, onSaved }: { reg: Register | { branch: num
       <ErrorBox error={error} />
       <Field label="Code" hint="Each register has its own gapless receipt series"><input value={f.code} onChange={(e) => setF({ ...f, code: e.target.value.toUpperCase() })} /></Field>
       <Field label="Name"><input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></Field>
-      <Field label="Printer driver">
+      <Field label="Default printer" hint="USB and serial thermal printers are paired on each till: POS → Devices. That overrides this default.">
         <select value={f.printer_driver} onChange={(e) => setF({ ...f, printer_driver: e.target.value })}>
           <option value="browser">Browser print dialog</option>
-          <option value="network_escpos">Network ESC/POS</option>
-          <option value="usb_bridge">USB thermal via local bridge</option>
+          <option value="network_escpos">Network printer with an HTTP print endpoint (ESC/POS)</option>
+          <option value="usb_bridge">Local print service on the till (HTTP)</option>
         </select>
       </Field>
-      {f.printer_driver !== 'browser' && <Field label="Printer / bridge URL"><input placeholder="http://192.168.1.50:9100/print" value={f.url} onChange={(e) => setF({ ...f, url: e.target.value })} /></Field>}
+      {f.printer_driver !== 'browser' && <Field label="Print endpoint URL" hint="Must accept raw ESC/POS bytes by HTTP POST. A plain port-9100 printer can't be reached from a browser."><input placeholder="http://192.168.1.50:8080/print" value={f.url} onChange={(e) => setF({ ...f, url: e.target.value })} /></Field>}
       <label className="check"><input type="checkbox" checked={f.is_active} onChange={(e) => setF({ ...f, is_active: e.target.checked })} /> Active</label>
       <div className="modal-foot">
         <Button onClick={onClose}>Cancel</Button>
@@ -388,5 +495,59 @@ function Audit() {
         <LoadMore more={more} loading={loading} />
       </div>
     </>
+  )
+}
+
+const MODE_LABEL = { disabled: 'Off', mock: 'Demo (simulated payments)', http: 'Live' } as const
+
+/** FonePay on/off/demo and the API address for the whole organization, stored
+ *  in the database. Merchant credentials are set per branch below. */
+function FonepayServerCard({ server, onSaved }: { server: FonepayServer; onSaved: () => void }) {
+  const [mode, setMode] = useState(server.backend)
+  const [baseUrl, setBaseUrl] = useState(server.base_url)
+  const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const dirty = mode !== server.backend || baseUrl !== server.base_url
+  return (
+    <section className="card fonepay-server">
+      <div className="card-head">
+        <div>
+          <h2>FonePay</h2>
+          <p className="card-sub">
+            {server.backend === 'http' ? 'Live: QR payments go to each branch\'s merchant account below'
+              : server.backend === 'mock' ? 'Demo: payments are simulated and merchant details are not used'
+              : 'Off: tills don\'t offer FonePay. Merchant details can be saved now'}
+          </p>
+        </div>
+      </div>
+      <ErrorBox error={error} />
+      <div className="form-grid">
+        <Field label="Mode">
+          <select value={mode} onChange={(e) => setMode(e.target.value as FonepayServer['backend'])}>
+            <option value="disabled">{MODE_LABEL.disabled}</option>
+            <option value="http">{MODE_LABEL.http}</option>
+            {(server.mock_allowed || server.backend === 'mock') && <option value="mock" disabled={!server.mock_allowed}>{MODE_LABEL.mock}</option>}
+          </select>
+        </Field>
+        <Field label="API address" hint={`https on ${server.allowed_hosts.join(', ')}. From the bank's FonePay merchant onboarding`}>
+          <input className="mono" placeholder="https://merchantapi.fonepay.com" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value.trim())} />
+        </Field>
+      </div>
+      <div className="flags">
+        <Button kind="primary" disabled={!dirty || saving} onClick={async () => {
+          setSaving(true)
+          setError(null)
+          try {
+            await api('fonepay-settings', { method: 'PATCH', body: { mode, base_url: baseUrl } })
+            onSaved()
+          } catch (e) {
+            setError((e as Error).message)
+          } finally {
+            setSaving(false)
+          }
+        }}>Save</Button>
+        {server.updated_at && <span className="muted small">Last changed {fmtDate(server.updated_at)}{server.updated_by_name ? ` by ${server.updated_by_name}` : ''}</span>}
+      </div>
+    </section>
   )
 }

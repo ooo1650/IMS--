@@ -4,7 +4,7 @@ import { useAuth } from '../auth'
 import { api, qs } from '../lib/api'
 import { npr } from '../lib/money'
 import type { Product } from '../lib/types'
-import { Icon } from './Icon'
+import { ProductThumb } from './ProductThumb'
 import { Badge, ErrorBox, LoadMore, Modal, Tabs, fmtDate, useLoad, usePaged } from './ui'
 
 interface Supplier { id: number; name: string; pan: string; phone: string; email: string; address: string }
@@ -48,7 +48,7 @@ export function ProductDetail({ productId, stock, actions, onClose }: {
       {!p ? <div className="splash">Loading…</div> : (
         <>
           <div className="detail-head">
-            <span className="prod-thumb lg"><Icon name="package" size={26} /></span>
+            <ProductThumb src={p.image_url} large />
             <div>
               <div className="mono muted">{p.sku}</div>
               <div className="flags">
@@ -117,7 +117,7 @@ export function ProductDetail({ productId, stock, actions, onClose }: {
                       <td className="small">{m.reason}</td>
                     </tr>
                   ))}
-                  {!moves.items.length && !moves.loading && <tr><td colSpan={6} className="empty">No stock movements at this branch.</td></tr>}
+                  {!moves.items.length && !moves.loading && <tr><td colSpan={6} className="empty">No stock movements at this branch</td></tr>}
                 </tbody>
               </table>
               <LoadMore more={moves.more} loading={moves.loading} />

@@ -1,5 +1,7 @@
 # payment.md → implementation status
 
+> **⏸ Paused (2026-11-06):** not applying for IRD listing for now. Kept for reference; see `docs/STATUS.md`.
+
 ✅ built and tested · 🟡 built, needs your input or external confirmation · 👤 a human/business task (the software only helps)
 
 ## Step 0–1 — IRD questions, product position

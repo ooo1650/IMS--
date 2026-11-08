@@ -20,6 +20,13 @@ if [ "$(date +%d)" = "01" ]; then
   cp "$file" "$file.sha256" "$BACKUP_DIR/monthly/"
 fi
 
+# Product photos: file names are content hashes, so copying only new files
+# (no-clobber) keeps a complete mirror. Not tax records; no retention needed.
+if [ -n "${MEDIA_DIR:-}" ] && [ -d "$MEDIA_DIR" ]; then
+  mkdir -p "$BACKUP_DIR/media"
+  cp -Rn "$MEDIA_DIR/." "$BACKUP_DIR/media/"
+fi
+
 # Retention: daily 90 days, monthly ~7 years. Never prune anything newer.
 find "$BACKUP_DIR/daily" -name 'ims-*.dump*' -mtime +90 -delete
 find "$BACKUP_DIR/monthly" -name 'ims-*.dump*' -mtime +2557 -delete

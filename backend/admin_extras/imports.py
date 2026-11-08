@@ -50,7 +50,8 @@ def _bool(raw, default=True):
     return str(raw).strip().lower() in ("1", "yes", "y", "true", "inclusive")
 
 
-def import_products(file_bytes, dry_run=True):
+def import_products(org, file_bytes, dry_run=True):
+    """Products into one business's catalog (SKUs and barcodes are per business)."""
     reader = _rows(file_bytes)
     missing = {"sku", "name", "price"} - set(reader.fieldnames)
     if missing:
@@ -71,7 +72,7 @@ def import_products(file_bytes, dry_run=True):
                 if barcode in seen_barcodes:
                     raise ValueError(f"barcode {barcode} also on row {seen_barcodes[barcode]}")
                 seen_barcodes[barcode] = n
-                owner = Barcode.objects.filter(code=barcode).exclude(product__sku=sku).first()
+                owner = Barcode.objects.filter(org=org, code=barcode).exclude(product__sku=sku).first()
                 if owner:
                     raise ValueError(f"barcode {barcode} already belongs to {owner.product.sku}")
             tax = Decimal((raw.get("tax_rate") or "13").strip())
@@ -83,7 +84,7 @@ def import_products(file_bytes, dry_run=True):
                 "cost_price_paisa": rupees_to_paisa(raw.get("cost") or 0, "cost"),
                 "tax_rate": str(tax), "tax_inclusive": _bool(raw.get("tax_inclusive")),
                 "category": (raw.get("category") or "").strip(), "unit": (raw.get("unit") or "pcs").strip(),
-                "action": "update" if Product.objects.filter(sku=sku).exists() else "create",
+                "action": "update" if Product.objects.filter(org=org, sku=sku).exists() else "create",
             })
         except (ValueError, InvalidOperation) as e:
             errors.append({"row": n, "error": str(e)})
@@ -99,15 +100,15 @@ def import_products(file_bytes, dry_run=True):
             if r["category"]:
                 cat = categories.get(r["category"])
                 if cat is None:
-                    cat, _ = Category.objects.get_or_create(name=r["category"], parent=None)
+                    cat, _ = Category.objects.get_or_create(org=org, name=r["category"], parent=None)
                     categories[r["category"]] = cat
-            product, _ = Product.objects.update_or_create(sku=r["sku"], defaults={
+            product, _ = Product.objects.update_or_create(org=org, sku=r["sku"], defaults={
                 "name": r["name"], "sale_price_paisa": r["sale_price_paisa"],
                 "cost_price_paisa": r["cost_price_paisa"], "tax_rate": Decimal(r["tax_rate"]),
                 "tax_inclusive": r["tax_inclusive"], "category": cat, "unit": r["unit"],
             })
             if r["barcode"]:
-                Barcode.objects.get_or_create(code=r["barcode"], defaults={"product": product})
+                Barcode.objects.get_or_create(org=org, code=r["barcode"], defaults={"product": product})
     return result
 
 
@@ -119,7 +120,7 @@ def import_opening_stock(branch, file_bytes, by, dry_run=True):
                 "rows": []}
     already = set(StockMovement.objects.filter(branch=branch, ref_type="opening_stock")
                   .values_list("product__sku", flat=True))
-    products = {p.sku: p for p in Product.objects.all()}
+    products = {p.sku: p for p in Product.objects.filter(org_id=branch.org_id)}
     rows, errors, seen = [], [], set()
     for n, raw in enumerate(reader, start=2):
         try:

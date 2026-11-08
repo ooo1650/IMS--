@@ -32,7 +32,7 @@ export default function Stocktakes() {
                 <td>{s.by_name}</td>
               </tr>
             ))}
-            {!items.length && !loading && <tr><td colSpan={7} className="empty">No stocktakes yet.</td></tr>}
+            {!items.length && !loading && <tr><td colSpan={7} className="empty">No stocktakes yet</td></tr>}
           </tbody>
         </table>
         <LoadMore more={more} loading={loading} />

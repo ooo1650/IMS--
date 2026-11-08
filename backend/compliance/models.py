@@ -102,12 +102,12 @@ class ComplianceSettings(models.Model):
         self.cbms_password_enc = crypto.encrypt(value)
 
 
-def get_settings(org=None) -> ComplianceSettings:
-    from tenancy.models import Organization
-
-    org = org or Organization.objects.order_by("id").first()
+def get_settings(org) -> ComplianceSettings:
+    """The business's tax settings (PAN, invoice series, CBMS login...). Every
+    caller names the business; there is no "first organization" fallback, so a
+    sale can never be numbered or reported under another business's settings."""
     if org is None:
-        raise RuntimeError("No organization configured")
+        raise RuntimeError("get_settings() needs the business (org)")
     obj, _ = ComplianceSettings.objects.get_or_create(org=org)
     return obj
 

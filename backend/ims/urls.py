@@ -1,8 +1,11 @@
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from accounts import views as accounts
+from admin_extras import platform
 from admin_extras import views as admin_extras
 from catalog import views as catalog
 from compliance import views as compliance
@@ -11,6 +14,8 @@ from purchasing import views as purchasing
 from reporting import views as reporting
 from sales import views as sales
 from tenancy import views as tenancy
+
+from .api import HealthView
 
 router = DefaultRouter()
 router.register("users", accounts.UserViewSet, basename="user")
@@ -35,13 +40,28 @@ router.register("pos/held", sales.HeldCartViewSet, basename="held")
 router.register("pos/catalog", catalog.PosCatalogView, basename="pos-catalog")
 router.register("purchase-orders", purchasing.PurchaseOrderViewSet, basename="purchase-order")
 router.register("audit-log", admin_extras.AuditLogViewSet, basename="audit-log")
+router.register("fonepay-merchants", sales.FonepayMerchantViewSet, basename="fonepay-merchant")
 
 api = [
+    path("health", HealthView.as_view()),
     path("auth/csrf", accounts.CsrfView.as_view()),
+    path("auth/brand", accounts.BrandView.as_view()),
     path("auth/login", accounts.LoginView.as_view()),
+    path("auth/login/verify", accounts.LoginVerifyView.as_view()),
+    path("auth/login/resend", accounts.LoginResendView.as_view()),
+    path("auth/password/forgot", accounts.ForgotPasswordView.as_view()),
+    path("auth/password/reset", accounts.ResetPasswordView.as_view()),
+    path("auth/signup", accounts.SignupView.as_view()),
+    path("auth/password/change", accounts.ChangePasswordView.as_view()),
+    path("auth/email", accounts.EmailChangeView.as_view()),
+    path("auth/email/verify", accounts.EmailVerifyView.as_view()),
+    path("auth/2fa", accounts.TwoFactorView.as_view()),
+    path("auth/sign-out-everywhere", accounts.SignOutEverywhereView.as_view()),
     path("auth/logout", accounts.LogoutView.as_view()),
+    path("auth/test-login", accounts.TestLoginView.as_view()),  # testing phase only
     path("auth/me", accounts.MeView.as_view()),
     path("auth/active-branch", accounts.ActiveBranchView.as_view()),
+    path("auth/active-org", accounts.ActiveOrgView.as_view()),
     path("auth/roles", accounts.RolesView.as_view()),
     path("pos/config", sales.PosConfigView.as_view()),
     path("pos/checkout", sales.CheckoutCashView.as_view()),
@@ -51,8 +71,10 @@ api = [
     path("pos/fonepay/callback", sales.FonepayCallbackView.as_view()),
     path("pos/fonepay/mock-pay/<str:prn>", sales.FonepayMockPayView.as_view()),
     path("pos/registers/<int:register_id>/receipt-gaps", sales.ReceiptGapsView.as_view()),
+    path("fonepay-settings", sales.FonepaySettingsView.as_view()),
     path("reports/dashboard", reporting.DashboardView.as_view()),
     path("reports/branch", reporting.BranchReportView.as_view()),
+    path("reports/analytics", reporting.AnalyticsView.as_view()),
     path("compliance/settings", compliance.SettingsView.as_view()),
     path("compliance/fiscal-years", compliance.FiscalYearsView.as_view()),
     path("compliance/turnover", compliance.TurnoverView.as_view()),
@@ -62,6 +84,27 @@ api = [
     path("import/template/<str:kind>", admin_extras.ImportTemplateView.as_view()),
     path("import/products", admin_extras.ProductImportView.as_view()),
     path("import/opening-stock", admin_extras.OpeningStockImportView.as_view()),
+    # Operator console (platform admins only; nginx serves these on the console's server block only).
+    path("platform/overview", platform.OverviewView.as_view()),
+    path("platform/businesses", platform.BusinessListView.as_view()),
+    path("platform/businesses/<int:pk>", platform.BusinessDetailView.as_view()),
+    path("platform/businesses/<int:pk>/rules", platform.RulesView.as_view()),
+    path("platform/businesses/<int:pk>/tax-settings", platform.TaxSettingsView.as_view()),
+    path("platform/businesses/<int:pk>/fonepay", platform.FonepayView.as_view()),
+    path("platform/businesses/<int:pk>/fonepay/merchants/<int:branch_pk>", platform.FonepayMerchantView.as_view()),
+    path("platform/businesses/<int:pk>/branches", platform.BranchesView.as_view()),
+    path("platform/branches/<int:branch_pk>", platform.BranchDetailView.as_view()),
+    path("platform/branches/<int:branch_pk>/registers", platform.RegistersView.as_view()),
+    path("platform/registers/<int:register_pk>", platform.RegisterDetailView.as_view()),
+    path("platform/users", platform.UsersView.as_view()),
+    path("platform/users/<int:user_pk>", platform.UserDetailView.as_view()),
+    path("platform/users/<int:user_pk>/<str:action>", platform.UserActionView.as_view()),
+    path("platform/system", platform.SystemSettingsView.as_view()),
+    path("platform/system/test-email", platform.TestEmailView.as_view()),
+    path("platform/jobs", platform.JobsView.as_view()),
+    path("platform/jobs/<str:name>", platform.JobRunView.as_view()),
+    path("platform/demo-seed", platform.DemoSeedView.as_view()),
+    path("platform/audit", platform.AuditView.as_view()),
     path("", include(router.urls)),
 ]
 
@@ -69,3 +112,5 @@ urlpatterns = [
     path("django-admin/", admin.site.urls),
     path("api/v1/", include(api)),
 ]
+# Dev only (a no-op when DEBUG is off): nginx serve /media/ in production.
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

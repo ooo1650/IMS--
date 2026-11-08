@@ -22,7 +22,8 @@ class AuditLogSerializer(serializers.ModelSerializer):
 
 
 class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
-    """Org auditors see everything; branch managers see their branch."""
+    """Business auditors see their business (its branches, plus branch-less
+    entries by its users); branch managers see their branch."""
 
     serializer_class = AuditLogSerializer
 
@@ -32,11 +33,19 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         return [HasBranchPerm("audit.view")()]
 
     def get_queryset(self):
+        from django.db.models import Q
+
+        from accounts.models import UserBranchRole
+
         qs = AuditLog.objects.select_related("user", "branch")
         if not can(self.request, "audit.view", org=True):
             qs = qs.filter(branch=self.request.branch)
-        elif b := self.request.query_params.get("branch"):
-            qs = qs.filter(branch_id=b)
+        else:
+            org = self.request.org
+            users = UserBranchRole.objects.filter(org=org).values("user_id")
+            qs = qs.filter(Q(branch__org=org) | Q(branch__isnull=True, user_id__in=users))
+            if b := self.request.query_params.get("branch"):
+                qs = qs.filter(branch_id=b)
         if a := self.request.query_params.get("action"):
             qs = qs.filter(action__startswith=a)
         if u := self.request.query_params.get("user"):
@@ -68,7 +77,7 @@ class ProductImportView(APIView):
 
     def post(self, request):
         data, dry_run = _upload(request)
-        result = imports.import_products(data, dry_run=dry_run)
+        result = imports.import_products(request.org, data, dry_run=dry_run)
         if not dry_run and result["ok"]:
             log_action(request.user, "import.products", request=request, creates=result["creates"],
                        updates=result["updates"])

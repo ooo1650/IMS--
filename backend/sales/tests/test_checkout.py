@@ -1,7 +1,6 @@
 import uuid
 from datetime import timedelta
 
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.utils import timezone
@@ -196,7 +195,7 @@ class OfflineSyncTests(TestCase):
         self.w.open_shift(self.w.reg_a, self.w.cashier_a)
         self.fy = fiscal_year_for(timezone.localdate())
         # Local offline numbering needs the per-register series.
-        cfg = get_settings()
+        cfg = get_settings(self.w.org)
         cfg.invoice_series = "register"
         cfg.save()
 
@@ -282,9 +281,13 @@ class ReturnTests(TestCase):
         self.assertEqual(services.expected_cash(shift), self.sale.total_paisa - cn.total_paisa)
 
     def test_over_threshold_needs_manager(self):
-        with self.settings(IMS={**settings.IMS, "RETURN_APPROVAL_THRESHOLD_PAISA": 100}):
-            with self.assertRaises(ValidationError):
-                self.ret(1)
-            cn = self.ret(1, approver_username="manager_a", approver_password="test-pass-123")
-            self.assertEqual(cn.approved_by, self.w.manager_a)
+        from tenancy.models import rules_for
+
+        rules = rules_for(self.w.org)  # per-business rule now
+        rules.return_approval_threshold_paisa = 100
+        rules.save()
+        with self.assertRaises(ValidationError):
+            self.ret(1)
+        cn = self.ret(1, approver_username="manager_a", approver_password="test-pass-123")
+        self.assertEqual(cn.approved_by, self.w.manager_a)
         self.assertEqual(CreditNote.objects.count(), 1)

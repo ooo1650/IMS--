@@ -5,6 +5,7 @@ from django.db import models
 
 
 class Category(models.Model):
+    org = models.ForeignKey("tenancy.Organization", on_delete=models.PROTECT, related_name="categories")
     name = models.CharField(max_length=200)
     parent = models.ForeignKey("self", null=True, blank=True, on_delete=models.PROTECT, related_name="children")
 
@@ -24,6 +25,7 @@ class Category(models.Model):
 
 
 class Supplier(models.Model):
+    org = models.ForeignKey("tenancy.Organization", on_delete=models.PROTECT, related_name="suppliers")
     name = models.CharField(max_length=200)
     pan = models.CharField(max_length=9, blank=True, help_text="Supplier PAN/VAT (purchase book)")
     phone = models.CharField(max_length=40, blank=True)
@@ -49,7 +51,8 @@ class Product(models.Model):
     default — real cost lives in InventoryItem.weighted_avg_cost_paisa.
     """
 
-    sku = models.CharField(max_length=64, unique=True)
+    org = models.ForeignKey("tenancy.Organization", on_delete=models.PROTECT, related_name="products")
+    sku = models.CharField(max_length=64)
     name = models.CharField(max_length=255)
     category = models.ForeignKey(Category, null=True, blank=True, on_delete=models.PROTECT)
     supplier = models.ForeignKey(Supplier, null=True, blank=True, on_delete=models.PROTECT)
@@ -72,6 +75,8 @@ class Product(models.Model):
     # Input VAT on purchases of this item that cannot be claimed (petrol,
     # alcohol/beverages, entertainment = 100; vehicles = 60).
     input_credit_blocked_pct = models.PositiveSmallIntegerField(default=0, validators=[MaxValueValidator(100)])
+    # Content hash naming the photo files under MEDIA_ROOT/products/ (catalog/images.py); "" = no photo.
+    image_key = models.CharField(max_length=64, blank=True, default="")
     is_active = models.BooleanField(default=True)
     archived_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -81,6 +86,8 @@ class Product(models.Model):
 
     class Meta:
         ordering = ["name"]
+        # SKUs are unique within a business; two businesses may reuse one.
+        constraints = [models.UniqueConstraint(fields=["org", "sku"], name="uniq_product_sku_per_org")]
 
     def __str__(self):
         return f"{self.sku} {self.name}"
@@ -90,10 +97,21 @@ class Barcode(models.Model):
     TYPES = [("ean13", "EAN-13"), ("ean8", "EAN-8"), ("upca", "UPC-A"), ("code128", "Code 128"), ("other", "Other")]
 
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="barcodes")
-    code = models.CharField(max_length=64, unique=True)
+    # Copied from the product so a barcode is unique within a business (a scan
+    # finds one product), while two businesses may stock the same item.
+    org = models.ForeignKey("tenancy.Organization", on_delete=models.CASCADE, related_name="+")
+    code = models.CharField(max_length=64)
     type = models.CharField(max_length=16, choices=TYPES, default="ean13")
     # Scanning this barcode rings up pack_qty units (e.g. a case of 24).
     pack_qty = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["org", "code"], name="uniq_barcode_per_org")]
+
+    def save(self, *args, **kwargs):
+        if self.product_id and not self.org_id:
+            self.org_id = Product.objects.filter(pk=self.product_id).values_list("org_id", flat=True).first()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.code

@@ -6,11 +6,17 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:console": "tsc -b && vite build --config vite.console.config.ts",
+    "dev:console": "vite --config vite.console.config.ts",
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run"
   },
   "dependencies": {
+    "@fontsource/ibm-plex-mono": "^5.2.7",
+    "@fontsource/ibm-plex-sans": "^5.2.8",
+    "@zxing/browser": "^0.2.1",
+    "@zxing/library": "^0.23.0",
     "idb": "^8.0.4",
     "qrcode": "^1.5.4",
     "react": "^19.3.1",

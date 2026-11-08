@@ -42,10 +42,6 @@ class Period:
         return f"{self.label} · {bs.bs_str(self.first)} – {bs.bs_str(self.last)} BS ({self.first} – {self.last})"
 
 
-def _branch_filter(qs, branches, field="branch"):
-    return qs.filter(**{f"{field}__in": branches})
-
-
 def _in_period(qs, period, branches, field, branch_field="branch"):
     """Filter ``qs`` to rows whose ``field`` falls in the period, per branch tz."""
     cond = Q()
@@ -207,7 +203,7 @@ def stock_reconciliation(period, branches):
     stock on hand. Increases with no purchase record (manual 'found' stock,
     positive stocktake variances) are 'excess stock' — IRD may fine 50% of its
     market value. Cancelled-invoice restocks count as supported."""
-    cfg = get_settings()
+    cfg = get_settings(branches[0].org) if branches else None
     rows = []
     for b in branches:
         mv = (StockMovement.objects.filter(branch=b).values("product_id", "type", "ref_type")
@@ -278,8 +274,12 @@ def audit_trail(period, branches, org_wide=False):
         start, end = period.range(b.tz)
         cond |= Q(branch=b, at__gte=start, at__lt=end)
     if org_wide and branches:
+        # Entries without a branch (sign-ins, settings) only for this business's users.
+        from accounts.models import UserBranchRole
+
         start, end = period.range(branches[0].tz)
-        cond |= Q(branch__isnull=True, at__gte=start, at__lt=end)
+        users = UserBranchRole.objects.filter(org_id=branches[0].org_id).values("user_id")
+        cond |= Q(branch__isnull=True, at__gte=start, at__lt=end, user_id__in=users)
     rows = [{"at": timezone.localtime(a.at).strftime("%Y-%m-%d %H:%M:%S"), "at_bs": a.at_bs,
              "user": a.user.username if a.user else "system", "branch": a.branch.code if a.branch else "",
              "action": a.action, "object": f"{a.object_type} {a.object_id}",
@@ -295,17 +295,18 @@ def audit_trail(period, branches, org_wide=False):
 
 # --- Turnover meter --------------------------------------------------------------
 
-def turnover(branches=None):
+def turnover(branches):
     """FY-to-date turnover (ex-VAT, net of returns) vs CBMS and VAT thresholds."""
     from tenancy.models import Branch
 
-    branches = branches or list(Branch.objects.all())
     period = Period()
     sb = sales_book(period, branches)["totals"]
     sr = sales_return_register(period, branches)["totals"]
     value = (sb["total"] - sb["vat"]) + (sr["total"] - sr["vat"])
-    cfg = get_settings()
-    org = cfg.org
+    org = branches[0].org if branches else None
+    if org is None:
+        return {"fiscal_year": period.fy, "turnover_paisa": 0, "alerts": []}
+    cfg = get_settings(org)
     vat_threshold = (cfg.vat_threshold_goods_paisa if org.business_type == "goods"
                      else cfg.vat_threshold_services_paisa)
     alerts = []

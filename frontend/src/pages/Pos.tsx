@@ -7,17 +7,24 @@
  * tax invoice is issued on sync; in per-register mode it numbers locally.
  */
 import QRCode from 'qrcode'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../auth'
+import { CameraScanner } from '../components/CameraScanner'
+import { DeviceSettings } from '../components/DeviceSettings'
 import { Icon } from '../components/Icon'
+import { ProductThumb } from '../components/ProductThumb'
 import { Badge, Button, ErrorBox, Field, Modal, Status } from '../components/ui'
-import { ApiError, NetworkError, api } from '../lib/api'
-import { npr, toBasisPoints, toPaisa, toRupeesInput } from '../lib/money'
+import { ApiError, NetworkError, api, qs } from '../lib/api'
+import { patchDisplay, publishDisplay } from '../lib/devices/display'
+import { beep, useScannerInput } from '../lib/devices/scanner'
+import { deviceSettings, useDeviceSettings } from '../lib/devices/settings'
+import { npr, plain, toBasisPoints, toPaisa, toRupeesInput } from '../lib/money'
 import {
   exportQueue, kvGet, kvSet, lastCachedLoginAge, loadCatalog, loadPosConfig, offlineLogin, peekLocalSeq,
   queueOfflineSale, saveCatalog, savePosConfig, syncLocalSeq,
 } from '../lib/offline'
-import { driverFor, printResult, provisionalSlipHtml } from '../lib/printer'
+import { warmImageCache } from '../lib/images'
+import { driverFor, printDocument, printResult, provisionalSlipHtml } from '../lib/printer'
 import { computeTotals, type DiscountType, type Totals } from '../lib/pricing'
 import { probe, syncQueue, useOnline } from '../lib/sync'
 import type { DocumentCtx, PayMethod, PosConfig, PosProduct, PrintResult, RegisterCfg, Sale, Shift } from '../lib/types'
@@ -55,6 +62,30 @@ const LOW_STOCK = 10
 const GRID_LIMIT = 60
 const uuid = () => crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`
 
+/** pos/catalog reply: `products` is left out when the till's `version` is still current. */
+interface CatalogReply { generated_at: string; version: string; unchanged?: boolean; products?: PosProduct[] }
+
+/** Memoized: adding to the cart re-renders only the tile whose in-cart state changed. */
+const ProductTile = memo(function ProductTile({ product: p, inCart, onPick }: {
+  product: PosProduct
+  inCart: boolean
+  onPick: (p: PosProduct) => void
+}) {
+  const tag = p.stock_estimate <= 0 ? 'out' : p.stock_estimate <= LOW_STOCK ? 'low' : ''
+  return (
+    <button className={`prod-card ${inCart ? 'in-cart' : ''}`} onClick={() => onPick(p)}>
+      <span className="prod-card-top">
+        <ProductThumb src={p.thumb} />
+        <span className="prod-name">{p.name}</span>
+        <span className={`stock-tag ${tag}`}>{p.stock_estimate}</span>
+      </span>
+      <span className="prod-sku">{p.sku}</span>
+      <span className="prod-price">{npr(p.sale_price_paisa)}</span>
+      <span className="prod-add"><Icon name="plus" size={14} /></span>
+    </button>
+  )
+})
+
 export default function Pos() {
   const { branch, can, me } = useAuth()
   const online = useOnline()
@@ -66,50 +97,64 @@ export default function Pos() {
   const [error, setError] = useState<string | null>(null)
   const [cart, setCart] = useState<CartItem[]>([])
   const [saleDiscount, setSaleDiscount] = useState<SaleDiscount>(NO_DISCOUNT)
-  const [modal, setModal] = useState<null | 'cash' | 'fonepay' | 'other' | 'buyer' | 'discount' | 'held' | 'return' | 'close-shift' | 'tools'>(null)
+  const [modal, setModal] = useState<null | 'cash' | 'fonepay' | 'other' | 'buyer' | 'discount' | 'held' | 'return' | 'close-shift' | 'tools' | 'devices'>(null)
   const [buyer, setBuyer] = useState<Buyer>(NO_BUYER)
   const [done, setDone] = useState<Done | null>(null)
   const [sessionAge, setSessionAge] = useState<number | null>(null)
+  const [devices] = useDeviceSettings()
+  const [camera, setCamera] = useState(false)
 
   const register = config?.registers.find((r) => r.id === registerId)
   const shift = register?.open_shift ?? null
 
-  // --- load config + catalog (server first, cache fallback) -----------------
+  // --- load config + catalog ----------------------------------------------------
+  // Cache first, so the till is usable at once even on a slow link; then the
+  // server copy replaces it. The catalog is only re-downloaded when its
+  // content version changed.
+  const shownBranch = useRef<number | null>(null)
   const loadAll = useCallback(async () => {
     setError(null)
+    const [cachedCfg, cached] = await Promise.all([loadPosConfig(branchId), loadCatalog(branchId)])
+    // Same branch: keep what's on screen (it may be newer, e.g. a shift just opened).
+    const switched = shownBranch.current !== branchId
+    shownBranch.current = branchId
+    setConfig((c) => (switched ? cachedCfg ?? null : c ?? cachedCfg ?? null))
+    if (switched || cached) {
+      setCatalog((c) => (switched || !c.length ? cached?.products ?? [] : c))
+      setCatalogAge((a) => (switched || !a ? cached?.generated_at ?? null : a))
+    }
     try {
-      const cfg = await api<PosConfig>('pos/config')
+      const [cfg, cat] = await Promise.all([
+        api<PosConfig>('pos/config'),
+        api<CatalogReply>(`pos/catalog/${qs({ version: cached?.version })}`),
+      ])
       setConfig(cfg)
       await savePosConfig(cfg)
       for (const r of cfg.registers) await syncLocalSeq(branchId, r.id, cfg.fiscal_year, r.next_receipt_number)
-      const cat = await api<{ generated_at: string; products: PosProduct[] }>('pos/catalog/')
-      setCatalog(cat.products)
       setCatalogAge(cat.generated_at)
-      await saveCatalog(branchId, cat.generated_at, cat.products)
+      if (cat.products) {
+        setCatalog(cat.products)
+        await saveCatalog(branchId, cat.generated_at, cat.products, cat.version)
+      }
     } catch (e) {
-      if (!(e instanceof NetworkError)) {
-        setError((e as Error).message)
-        return
-      }
-      const [cfg, cat] = await Promise.all([loadPosConfig(branchId), loadCatalog(branchId)])
-      if (!cfg || !cat) {
-        setError('Offline, and this register has no cached catalog yet. Connect once to download it.')
-        return
-      }
-      setConfig(cfg)
-      setCatalog(cat.products)
-      setCatalogAge(cat.generated_at)
+      if (!(e instanceof NetworkError)) setError((e as Error).message)
+      else if (!cachedCfg || !cached) setError('Offline, and this register has no cached catalog yet. Connect once to download it.')
     }
   }, [branchId])
 
-  useEffect(() => {
-    void loadAll()
-    void lastCachedLoginAge().then(setSessionAge)
-  }, [loadAll])
+  useEffect(() => void lastCachedLoginAge().then(setSessionAge), [])
 
+  // On mount, on branch change and whenever the connection comes back.
+  useEffect(() => void loadAll(), [online, loadAll])
+
+  // Photos for the product tiles: fetched in idle time, never awaited by a sale.
+  const thumbs = useMemo(() => catalog.flatMap((p) => (p.thumb ? [p.thumb] : [])).join('\n'), [catalog])
   useEffect(() => {
-    if (online) void loadAll()
-  }, [online, loadAll])
+    if (!online || !thumbs) return
+    const ac = new AbortController()
+    void warmImageCache(thumbs.split('\n'), ac.signal)
+    return () => ac.abort()
+  }, [online, thumbs])
 
   useEffect(() => {
     if (!config) return
@@ -125,13 +170,13 @@ export default function Pos() {
   }
 
   // --- cart -------------------------------------------------------------------
-  const addProduct = (p: PosProduct, qty = 1) => {
+  const addProduct = useCallback((p: PosProduct, qty = 1) => {
     setCart((c) => {
       const i = c.findIndex((x) => x.product.id === p.id && x.discount_type === 'none')
       if (i >= 0) return c.map((x, j) => (j === i ? { ...x, qty: x.qty + qty } : x))
       return [...c, { product: p, qty, discount_type: 'none', discount_value: 0, discount_reason: '' }]
     })
-  }
+  }, [])
   const updateLine = (i: number, patch: Partial<CartItem>) => setCart((c) => c.map((x, j) => (j === i ? { ...x, ...patch } : x)))
   const removeLine = (i: number) => setCart((c) => c.filter((_, j) => j !== i))
   const clearSale = () => {
@@ -279,8 +324,7 @@ export default function Pos() {
     clearSale()
     setDone({ saleId: null, doc, change: tendered - totals.total_paisa })
     try {
-      await driverFor(register).print({ html: provisionalSlipHtml(doc), document: doc })
-      await driverFor(register).openDrawer()
+      await printDocument(register, { html: provisionalSlipHtml(doc), document: doc })
     } catch (e) {
       setError(`Sale saved offline, but printing failed: ${(e as Error).message}`)
     }
@@ -290,40 +334,75 @@ export default function Pos() {
   const [query, setQuery] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
 
-  // Product tiles: everything when idle, a wider match list while typing.
-  const gridAll = useMemo(() => {
-    const q = query.trim().toLowerCase()
+  // Lookup tables, rebuilt only when the catalog changes: a scan is one Map
+  // lookup however many products there are, and search doesn't lowercase
+  // every name on every keystroke.
+  const index = useMemo(() => {
+    const byCode = new Map<string, { product: PosProduct; pack: number }>()
+    const bySku = new Map<string, PosProduct>()
+    for (const p of catalog) {
+      for (const b of p.barcodes) byCode.set(b.code, { product: p, pack: b.pack_qty })
+      bySku.set(p.sku.toLowerCase(), p)
+    }
+    return { byCode, bySku, text: catalog.map((p) => `${p.name}\n${p.sku}`.toLowerCase()) }
+  }, [catalog])
+
+  const search = useCallback((raw: string) => {
+    const q = raw.trim().toLowerCase()
     if (!q) return catalog
-    return catalog.filter((p) => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || p.barcodes.some((b) => b.code === q))
-  }, [query, catalog])
+    const exact = index.byCode.get(raw.trim())?.product
+    return catalog.filter((p, i) => p === exact || index.text[i].includes(q))
+  }, [catalog, index])
+
+  // Product tiles: everything when idle, a wider match list while typing. The
+  // grid follows the typing at low priority so the search box never lags.
+  const gridQuery = useDeferredValue(query)
+  const gridAll = useMemo(() => search(gridQuery), [search, gridQuery])
   const grid = gridAll.slice(0, GRID_LIMIT)
   const gridTotal = gridAll.length
   const lowCount = useMemo(() => catalog.filter((p) => p.stock_estimate <= LOW_STOCK).length, [catalog])
   const cartIds = new Set(cart.map((c) => c.product.id))
 
+  /** Barcode (with its pack size) or exact SKU → cart. Returns false when nothing matched. */
+  const addByCode = (code: string) => {
+    const hit = index.byCode.get(code)
+    if (hit) {
+      addProduct(hit.product, hit.pack)
+      return true
+    }
+    const bySku = index.bySku.get(code.toLowerCase())
+    if (bySku) addProduct(bySku)
+    return !!bySku
+  }
+
   const onScan = (e: React.FormEvent) => {
     e.preventDefault()
     const q = query.trim()
     if (!q) return
-    for (const p of catalog) {
-      const bc = p.barcodes.find((b) => b.code === q)
-      if (bc) {
-        addProduct(p, bc.pack_qty)
-        setQuery('')
-        return
-      }
+    let ok = addByCode(q)
+    // The deferred grid can trail a fast scanner by a keystroke: match the box as typed.
+    const matches = ok ? [] : gridQuery === query ? gridAll : search(query)
+    if (!ok && matches.length === 1) {
+      addProduct(matches[0])
+      ok = true
     }
-    const bySku = catalog.find((p) => p.sku.toLowerCase() === q.toLowerCase())
-    if (bySku) {
-      addProduct(bySku)
-      setQuery('')
-      return
-    }
-    if (gridAll.length === 1) {
-      addProduct(gridAll[0])
-      setQuery('')
-    }
+    if (devices.scanner.beep && (ok || !matches.length)) beep(ok)
+    if (ok) setQuery('')
   }
+
+  const pickTile = useCallback((p: PosProduct) => {
+    addProduct(p)
+    setQuery('')
+    searchRef.current?.focus()
+  }, [addProduct])
+
+  /** Scans that didn't go through the search box: scanner with no field focused, or the camera. */
+  const onDeviceScan = (code: string) => {
+    const ok = addByCode(code.trim())
+    if (devices.scanner.beep) beep(ok)
+    setError(ok ? null : `No product with barcode or SKU “${code}”. Add it in Products → Barcodes.`)
+  }
+  useScannerInput(onDeviceScan, devices.scanner.anywhere && !!shift && modal === null && !done)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -336,6 +415,28 @@ export default function Pos() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [cart.length, shift, invoice.problem])
+
+  // Customer display: mirror the bill (second screen and/or pole display).
+  useEffect(() => {
+    if (!config) return
+    const store = config.seller.name || config.branch.name
+    const t = priced.cash
+    if (done) {
+      publishDisplay({ mode: 'done', store, lines: [], total: done.doc.total, change: done.change > 0 ? plain(done.change) : undefined })
+      return
+    }
+    const state = {
+      store,
+      lines: cart.map((c, i) => ({ name: c.product.name, qty: c.qty, amount: plain(t?.lines[i]?.line_total_paisa ?? 0) })),
+      subtotal: t ? plain(t.subtotal_paisa) : undefined,
+      discount: t?.discount_total_paisa ? plain(t.discount_total_paisa) : undefined,
+      tax: t ? plain(t.tax_total_paisa) : undefined,
+      total: plain((modal === 'fonepay' ? priced.digital?.total_paisa : t?.total_paisa) ?? 0),
+    }
+    // Keep the QR the FonePay modal added while it is open.
+    if (modal === 'fonepay') patchDisplay({ ...state, mode: 'pay' })
+    else publishDisplay({ ...state, mode: cart.length ? 'cart' : 'idle', qr: undefined })
+  }, [cart, priced, done, modal, config])
 
   if (!config) {
     return (
@@ -372,6 +473,7 @@ export default function Pos() {
         {!online && sessionHours != null && sessionHours > (config.offline_login_max_age_hours - 4) && (
           <Badge tone="warn">Cached login {sessionHours.toFixed(0)}h old</Badge>
         )}
+        <Button kind="ghost" onClick={() => setModal('devices')}><Icon name="printer" size={16} /> Devices</Button>
         <Button kind="ghost" onClick={() => setModal('tools')}><Icon name="settings" size={16} /> Register tools</Button>
         {shift && <Button onClick={() => setModal('close-shift')}><Icon name="lock" size={16} /> Close shift</Button>}
       </div>
@@ -392,79 +494,49 @@ export default function Pos() {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                 />
+                <button type="button" className="icon-btn scan-camera" title="Scan with camera" aria-label="Scan with camera" onClick={() => setCamera(true)}>
+                  <Icon name="qr" size={20} />
+                </button>
               </form>
-            </div>
-            <div className="pos-stats">
-              <div className="tile">
-                <div className="tile-icon"><Icon name="cart" size={20} /></div>
-                <div className="tile-value">{cart.reduce((a, c) => a + c.qty, 0)}</div>
-                <div className="tile-label">Units in bill</div>
-              </div>
-              <div className="tile">
-                <div className="tile-icon tone-info"><Icon name="coins" size={20} /></div>
-                <div className="tile-value">{npr(totals?.total_paisa ?? 0)}</div>
-                <div className="tile-label">Bill total</div>
-              </div>
-              <div className="tile">
-                <div className="tile-icon tone-warn"><Icon name="alert" size={20} /></div>
-                <div className="tile-value">{lowCount}</div>
-                <div className="tile-label">Low / out of stock</div>
-              </div>
             </div>
             <div className="pos-panel">
               <div className="prod-head">
-                <h2><Icon name="package" /> {query.trim() ? 'Search results' : 'Available products'}</h2>
-                <Badge>{gridTotal} items</Badge>
+                <h2>{query.trim() ? 'Search results' : 'Products'}</h2>
+                <span className="muted small">{gridTotal} items{lowCount ? ` · ${lowCount} low or out of stock` : ''}</span>
               </div>
               {!grid.length && <div className="empty">No products match “{query}”.</div>}
               <div className="prod-grid">
-                {grid.map((p) => {
-                  const inCart = cartIds.has(p.id)
-                  const tag = p.stock_estimate <= 0 ? 'out' : p.stock_estimate <= LOW_STOCK ? 'low' : ''
-                  return (
-                    <button key={p.id} className={`prod-card ${inCart ? 'in-cart' : ''}`} onClick={() => { addProduct(p); setQuery(''); searchRef.current?.focus() }}>
-                      <span className="prod-card-top">
-                        <span className="prod-name">{p.name}</span>
-                        <span className={`stock-tag ${tag}`}>{p.stock_estimate}</span>
-                      </span>
-                      <span className="prod-sku">{p.sku}</span>
-                      <span className="prod-price">{npr(p.sale_price_paisa)}</span>
-                      <span className="prod-add"><Icon name="plus" size={14} /></span>
-                    </button>
-                  )
-                })}
+                {grid.map((p) => <ProductTile key={p.id} product={p} inCart={cartIds.has(p.id)} onPick={pickTile} />)}
               </div>
               {gridTotal > grid.length && <div className="muted small center-text" style={{ marginTop: 10 }}>Showing {grid.length} of {gridTotal} — search to narrow down.</div>}
             </div>
           </section>
 
           <aside className="pos-right">
-            <div className="bill-head">
-              <h2><Icon name="cart" /> Current bill</h2>
-              <Badge tone={cart.length ? 'good' : 'neutral'}>{cart.length} item{cart.length === 1 ? '' : 's'}</Badge>
+            {/* The bill being built, drawn as the receipt the customer will get. */}
+            <div className="receipt-wrap">
+            <div className="receipt" aria-label="Current bill">
+            <div className="receipt-head">
+              <strong>{config.seller.name || config.branch.name}</strong>
+              <span>{config.branch.name}{register ? ` · ${register.name}` : ''}</span>
+              <span>{invoice.type === 'full' ? 'Tax invoice · कर बीजक' : 'Abbreviated tax invoice'}</span>
             </div>
-            <div className="bill-buyer invoice-box">
-              <div className="invoice-type">
-                {invoice.type === 'full' ? <Badge tone="info">Tax invoice · कर बीजक</Badge> : <Badge>Abbreviated tax invoice</Badge>}
-                <button className="link" onClick={() => setModal('buyer')}>
-                  {buyer.name ? `${buyer.name}${buyer.pan ? ` · PAN ${buyer.pan}` : ''}` : '+ Add buyer / PAN'}
-                </button>
-              </div>
-              {invoice.problem && cart.length > 0 && <div className="alert alert-warn small" style={{ margin: 0 }}>{invoice.problem}</div>}
+            <div className="receipt-buyer">
+              <button className="link" onClick={() => setModal('buyer')}>
+                {buyer.name ? `${buyer.name}${buyer.pan ? ` · PAN ${buyer.pan}` : ''}` : 'Add buyer or PAN'}
+              </button>
+              <span className="fig muted">{cart.length} line{cart.length === 1 ? '' : 's'}</span>
+              {invoice.problem && cart.length > 0 && <div className="alert alert-warn small">{invoice.problem}</div>}
             </div>
             <div className="cart">
               {cart.map((c, i) => (
                 <CartRow key={i} item={c} line={totals?.lines[i]} onChange={(p) => updateLine(i, p)} onRemove={() => removeLine(i)} />
               ))}
               {!cart.length && (
-                <div className="cart-empty">
-                  <Icon name="cart" size={36} />
-                  Scan or tap a product to start a sale.
-                </div>
+                <div className="cart-empty">Scan or tap a product to start a sale</div>
               )}
             </div>
-            <div className="bill-foot">
-              <div className="totals">
+              <div className="totals receipt-totals">
                 <Row label="Subtotal (excl. tax)" value={totals?.subtotal_paisa ?? 0} />
                 <Row label="Discount" value={-(totals?.discount_total_paisa ?? 0)} />
                 {totals && Object.entries(totals.tax_by_rate).map(([rate, amt]) => <Row key={rate} label={`VAT ${rate}%`} value={amt} />)}
@@ -484,14 +556,17 @@ export default function Pos() {
                 )}
                 {needsApproval && <Badge tone="warn">Discount needs manager approval</Badge>}
               </div>
+            </div>
+            </div>
+            <div className="bill-actions">
               <div className="pay-buttons">
                 <Button kind="primary" className="btn-xl" disabled={!cart.length || !!priced.error || !!invoice.problem} onClick={() => setModal('cash')}>
                   <Icon name="wallet" /> Cash (F9)
                 </Button>
                 <Button
                   className="btn-xl"
-                  disabled={!cart.length || !!priced.error || !online || !!invoice.problem}
-                  title={online ? '' : 'FonePay needs internet'}
+                  disabled={!cart.length || !!priced.error || !online || !!invoice.problem || config.fonepay_backend === 'disabled'}
+                  title={config.fonepay_backend === 'disabled' ? 'FonePay is not set up on this server' : online ? '' : 'FonePay needs internet'}
                   onClick={() => setModal('fonepay')}
                 >
                   <Icon name="qr" /> FonePay
@@ -601,6 +676,12 @@ export default function Pos() {
       )}
       {modal === 'close-shift' && shift && (
         <CloseShiftModal shift={shift} online={online} onClose={() => setModal(null)} onClosed={() => { setModal(null); void loadAll() }} />
+      )}
+      {modal === 'devices' && register && (
+        <DeviceSettings register={register} storeName={config.seller.name || config.branch.name} onClose={() => setModal(null)} />
+      )}
+      {camera && (
+        <CameraScanner onClose={() => setCamera(false)} onDetected={(code) => { setCamera(false); onDeviceScan(code) }} />
       )}
       {modal === 'tools' && register && (
         <ToolsModal register={register} config={config} catalogAge={catalogAge} onClose={() => setModal(null)} onRefresh={loadAll} />
@@ -753,7 +834,7 @@ function CashModal({ total, needsApproval, online, onClose, onPay }: {
   return (
     <Modal title="Cash payment" onClose={onClose}>
       <div className="big-total">{npr(total)}</div>
-      {!online && <div className="alert alert-warn">Offline — this sale will be numbered locally and synced later.</div>}
+      {!online && <div className="alert alert-warn">Offline — this sale will be numbered locally and synced later</div>}
       <ErrorBox error={error} />
       <Field label="Tendered (Rs)">
         <input autoFocus inputMode="decimal" value={raw} onChange={(e) => setRaw(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void pay()} />
@@ -802,7 +883,9 @@ function FonepayModal({ total, needsApproval, mock, start, onClose, onPaid }: {
     try {
       const s = await start(needsApproval ? approver : undefined, key.current)
       setSale(s)
-      setQr(await QRCode.toDataURL(s.qr_payload || s.prn, { width: 260, margin: 1 }))
+      const url = await QRCode.toDataURL(s.qr_payload || s.prn, { width: 260, margin: 1 })
+      setQr(url)
+      patchDisplay({ mode: 'pay', qr: url })
     } catch (e) {
       starting.current = false
       setError((e as Error).message)
@@ -990,8 +1073,8 @@ function OpenShift({ register, online, onOpened }: { register: RegisterCfg; onli
   return (
     <div className="card narrow">
       <h2>Open shift on {register.name}</h2>
-      <p className="muted">Count the drawer and enter the starting cash.</p>
-      {!online && <div className="alert alert-warn">Opening a shift needs a connection.</div>}
+      <p className="muted">Count the drawer and enter the starting cash</p>
+      {!online && <div className="alert alert-warn">Opening a shift needs a connection</div>}
       <ErrorBox error={error} />
       <Field label="Opening cash (Rs)">
         <input value={raw} onChange={(e) => setRaw(e.target.value)} inputMode="decimal" />
@@ -1029,7 +1112,7 @@ function CloseShiftModal({ shift, online, onClose, onClosed }: { shift: Shift; o
   }, [shift.id, online])
   return (
     <Modal title="Close shift" onClose={onClose}>
-      {!online && <div className="alert alert-warn">Offline — closing is saved on this device and posted when the connection returns.</div>}
+      {!online && <div className="alert alert-warn">Offline — closing is saved on this device and posted when the connection returns</div>}
       <ErrorBox error={error} />
       {result ? (
         <div>
@@ -1045,7 +1128,7 @@ function CloseShiftModal({ shift, online, onClose, onClosed }: { shift: Shift; o
         </div>
       ) : (
         <>
-          <p className="muted">Count the drawer without looking at the expected figure.</p>
+          <p className="muted">Count the drawer without looking at the expected figure</p>
           <Field label="Counted cash (Rs)">
             <input autoFocus value={raw} onChange={(e) => setRaw(e.target.value)} inputMode="decimal" />
           </Field>
@@ -1116,7 +1199,7 @@ function HeldModal({ register, cart, saleDiscount, catalog, onClose, onHeld, onR
         </div>
       )}
       <h3>Held sales</h3>
-      {!held.length && <div className="empty">Nothing on hold.</div>}
+      {!held.length && <div className="empty">Nothing on hold</div>}
       {held.map((h) => (
         <div key={h.id} className="list-row">
           <span>
@@ -1247,6 +1330,13 @@ function ReturnModal({ register, threshold, onClose, onDone }: { register: Regis
   )
 }
 
+function printerSummary(register: RegisterCfg) {
+  const p = deviceSettings().printer
+  if (p.connection === 'usb' || p.connection === 'serial') return `${p.connection.toUpperCase()} · ${p.device?.label ?? 'not paired'} · ${p.paper} mm`
+  if (p.connection === 'browser') return 'Browser print dialog'
+  return register.printer_driver === 'browser' || !register.printer_config?.url ? 'Browser print dialog' : `HTTP · ${register.printer_config.url}`
+}
+
 function ToolsModal({ register, config, catalogAge, onClose, onRefresh }: {
   register: RegisterCfg
   config: PosConfig
@@ -1262,11 +1352,10 @@ function ToolsModal({ register, config, catalogAge, onClose, onRefresh }: {
         <dt>Fiscal year</dt><dd>{config.fiscal_year}</dd>
         <dt>Next receipt (local)</dt><dd>{localSeq ?? '…'}</dd>
         <dt>Next receipt (server, last sync)</dt><dd>{register.next_receipt_number}</dd>
-        <dt>Catalog downloaded</dt><dd>{catalogAge ? new Date(catalogAge).toLocaleString() : 'never'}</dd>
-        <dt>Printer</dt><dd>{register.printer_driver}{register.printer_config?.url ? ` → ${register.printer_config.url}` : ''}</dd>
+        <dt>Catalog checked</dt><dd>{catalogAge ? new Date(catalogAge).toLocaleString() : 'never'}</dd>
+        <dt>Printer (this till)</dt><dd>{printerSummary(register)}</dd>
       </dl>
       <div className="modal-foot">
-        <Button onClick={() => void driverFor(register).openDrawer()}>Open drawer</Button>
         <Button
           onClick={async () => {
             const blob = await exportQueue()

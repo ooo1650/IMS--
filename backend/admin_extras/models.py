@@ -21,7 +21,8 @@ class AuditLog(AppendOnlyModel):
     ip = models.GenericIPAddressField(null=True, blank=True)
 
     class Meta:
-        indexes = [models.Index(fields=["branch", "at"])]
+        # (action, at): login lockout counts recent auth.login_failed rows.
+        indexes = [models.Index(fields=["branch", "at"]), models.Index(fields=["action", "at"])]
         ordering = ["-at"]
 
 
@@ -30,6 +31,8 @@ def log_action(user, action, obj=None, branch=None, request=None, changes=None, 
 
     from compliance import bs
 
+    from ims.net import client_ip
+
     from .audit import current
 
     ctx = current()
@@ -37,9 +40,7 @@ def log_action(user, action, obj=None, branch=None, request=None, changes=None, 
         user = ctx.get("user")
     ip = None
     if request is not None:
-        ip = request.META.get("HTTP_X_FORWARDED_FOR", "").split(",")[0].strip() or request.META.get(
-            "REMOTE_ADDR"
-        )
+        ip = client_ip(request)
     elif ctx:
         ip = ctx.get("ip")
     if branch is None and ctx:
@@ -55,3 +56,44 @@ def log_action(user, action, obj=None, branch=None, request=None, changes=None, 
         changes=changes or {},
         ip=ip or None,
     )
+
+
+def _default_otp_roles():
+    return ["SuperAdmin", "OrgAdmin", "BranchManager"]
+
+
+class SystemSettings(models.Model):
+    """Deployment-wide settings edited in the operator console (one row, pk=1).
+    These used to be environment variables; secrets and security guard rails
+    that must not be editable by an account stay in the environment."""
+
+    # Shown on the sign-in page above every business, e.g. the owner's group name.
+    group_name = models.CharField(max_length=200, blank=True)
+    # Roles that must enter an emailed code at every sign-in.
+    otp_required_roles = models.JSONField(default=_default_otp_roles, blank=True)
+    # Failed sign-ins (from the audit log) before a lockout.
+    login_window_minutes = models.PositiveIntegerField(default=15)
+    login_max_per_username = models.PositiveIntegerField(default=5)
+    login_max_per_ip = models.PositiveIntegerField(default=20)
+    # Outgoing email (sign-in and reset codes). No host = codes go to the server log.
+    smtp_host = models.CharField(max_length=200, blank=True)
+    smtp_port = models.PositiveIntegerField(default=587)
+    smtp_user = models.CharField(max_length=200, blank=True)
+    smtp_password_enc = models.TextField(blank=True)
+    smtp_use_tls = models.BooleanField(default=True)
+    from_email = models.CharField(max_length=200, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+                                   related_name="+")
+
+    @property
+    def smtp_password(self):
+        from compliance import crypto
+
+        return crypto.decrypt(self.smtp_password_enc)
+
+    @smtp_password.setter
+    def smtp_password(self, value):
+        from compliance import crypto
+
+        self.smtp_password_enc = crypto.encrypt(value)

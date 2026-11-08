@@ -53,9 +53,19 @@ class POSerializer(serializers.ModelSerializer):
     def get_total_paisa(self, po):
         return sum(l.qty_ordered * l.unit_cost_paisa for l in po.lines.all())
 
+    def _org_id(self):
+        return self.context["request"].branch.org_id
+
+    def validate_supplier(self, supplier):
+        if supplier is not None and supplier.org_id != self._org_id():
+            raise serializers.ValidationError("Unknown supplier")
+        return supplier
+
     def validate_lines(self, lines):
         if not lines:
             raise serializers.ValidationError("Add at least one line")
+        if any(l["product"].org_id != self._org_id() for l in lines):
+            raise serializers.ValidationError("Unknown product")
         if any(l["qty_ordered"] <= 0 or l["unit_cost_paisa"] < 0 for l in lines):
             raise serializers.ValidationError("Quantities must be positive and costs non-negative")
         return lines
@@ -155,7 +165,9 @@ class PurchaseReturnViewSet(BranchScopedMixin, mixins.CreateModelMixin, mixins.L
     def create(self, request):
         from catalog.models import Supplier
 
-        supplier = Supplier.objects.get(pk=request.data.get("supplier"))
+        supplier = Supplier.objects.filter(pk=request.data.get("supplier"), org_id=request.branch.org_id).first()
+        if supplier is None:
+            raise serializers.ValidationError({"supplier": "Unknown supplier"})
         gr = None
         if request.data.get("goods_receipt"):
             gr = GoodsReceipt.objects.get(pk=request.data["goods_receipt"], po__branch=request.branch)

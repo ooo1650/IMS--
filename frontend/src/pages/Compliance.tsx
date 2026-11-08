@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useAuth } from '../auth'
 import { Badge, Button, ErrorBox, Field, Modal, PageHead, Status, Tabs, fmtDate, useLoad } from '../components/ui'
 import { api, qs } from '../lib/api'
-import { npr, toPaisa, toRupeesInput } from '../lib/money'
+import { npr, plain, toPaisa, toRupeesInput } from '../lib/money'
 
 interface FiscalYears { current: string; current_month: number; years: string[]; months: { no: number; name: string }[]; today_bs: string }
 interface Column { key: string; label: string; kind: 'text' | 'int' | 'money' | 'date' }
@@ -45,10 +45,16 @@ export default function Compliance() {
   )
 }
 
+/** Report cells: the column header carries "Rs", and a zero amount is a quiet dash
+ *  so the figures that exist stand out (ledger style). */
 function fmtCell(v: string | number | undefined, kind: Column['kind']) {
-  if (kind === 'money') return npr(Number(v ?? 0))
+  if (kind === 'money') {
+    const n = Number(v ?? 0)
+    return n ? plain(n) : <span className="zero" aria-label="zero">–</span>
+  }
   return v ?? ''
 }
+const colLabel = (c: Column) => (c.kind === 'money' ? `${c.label} (Rs)` : c.label)
 
 function Reports() {
   const { canOrg } = useAuth()
@@ -112,13 +118,13 @@ function Reports() {
             </div>
           )}
           <div className="table-scroll tall">
-            <table className="table">
-              <thead><tr>{r.columns.map((c) => <th key={c.key} className={c.kind === 'money' || c.kind === 'int' ? 'num' : ''}>{c.label}</th>)}</tr></thead>
+            <table className="table report-table">
+              <thead><tr>{r.columns.map((c) => <th key={c.key} className={c.kind === 'money' || c.kind === 'int' ? 'num' : ''}>{colLabel(c)}</th>)}</tr></thead>
               <tbody>
                 {r.rows.map((row, i) => (
                   <tr key={i}>{r.columns.map((c) => <td key={c.key} className={c.kind === 'money' || c.kind === 'int' ? 'num' : ''}>{fmtCell(row[c.key], c.kind)}</td>)}</tr>
                 ))}
-                {!r.rows.length && <tr><td colSpan={r.columns.length} className="empty">Nothing in this period.</td></tr>}
+                {!r.rows.length && <tr><td colSpan={r.columns.length} className="empty">Nothing in this period</td></tr>}
               </tbody>
               {Object.keys(r.totals).length > 0 && (
                 <tfoot><tr>{r.columns.map((c, i) => <th key={c.key} className={c.kind === 'money' || c.kind === 'int' ? 'num' : ''}>{i === 0 ? 'Total' : c.key in r.totals ? fmtCell(r.totals[c.key], c.kind) : ''}</th>)}</tr></tfoot>

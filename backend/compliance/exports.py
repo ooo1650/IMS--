@@ -15,10 +15,19 @@ CONTENT_TYPES = {
 }
 
 
+FORMULA_START = ("=", "+", "-", "@", "\t", "\r")
+
+
 def _value(v, kind, for_text=False):
     if kind == "money":
         return f"{(v or 0) / 100:.2f}" if for_text else round((v or 0) / 100, 2)
-    return "" if v is None else v
+    if v is None:
+        return ""
+    # Text typed at the till (buyer names, product names) must not become a
+    # spreadsheet formula when the accountant opens the export (CSV injection).
+    if isinstance(v, str) and v.startswith(FORMULA_START):
+        return "'" + v
+    return v
 
 
 def to_xlsx(report) -> bytes:

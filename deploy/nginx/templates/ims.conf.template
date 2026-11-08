@@ -1,0 +1,165 @@
+# IMS web server: the built SPA, Django static files and product photos, and a
+# reverse proxy to the backend, all on one origin so session cookies and CSRF
+# stay first-party.
+#
+# Rendered at container start by the nginx image (envsubst, IMS_* variables
+# only; nginx's own $variables are left alone). TLS files are put in
+# /etc/nginx/runtime/tls by 40-ims.sh: Let's Encrypt (certbot service) for a
+# public IMS_DOMAIN, otherwise a self-signed certificate.
+
+limit_req_zone $binary_remote_addr zone=ims_auth:10m rate=30r/m;
+limit_req_zone $binary_remote_addr zone=ims_pos:10m rate=20r/s;
+limit_req_zone $binary_remote_addr zone=ims_api:10m rate=50r/s;
+limit_req_status 429;
+
+server_tokens off;
+client_max_body_size 10m;
+gzip on;
+gzip_vary on;
+gzip_min_length 1024;
+gzip_types text/css application/javascript application/json application/manifest+json image/svg+xml text/plain application/xml;
+
+# Docker's DNS, so a restarted backend container (new IP) is found again.
+resolver 127.0.0.11 valid=10s ipv6=off;
+
+# Port 80: Let's Encrypt challenges and a health probe; everything else goes to https.
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+        default_type text/plain;
+    }
+    location = /nginx-health {
+        access_log off;
+        return 200 "ok\n";
+    }
+    location / {
+        return 308 https://${IMS_DOMAIN}$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+    http2 on;
+    server_name _;
+
+    ssl_certificate     /etc/nginx/runtime/tls/fullchain.pem;
+    ssl_certificate_key /etc/nginx/runtime/tls/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:ims_ssl:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off;
+    # Plain http:// sent to port 443 (e.g. "localhost:443" typed without https://): redirect.
+    error_page 497 =308 https://${IMS_DOMAIN}$request_uri;
+
+    # A location with its own add_header drops these, so every such location
+    # includes the file again.
+    include /etc/nginx/conf.d/ims-headers.inc;
+
+    # Sign-in, sign-in codes and password resets. The app also locks accounts
+    # after failed attempts (audit-log lockout); this caps raw request volume.
+    location ~ ^/api/v1/auth/(login|password/) {
+        limit_req zone=ims_auth burst=20 nodelay;
+        include /etc/nginx/snippets/ims-proxy.conf;
+    }
+    location ^~ /api/v1/pos/ {
+        limit_req zone=ims_pos burst=40;
+        include /etc/nginx/snippets/ims-proxy.conf;
+    }
+    # Operator console API: only on the console's server block below.
+    location ^~ /api/v1/platform/ {
+        return 404;
+    }
+    # Plain prefix (no ^~): a ^~ match here would skip the auth regex above.
+    location /api/ {
+        limit_req zone=ims_api burst=100 nodelay;
+        include /etc/nginx/snippets/ims-proxy.conf;
+    }
+
+    # Django admin: office/VPN networks only (IMS_ADMIN_ALLOW).
+    location ^~ /django-admin/ {
+        include /etc/nginx/runtime/admin-allow.inc;
+        include /etc/nginx/snippets/ims-proxy.conf;
+    }
+
+    location ^~ /static/ {
+        root /srv;
+        include /etc/nginx/conf.d/ims-headers.inc;
+        add_header Cache-Control "public, max-age=604800" always;
+    }
+    # Product photos: content-addressed names (catalog/images.py), so a new
+    # photo is a new URL and these can be cached forever.
+    location ^~ /media/ {
+        root /srv;
+        include /etc/nginx/conf.d/ims-headers.inc;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+    }
+    # Vite build output: hashed file names.
+    location ^~ /assets/ {
+        root /srv/spa;
+        try_files $uri =404;
+        include /etc/nginx/conf.d/ims-headers.inc;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+    }
+    location = /sw.js {
+        root /srv/spa;
+        include /etc/nginx/conf.d/ims-headers.inc;
+        add_header Cache-Control "no-cache" always;
+    }
+    # The SPA: unknown paths are client-side routes. index.html is revalidated
+    # so tills pick up a new release.
+    location / {
+        root /srv/spa;
+        try_files $uri /index.html;
+        include /etc/nginx/conf.d/ims-headers.inc;
+        add_header Cache-Control "no-cache" always;
+    }
+}
+
+# --- Operator console: a separate app (frontend/console) on port 8443 or its
+# own subdomain (IMS_CONSOLE_DOMAIN), limited to IMS_CONSOLE_ALLOW networks.
+server {
+    include /etc/nginx/runtime/console-listen.inc;
+    http2 on;
+
+    ssl_certificate     /etc/nginx/runtime/tls/fullchain.pem;
+    ssl_certificate_key /etc/nginx/runtime/tls/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:ims_ssl:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off;
+    error_page 497 =308 https://$host:$server_port$request_uri;
+
+    include /etc/nginx/runtime/console-allow.inc;
+    include /etc/nginx/conf.d/ims-headers.inc;
+
+    location ~ ^/api/v1/auth/(login|password/) {
+        limit_req zone=ims_auth burst=20 nodelay;
+        include /etc/nginx/snippets/ims-proxy.conf;
+    }
+    location /api/ {
+        limit_req zone=ims_api burst=100 nodelay;
+        include /etc/nginx/snippets/ims-proxy.conf;
+    }
+    location ^~ /assets/ {
+        root /srv/console;
+        try_files $uri =404;
+        include /etc/nginx/conf.d/ims-headers.inc;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+    }
+    location = /favicon.svg {
+        root /srv/spa;
+    }
+    location / {
+        root /srv/console;
+        try_files $uri /index.html;
+        include /etc/nginx/conf.d/ims-headers.inc;
+        add_header Cache-Control "no-cache" always;
+    }
+}

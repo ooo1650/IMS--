@@ -30,14 +30,14 @@ def local_today(branch):
     return timezone.localtime(timezone.now(), branch.tz).date()
 
 
-def series_mode():
-    return get_settings().invoice_series
+def series_mode(branch):
+    return get_settings(branch.org).invoice_series
 
 
 def series_for(branch, register, doc_type):
     """(register_key, series label) for a document. Debit notes and purchase
     returns are always issued at branch level."""
-    if (series_mode() == ComplianceSettings.REGISTER and register is not None
+    if (series_mode(branch) == ComplianceSettings.REGISTER and register is not None
             and doc_type in (DocumentSequence.INVOICE, DocumentSequence.CREDIT_NOTE)):
         return register.id, register.code
     return 0, ""
@@ -68,7 +68,7 @@ def allocate(doc_type, branch, register, fiscal_year):
 def claim_offline(branch, register, fiscal_year, n):
     """Register-series mode only: an offline till used number ``n`` from its
     local copy of the series; advance the server past it (§9.10)."""
-    if series_mode() != ComplianceSettings.REGISTER:
+    if series_mode(branch) != ComplianceSettings.REGISTER:
         raise ValidationError("Offline numbers can only be claimed in per-register series mode")
     if n < 1:
         raise ValidationError("Invalid offline receipt number")

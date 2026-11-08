@@ -1,10 +1,12 @@
 from rest_framework import serializers, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
 
 from accounts.permissions import HasOrgPerm
 from admin_extras.models import log_action
+from ims.api import OrgFieldsMixin
 
 from .models import Branch, Register
 
@@ -13,9 +15,12 @@ class BranchSerializer(serializers.ModelSerializer):
     class Meta:
         model = Branch
         fields = ["id", "org", "name", "code", "timezone", "address", "is_active"]
+        read_only_fields = ["org"]  # a branch belongs to the active business; it never moves
 
 
-class RegisterSerializer(serializers.ModelSerializer):
+class RegisterSerializer(OrgFieldsMixin, serializers.ModelSerializer):
+    org_fields = ("branch",)  # registers only on the active business's branches
+
     branch_code = serializers.CharField(source="branch.code", read_only=True)
 
     class Meta:
@@ -24,7 +29,8 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 
 class BranchViewSet(viewsets.ModelViewSet):
-    """Read: branches the user can access. Write: org admins (branches.manage)."""
+    """Branches of the active business that the user can access. Write: that
+    business's admins (branches.manage)."""
 
     serializer_class = BranchSerializer
     pagination_class = None
@@ -36,15 +42,18 @@ class BranchViewSet(viewsets.ModelViewSet):
         return [IsAuthenticated(), HasOrgPerm("branches.manage")()]
 
     def get_queryset(self):
-        return Branch.objects.filter(id__in=self.request.user.accessible_branch_ids())
+        return Branch.objects.filter(id__in=self.request.user.accessible_branch_ids(self.request.org))
 
     @action(detail=False)
     def directory(self, request):
-        """All active branches (id, code, name) — e.g. transfer destinations."""
-        return Response(list(Branch.objects.filter(is_active=True).values("id", "code", "name")))
+        """Active branches of the active business (id, code, name), e.g. transfer destinations."""
+        org = getattr(request, "org", None)
+        return Response(list(Branch.objects.filter(org=org, is_active=True).values("id", "code", "name")))
 
     def perform_create(self, serializer):
-        log_action(self.request.user, "branch.created", serializer.save(), request=self.request)
+        if self.request.org is None:
+            raise PermissionDenied("Choose a business first")
+        log_action(self.request.user, "branch.created", serializer.save(org=self.request.org), request=self.request)
 
     def perform_update(self, serializer):
         branch = serializer.save()
@@ -61,10 +70,14 @@ class RegisterViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated()]
         return [IsAuthenticated(), HasOrgPerm("branches.manage")()]
 
+    def get_serializer_context(self):
+        return {**super().get_serializer_context(), "org": self.request.org}
+
     def get_queryset(self):
-        qs = Register.objects.select_related("branch").filter(branch_id__in=self.request.user.accessible_branch_ids())
+        qs = Register.objects.select_related("branch").filter(
+            branch_id__in=self.request.user.accessible_branch_ids(self.request.org))
         if branch := self.request.query_params.get("branch"):
             qs = qs.filter(branch_id=branch)
-        elif self.request.branch and not self.request.user.org_role():
+        elif self.request.branch and not self.request.user.org_role(self.request.org):
             qs = qs.filter(branch=self.request.branch)
         return qs

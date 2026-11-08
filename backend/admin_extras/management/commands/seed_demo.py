@@ -1,10 +1,19 @@
-"""Demo data for local development: 3 branches, users for each role, a small
-catalog with opening stock, and a few days of sales for the dashboard."""
+"""Demo data for local development. Two separately registered businesses with
+one owner, to show that each has its own catalog, invoices and reports:
+
+* Himalaya Mart (groceries): 3 branches, users for each role, a catalog with
+  opening stock and a few days of sales for the dashboard;
+* Himalaya Footwear (shoes): 1 branch, its own small catalog.
+
+``admin`` is the owner (org admin of both); ``operator`` is the platform admin
+for the operator console."""
 import random
 import uuid
 from datetime import timedelta
 from decimal import Decimal
 
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
@@ -47,6 +56,15 @@ CATALOG = [
 ]
 
 
+FOOTWEAR = [
+    # sku, name, price NPR, cost NPR, barcode (SKU "SOCKS" exists in neither grocery list: no clash)
+    ("SNEAKER-42", "Running Sneaker size 42", "4500.00", "3100.00", "8902000000019"),
+    ("SANDAL-40", "Leather Sandal size 40", "2200.00", "1450.00", "8902000000026"),
+    ("BOOT-41", "Trekking Boot size 41", "7800.00", "5600.00", "8902000000033"),
+    ("SOCKS", "Cotton Socks (3 pairs)", "450.00", "280.00", "8902000000040"),
+]
+
+
 def paisa(npr):
     return int(Decimal(npr) * 100)
 
@@ -54,20 +72,32 @@ def paisa(npr):
 class Command(BaseCommand):
     help = "Seed demo branches, users, catalog, stock and sales. Refuses to run twice."
 
+    def add_arguments(self, parser):
+        parser.add_argument("--admin-email", default="",
+                            help="Real address for the admin account, so its sign-in codes arrive by email "
+                                 "(default: admin@demo.ims.test, which only prints to the log)")
+
     def handle(self, *args, **opts):
         if Organization.objects.exists():
             raise CommandError("Data already exists; run on an empty database (flush first).")
+        admin_email = opts["admin_email"].strip().lower()
+        if admin_email:
+            try:
+                validate_email(admin_email)
+            except ValidationError:
+                raise CommandError(f"Not a valid email address: {admin_email}")
         with transaction.atomic():
-            self.seed()
+            self.seed(admin_email)
         self.stdout.write(self.style.SUCCESS(f"Seeded. Every demo user's password is: {PASSWORD}"))
         for u in User.objects.order_by("username"):
-            roles = ", ".join(f"{r.role}@{r.branch.code if r.branch else 'ORG'}" for r in u.branch_roles.all())
+            roles = ", ".join(f"{r.role}@{r.branch.code if r.branch else r.org.code}" for r in u.branch_roles.all())
+            roles = roles or ("platform admin" if u.is_platform_admin else "")
             self.stdout.write(f"  {u.username:<14} {roles}")
 
-    def seed(self):
+    def seed(self, admin_email=""):
         org = Organization.objects.create(
             name="Himalaya Mart Pvt. Ltd.", name_np="हिमालय मार्ट प्रा. लि.", pan="999999999",
-            address="New Road, Kathmandu", phone="01-4200000")
+            address="New Road, Kathmandu", phone="01-4200000", code="himalaya-mart", trade="Groceries")
         cfg = get_settings(org)
         # Demo: per-branch series and the in-process CBMS double (IRD test login).
         cfg.cbms_enabled, cfg.cbms_base_url, cfg.cbms_username = True, "mock://", "Test_CBMS"
@@ -82,15 +112,17 @@ class Command(BaseCommand):
                      for b in branches}
         ktm, pkr, brt = branches
 
-        def user(username, first, roles, superuser=False):
-            u = User.objects.create(username=username, first_name=first, is_staff=superuser, is_superuser=superuser)
+        def user(username, first, roles, superuser=False, email=""):
+            # .test is a reserved domain; in dev the sign-in codes print to the runserver console.
+            u = User.objects.create(username=username, first_name=first, email=email or f"{username}@demo.ims.test",
+                                    is_staff=superuser, is_superuser=superuser)
             u.set_password(PASSWORD)
             u.save()
             for branch, role in roles:
-                UserBranchRole.objects.create(user=u, branch=branch, role=role)
+                UserBranchRole.objects.create(user=u, org=org, branch=branch, role=role)
             return u
 
-        admin = user("admin", "Org Admin", [(None, ORG_ADMIN)], superuser=True)
+        admin = user("admin", "Org Admin", [(None, ORG_ADMIN)], superuser=True, email=admin_email)
         user("manager", "Sita Manager", [(ktm, BRANCH_MANAGER), (pkr, CASHIER)])
         cashier = user("cashier", "Ram Cashier", [(ktm, CASHIER)])
         user("cashier_pkr", "Hari Cashier", [(pkr, CASHIER)])
@@ -98,7 +130,7 @@ class Command(BaseCommand):
         user("viewer", "Auditor", [(None, VIEWER)])
         user("manager_brt", "Bikash Manager", [(brt, BRANCH_MANAGER)])
 
-        suppliers = [Supplier.objects.create(name=n, phone=p, pan=pan) for n, p, pan in
+        suppliers = [Supplier.objects.create(org=org, name=n, phone=p, pan=pan) for n, p, pan in
                      [("Everest Traders", "01-4220000", "301234567"),
                       ("Sagarmatha Distributors", "061-520000", "302345678")]]
         # flush also removes the migration-seeded tax categories; recreate them.
@@ -111,9 +143,9 @@ class Command(BaseCommand):
         cats = {}
         products = []
         for sku, name, cat, price, cost, tax, incl, code in CATALOG:
-            cats.setdefault(cat, Category.objects.get_or_create(name=cat)[0])
+            cats.setdefault(cat, Category.objects.get_or_create(org=org, name=cat)[0])
             p = Product.objects.create(
-                sku=sku, name=name, category=cats[cat], supplier=random.choice(suppliers),
+                org=org, sku=sku, name=name, category=cats[cat], supplier=random.choice(suppliers),
                 sale_price_paisa=paisa(price), cost_price_paisa=paisa(cost), tax_rate=Decimal(tax),
                 tax_inclusive=incl, tax_category=tax_cats["VAT13" if tax == "13" else "EXEMPT"],
                 hs_code=HS.get(cat, ""),
@@ -152,3 +184,36 @@ class Command(BaseCommand):
                     except services.StockUnavailable:
                         continue
             services.close_shift(shift, admin, services.expected_cash(shift))
+
+        self.seed_footwear(admin, tax_cats)
+        # Platform admin for the operator console (always needs an emailed code).
+        op = User.objects.create(username="operator", first_name="Operator", email="operator@demo.ims.test",
+                                 is_platform_admin=True)
+        op.set_password(PASSWORD)
+        op.save()
+
+    def seed_footwear(self, owner, tax_cats):
+        """A second, separately registered business run by the same owner."""
+        org = Organization.objects.create(
+            name="Himalaya Footwear Pvt. Ltd.", name_np="हिमालय फुटवेयर प्रा. लि.", pan="999999998",
+            address="Durbar Marg, Kathmandu", phone="01-4211111", code="himalaya-footwear", trade="Footwear")
+        branch = Branch.objects.create(org=org, name="Durbar Marg", code="SHO", address="Durbar Marg, Kathmandu")
+        Register.objects.create(branch=branch, code="R1", name="Till 1")
+        UserBranchRole.objects.create(user=owner, org=org, role=ORG_ADMIN)
+        manager = User.objects.create(username="manager_shoes", first_name="Anita Manager",
+                                      email="manager_shoes@demo.ims.test")
+        manager.set_password(PASSWORD)
+        manager.save()
+        UserBranchRole.objects.create(user=manager, org=org, branch=branch, role=BRANCH_MANAGER)
+        supplier = Supplier.objects.create(org=org, name="Bhaktapur Shoe Works", pan="303456789")
+        cat = Category.objects.create(org=org, name="Shoes")
+        products = []
+        for sku, name, price, cost, code in FOOTWEAR:
+            p = Product.objects.create(org=org, sku=sku, name=name, category=cat, supplier=supplier,
+                                       sale_price_paisa=paisa(price), cost_price_paisa=paisa(cost),
+                                       tax_rate=Decimal("13"), tax_inclusive=True, tax_category=tax_cats["VAT13"],
+                                       hs_code="6403")
+            Barcode.objects.create(product=p, code=code)
+            products.append(p)
+        receive_stock(branch, [Receipt(p.id, 25, p.cost_price_paisa) for p in products], StockMovement.PURCHASE_IN,
+                      owner, ref_type="opening_stock", reason="demo opening stock")

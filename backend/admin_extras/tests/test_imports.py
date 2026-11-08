@@ -13,14 +13,14 @@ class ImportTests(TestCase):
         self.w = World()
 
     def test_dry_run_previews_without_writing(self):
-        r = imports.import_products(PRODUCTS, dry_run=True)
+        r = imports.import_products(self.w.org, PRODUCTS, dry_run=True)
         self.assertTrue(r["ok"])
         self.assertEqual((r["creates"], r["updates"]), (1, 1))
         self.assertFalse(Product.objects.filter(sku="NEW1").exists())
 
     def test_commit_upserts_on_sku_and_converts_rupees(self):
-        imports.import_products(PRODUCTS, dry_run=False)
-        imports.import_products(PRODUCTS, dry_run=False)  # idempotent
+        imports.import_products(self.w.org, PRODUCTS, dry_run=False)
+        imports.import_products(self.w.org, PRODUCTS, dry_run=False)  # idempotent
         p = Product.objects.get(sku="NEW1")
         self.assertEqual(p.sale_price_paisa, 12050)
         self.assertEqual(Product.objects.get(sku="P1").name, "Renamed")
@@ -28,13 +28,13 @@ class ImportTests(TestCase):
 
     def test_row_errors_block_commit(self):
         bad = b"sku,name,price\nX1,Ok,10\nX2,Bad,12.345\n,NoSku,5\n"
-        r = imports.import_products(bad, dry_run=False)
+        r = imports.import_products(self.w.org, bad, dry_run=False)
         self.assertFalse(r["ok"])
         self.assertEqual([e["row"] for e in r["errors"]], [3, 4])
         self.assertFalse(Product.objects.filter(sku="X1").exists())
 
     def test_opening_stock_is_not_doubled_on_reimport(self):
-        imports.import_products(PRODUCTS, dry_run=False)
+        imports.import_products(self.w.org, PRODUCTS, dry_run=False)
         csv = b"sku,qty,cost\nNEW1,25,95.00\n"
         imports.import_opening_stock(self.w.a, csv, self.w.admin, dry_run=False)
         r = imports.import_opening_stock(self.w.a, csv, self.w.admin, dry_run=False)

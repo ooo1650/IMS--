@@ -10,11 +10,26 @@ export interface BranchAccess {
 export interface Me {
   id: number
   username: string
+  email: string
+  email_verified: boolean
+  /** Opted in to the emailed sign-in code. */
+  otp_enabled: boolean
+  /** Must enter a code at sign-in (opted in, or the role requires it). */
+  otp_required: boolean
   name: string
+  /** Operator account for the console; holds no business roles. */
+  is_platform_admin?: boolean
+  /** Every business this user works for (switcher shown when more than one). */
+  businesses: { id: number; name: string; code: string; role: string | null }[]
+  active_org_id: number | null
+  active_org_name: string | null
+  /** Role and permissions in the active business. */
   org_role: string | null
   org_permissions: string[]
   branches: BranchAccess[]
   active_branch_id: number | null
+  /** Testing phase: one-click sign-in is on (server IMS_TEST_LOGIN). */
+  test_login?: boolean
 }
 
 export interface Barcode {
@@ -49,6 +64,9 @@ export interface Product {
   on_hand: number | null
   /** Active branch's reorder point (null when the product isn't stocked there). */
   reorder_point: number | null
+  /** Product photo (800 px) and thumbnail (160 px); null without a photo. */
+  image_url: string | null
+  thumb_url: string | null
 }
 
 /** Offline catalog entry — no cost fields by design. */
@@ -66,6 +84,8 @@ export interface PosProduct {
   levy_rate?: string
   barcodes: { code: string; pack_qty: number }[]
   stock_estimate: number
+  /** Thumbnail URL; absent in catalogs cached before photos existed. */
+  thumb?: string | null
 }
 
 export interface Shift {

@@ -1,5 +1,7 @@
 # Questions to settle with IRD and the tax practitioner
 
+> **⏸ Paused (2026-11-06):** not applying for IRD listing for now. Kept for reference; see `docs/STATUS.md`.
+
 payment.md Step 0 says to ask IRD these questions before finalising the tax engine and CBMS module. The software is built so that every answer is a **settings change** (Tax & IRD → Settings / Tax categories), not a code change. Record each answer here with the date and who gave it.
 
 ## From payment.md Step 0

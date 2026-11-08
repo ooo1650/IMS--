@@ -109,15 +109,13 @@ def cancellation_payload(sale, reason):
     }
 
 
-def enabled():
-    try:
-        return get_settings().cbms_enabled
-    except RuntimeError:
-        return False
+def enabled(org):
+    """CBMS posting is switched on for this business (each has its own PAN and login)."""
+    return get_settings(org).cbms_enabled
 
 
 def enqueue_bill(sale):
-    if not enabled():
+    if not enabled(sale.branch.org):
         return None
     return CbmsPost.objects.get_or_create(key=f"bill:{sale.id}", defaults=dict(
         doc_type=CbmsPost.BILL, branch=sale.branch, sale=sale, document_number=sale.receipt_number,
@@ -125,7 +123,7 @@ def enqueue_bill(sale):
 
 
 def enqueue_return(cn):
-    if not enabled():
+    if not enabled(cn.branch.org):
         return None
     return CbmsPost.objects.get_or_create(key=f"billreturn:cn:{cn.id}", defaults=dict(
         doc_type=CbmsPost.RETURN, branch=cn.branch, credit_note=cn, sale=cn.original_sale,
@@ -133,7 +131,7 @@ def enqueue_return(cn):
 
 
 def enqueue_cancellation(sale, reason):
-    if not enabled() or not CbmsPost.objects.filter(key=f"bill:{sale.id}").exists():
+    if not enabled(sale.branch.org) or not CbmsPost.objects.filter(key=f"bill:{sale.id}").exists():
         return None
     return CbmsPost.objects.get_or_create(key=f"billreturn:cancel:{sale.id}", defaults=dict(
         doc_type=CbmsPost.RETURN, branch=sale.branch, sale=sale, document_number=f"CANCEL-{sale.receipt_number}",
@@ -174,7 +172,7 @@ def send(base_url, endpoint, body, timeout=15) -> str:
 
 
 def post_one(post: CbmsPost, cfg=None, now=None) -> CbmsPost:
-    cfg = cfg or get_settings()
+    cfg = cfg or get_settings(post.branch.org)
     now = now or timezone.now()
     realtime = (now - post.issued_at) <= timedelta(minutes=cfg.cbms_realtime_window_minutes)
     body = {"username": cfg.cbms_username, "password": cfg.cbms_password, **post.payload,
@@ -204,15 +202,27 @@ def post_one(post: CbmsPost, cfg=None, now=None) -> CbmsPost:
     return post
 
 
-def sync_pending(limit=200, now=None, force=False):
-    """Post due rows, bills before returns (a return needs its bill first)."""
-    cfg = get_settings()
+def sync_pending(limit=200, now=None, force=False, org=None):
+    """Post due rows, bills before returns (a return needs its bill first).
+    Every business posts with its own settings (PAN, CBMS login); a business
+    whose credentials were rejected is paused without holding up the others."""
+    from tenancy.models import Organization
+
+    orgs = [org] if org is not None else list(Organization.objects.all())
+    done = []
+    for o in orgs:
+        done += _sync_org(o, limit, now, force)
+    return done
+
+
+def _sync_org(org, limit, now, force):
+    cfg = get_settings(org)
     if not cfg.cbms_enabled:
         return []
     if cfg.cbms_paused_reason and not force:
         return []
     now = now or timezone.now()
-    qs = CbmsPost.objects.filter(status=CbmsPost.PENDING)
+    qs = CbmsPost.objects.filter(status=CbmsPost.PENDING, branch__org=org)
     if not force:
         qs = qs.filter(next_attempt_at__lte=now)
     done = []
@@ -228,13 +238,15 @@ def sync_pending(limit=200, now=None, force=False):
     return done
 
 
-def status_summary(branches=None):
+def status_summary(org, branches=None):
     from django.db.models import Count
 
-    qs = CbmsPost.objects.all() if branches is None else CbmsPost.objects.filter(branch__in=branches)
+    qs = CbmsPost.objects.filter(branch__org=org)
+    if branches is not None:
+        qs = qs.filter(branch__in=branches)
     counts = dict(qs.values_list("status").annotate(n=Count("id")))
     oldest = qs.filter(status=CbmsPost.PENDING).order_by("issued_at").first()
-    cfg = get_settings()
+    cfg = get_settings(org)
     return {
         "enabled": cfg.cbms_enabled, "paused_reason": cfg.cbms_paused_reason,
         "pending": counts.get(CbmsPost.PENDING, 0), "synced": counts.get(CbmsPost.SYNCED, 0),

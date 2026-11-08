@@ -1,6 +1,10 @@
 """Shared API plumbing."""
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import DatabaseError, connection
 from rest_framework import serializers
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework.views import exception_handler as drf_exception_handler
 
 from accounts.permissions import PerActionPermissionMixin
@@ -41,5 +45,61 @@ class BranchScopedMixin(PerActionPermissionMixin):
         serializer.save(**{self.branch_field: self.request.branch})
 
 
-def paisa_field(**kw):
-    return serializers.IntegerField(min_value=0, **kw)
+class OrgScopedMixin:
+    """For business-wide tables (catalog, suppliers, customers): list only the
+    active business's rows (``request.org``) and stamp it on create. With no
+    active business the list is empty and writes are refused."""
+
+    org_field = "org"
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        org = getattr(self.request, "org", None)
+        if org is None:
+            return qs.none()
+        return qs.filter(**{self.org_field: org})
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        ctx["org"] = getattr(self.request, "org", None)
+        return ctx
+
+    def perform_create(self, serializer):
+        from rest_framework.exceptions import PermissionDenied
+
+        if getattr(self.request, "org", None) is None:
+            raise PermissionDenied("Choose a business first")
+        serializer.save(**{self.org_field: self.request.org})
+
+
+class OrgFieldsMixin:
+    """Serializer mixin: related fields named in ``org_fields`` only accept rows
+    of the business in ``context["org"]`` (a product can't point at another
+    business's category or supplier)."""
+
+    org_fields = ()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        org = self.context.get("org")
+        if org is None:
+            return
+        for name in self.org_fields:
+            field = self.fields.get(name)
+            if field is not None and getattr(field, "queryset", None) is not None:
+                field.queryset = field.queryset.filter(org=org)
+
+
+class HealthView(APIView):
+    """Liveness + database check for container health probes. No data, no auth."""
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def get(self, request):
+        try:
+            with connection.cursor() as cur:
+                cur.execute("SELECT 1")
+        except DatabaseError:
+            return Response({"status": "db-unavailable"}, status=503)
+        return Response({"status": "ok"})

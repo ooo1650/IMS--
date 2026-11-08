@@ -46,10 +46,10 @@ export default function Inventory() {
         )}
       </PageHead>
       <div className="tiles">
-        <Tile icon="package" label="Products tracked" value={s?.items ?? '—'} />
-        <Tile icon="coins" iconTone="info" label="Stock value" value={s ? npr(s.inventory_value_paisa) : '—'} sub="on hand × weighted-avg cost" />
-        <Tile icon="alert" iconTone="warn" label="Low stock" value={s?.low_stock ?? '—'} tone={s?.low_stock ? 'warn' : undefined} sub="at or below reorder point" />
-        <Tile icon="x" iconTone="bad" label="Out of stock" value={s?.out_of_stock ?? '—'} tone={s?.out_of_stock ? 'bad' : undefined}
+        <Tile label="Products tracked" value={s?.items ?? '—'} />
+        <Tile label="Stock value" value={s ? npr(s.inventory_value_paisa) : '—'} sub="on hand × weighted-avg cost" />
+        <Tile label="Low stock" value={s?.low_stock ?? '—'} tone={s?.low_stock ? 'warn' : undefined} sub="at or below reorder point" />
+        <Tile label="Out of stock" value={s?.out_of_stock ?? '—'} tone={s?.out_of_stock ? 'bad' : undefined}
           sub={s?.negative_stock ? `${s.negative_stock} below zero — recount` : 'nothing on hand'} />
       </div>
       <Tabs value={tab} onChange={setTab} tabs={[['stock', 'Stock on hand'], ['movements', 'Movements']]} />
@@ -94,7 +94,7 @@ export default function Inventory() {
                     </td>
                   </tr>
                 ))}
-                {!stock.items.length && !stock.loading && <tr><td colSpan={8} className="empty">Nothing here.</td></tr>}
+                {!stock.items.length && !stock.loading && <tr><td colSpan={8} className="empty">Nothing here</td></tr>}
               </tbody>
             </table>
             <LoadMore more={stock.more} loading={stock.loading} />
@@ -117,7 +117,7 @@ export default function Inventory() {
                   <td className="small">{m.reason}</td>
                 </tr>
               ))}
-              {!moves.items.length && !moves.loading && <tr><td colSpan={8} className="empty">No movements yet.</td></tr>}
+              {!moves.items.length && !moves.loading && <tr><td colSpan={8} className="empty">No movements yet</td></tr>}
             </tbody>
           </table>
           <LoadMore more={moves.more} loading={moves.loading} />

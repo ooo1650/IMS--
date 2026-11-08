@@ -13,10 +13,12 @@ import decimal
 
 from django.db.models.signals import post_delete, post_save, pre_save
 
+from ims.net import client_ip
+
 _ctx = contextvars.ContextVar("audit_ctx", default=None)
 
 # Fields never written to the audit log.
-REDACT = {"password", "cbms_password_enc"}
+REDACT = {"password", "cbms_password_enc", "password_enc", "secret_enc"}
 SKIP = {"updated_at", "last_login"}
 
 
@@ -33,8 +35,7 @@ class AuditContextMiddleware:
         token = _ctx.set({
             "user": user if (user is not None and user.is_authenticated) else None,
             "branch": getattr(request, "branch", None),
-            "ip": (request.META.get("HTTP_X_FORWARDED_FOR", "").split(",")[0].strip()
-                   or request.META.get("REMOTE_ADDR")),
+            "ip": client_ip(request),
         })
         try:
             return self.get_response(request)
@@ -99,6 +100,7 @@ AUDITED = [
     "catalog.Category", "catalog.Supplier", "catalog.Product", "catalog.Barcode", "catalog.BranchPrice",
     "inventory.InventoryItem", "inventory.StockTransfer", "inventory.Stocktake",
     "sales.Sale", "sales.CreditNote", "sales.DebitNote", "sales.Customer", "sales.CashierShift",
+    "sales.FonepayMerchant", "sales.FonepaySettings",
     "purchasing.PurchaseOrder", "purchasing.GoodsReceipt", "purchasing.PurchaseReturn",
     "compliance.ComplianceSettings", "compliance.TaxCategory", "compliance.TaxCategoryRate",
 ]

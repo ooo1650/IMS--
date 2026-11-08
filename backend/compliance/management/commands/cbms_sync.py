@@ -10,11 +10,15 @@ class Command(BaseCommand):
         parser.add_argument("--force", action="store_true", help="ignore backoff and paused state")
 
     def handle(self, *args, **opts):
-        done = cbms.sync_pending(force=opts["force"])
-        for p in done:
-            self.stdout.write(f"{p.doc_type} {p.document_number}: {p.status} ({p.last_code})")
-        s = cbms.status_summary()
-        if s["paused_reason"]:
-            self.stdout.write(self.style.ERROR(f"PAUSED: {s['paused_reason']}"))
-        self.stdout.write(self.style.SUCCESS(
-            f"{len(done)} posted · pending {s['pending']} · synced {s['synced']} · failed {s['failed']}"))
+        from tenancy.models import Organization
+
+        # Each business posts with its own PAN and CBMS login.
+        for org in Organization.objects.all():
+            done = cbms.sync_pending(force=opts["force"], org=org)
+            for p in done:
+                self.stdout.write(f"{p.doc_type} {p.document_number}: {p.status} ({p.last_code})")
+            s = cbms.status_summary(org)
+            if s["paused_reason"]:
+                self.stdout.write(self.style.ERROR(f"{org.name}: PAUSED: {s['paused_reason']}"))
+            self.stdout.write(self.style.SUCCESS(
+                f"{org.name}: {len(done)} posted · pending {s['pending']} · synced {s['synced']} · failed {s['failed']}"))

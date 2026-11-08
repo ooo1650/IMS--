@@ -22,7 +22,10 @@ pg_restore --no-owner --dbname="$target" "$dump"
 invoices="$(psql "$target" -tAc "SELECT count(*) FROM sales_sale WHERE receipt_number <> ''")"
 triggers="$(psql "$target" -tAc "SELECT count(*) FROM pg_trigger WHERE tgname LIKE '%no_delete'")"
 psql "$target" -qc "REFRESH MATERIALIZED VIEW cbms_bill_view" >/dev/null
-DATABASE_URL="$target" python backend/manage.py migrate --check >/dev/null
+# Schema matches the code (skipped in the Docker backup container, which has no Python).
+if command -v python >/dev/null && [ -f backend/manage.py ]; then
+  DATABASE_URL="$target" python backend/manage.py migrate --check >/dev/null
+fi
 
 [ "$triggers" -gt 0 ] || { echo "FAIL: append-only triggers missing"; exit 1; }
 echo "restore drill ok: $dump -> $db · $invoices invoices · $triggers delete-guards"

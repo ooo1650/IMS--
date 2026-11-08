@@ -128,7 +128,7 @@ def create_purchase_return(*, branch, supplier, by, lines, reason, goods_receipt
         items = lock_items(branch, [p for p, _, _ in lines])
         from catalog.models import Product
 
-        products = Product.objects.select_related("tax_category").in_bulk([p for p, _, _ in lines])
+        products = Product.objects.filter(org_id=branch.org_id).select_related("tax_category").in_bulk([p for p, _, _ in lines])
         today = local_today(branch)
         planned = []
         for pid, qty, cost in sorted(lines):

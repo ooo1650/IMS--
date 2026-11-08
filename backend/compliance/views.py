@@ -64,10 +64,10 @@ class SettingsView(APIView):
     permission_classes = [HasOrgPerm("branches.manage")]
 
     def get(self, request):
-        return Response(SettingsSerializer(get_settings()).data)
+        return Response(SettingsSerializer(get_settings(request.org)).data)
 
     def patch(self, request):
-        s = SettingsSerializer(get_settings(), data=request.data, partial=True)
+        s = SettingsSerializer(get_settings(request.org), data=request.data, partial=True)
         s.is_valid(raise_exception=True)
         obj = s.save()
         log_action(request.user, "compliance.settings_updated", obj, request=request,
@@ -131,14 +131,15 @@ class TaxCategoryViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.
 # --- CBMS --------------------------------------------------------------------------
 
 def _report_branches(request):
-    """Org-level report users see all branches by default (or ?branch=<id>);
-    branch users see only their active branch."""
+    """Business-wide report users see every branch of the active business (or
+    ?branch=<id> within it); branch users see only their active branch."""
     wanted = request.query_params.get("branch")
     org_ok = can(request, "reports.view", org=True) or can(request, "dashboard.view", org=True)
     if org_ok:
+        mine = Branch.objects.filter(org=request.org)
         if wanted and wanted != "all":
-            return list(Branch.objects.filter(pk=wanted)), False
-        return list(Branch.objects.all()), True
+            return list(mine.filter(pk=wanted if str(wanted).isdigit() else 0)), False
+        return list(mine), True
     if request.branch and can(request, "reports.view"):
         return [request.branch], False
     raise PermissionDenied("You need reports access at the active branch")
@@ -166,23 +167,24 @@ class CbmsPostViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=False)
     def status(self, request):
         branches, _ = _report_branches(request)
-        return Response(cbms.status_summary(branches))
+        return Response(cbms.status_summary(request.org, branches))
 
     @action(detail=False, methods=["post"], url_path="sync-now")
     def sync_now(self, request):
         if not can(request, "branches.manage", org=True):
             raise PermissionDenied("Org admin only")
-        done = cbms.sync_pending(force=True)
+        done = cbms.sync_pending(force=True, org=request.org)
         log_action(request.user, "cbms.sync_now", request=request, posted=len(done))
-        return Response({"posted": len(done), **cbms.status_summary(_report_branches(request)[0])})
+        return Response({"posted": len(done), **cbms.status_summary(request.org, _report_branches(request)[0])})
 
     @action(detail=False, methods=["post"], url_path="retry-failed")
     def retry_failed(self, request):
         if not can(request, "branches.manage", org=True):
             raise PermissionDenied("Org admin only")
-        n = CbmsPost.objects.filter(status=CbmsPost.FAILED).update(status=CbmsPost.PENDING, attempts=0)
+        n = CbmsPost.objects.filter(status=CbmsPost.FAILED, branch__org=request.org).update(
+            status=CbmsPost.PENDING, attempts=0)
         log_action(request.user, "cbms.retry_failed", request=request, count=n)
-        return Response({"requeued": n, **cbms.status_summary(_report_branches(request)[0])})
+        return Response({"requeued": n, **cbms.status_summary(request.org, _report_branches(request)[0])})
 
 
 # --- Reports ---------------------------------------------------------------------

@@ -1,6 +1,7 @@
 /**
  * Offline storage for the POS (design doc §10.3, §15), in IndexedDB:
- *  - catalog: last synced sale-relevant product data per branch (no cost prices)
+ *  - catalog: last synced sale-relevant product data per branch (no cost prices),
+ *             with the server's content version so an unchanged catalog isn't re-downloaded
  *  - queue:   cash sales taken offline, waiting to sync (each with idempotency key)
  *  - kv:      cached login, POS config, and each register's local receipt-series copy
  *
@@ -25,6 +26,14 @@ export interface QueuedSale {
   attempts: number
 }
 
+export interface CachedCatalog {
+  branch_id: number
+  generated_at: string
+  /** Server content hash (absent in catalogs saved by older builds). */
+  version?: string
+  products: PosProduct[]
+}
+
 export interface CachedLogin {
   username: string
   salt: string
@@ -35,7 +44,7 @@ export interface CachedLogin {
 
 interface PosDB extends DBSchema {
   kv: { key: string; value: unknown }
-  catalog: { key: number; value: { branch_id: number; generated_at: string; products: PosProduct[] } }
+  catalog: { key: number; value: CachedCatalog }
   queue: { key: string; value: QueuedSale; indexes: { by_created: string } }
 }
 
@@ -68,8 +77,8 @@ export async function kvDelete(key: string) {
 }
 
 // --- catalog ------------------------------------------------------------------
-export async function saveCatalog(branchId: number, generatedAt: string, products: PosProduct[]) {
-  await (await db()).put('catalog', { branch_id: branchId, generated_at: generatedAt, products })
+export async function saveCatalog(branchId: number, generatedAt: string, products: PosProduct[], version?: string) {
+  await (await db()).put('catalog', { branch_id: branchId, generated_at: generatedAt, products, version })
 }
 export async function loadCatalog(branchId: number) {
   return (await db()).get('catalog', branchId)

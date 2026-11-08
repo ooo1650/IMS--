@@ -46,7 +46,7 @@ class ComplianceBase(TestCase):
         self.w.org.pan = "999999999"
         self.w.org.save()
         self.w.open_shift(self.w.reg_a, self.w.cashier_a)
-        self.cfg = get_settings()
+        self.cfg = get_settings(self.w.org)
 
     def enable_cbms(self, password="test@321"):
         self.cfg.cbms_enabled, self.cfg.cbms_base_url, self.cfg.cbms_username = True, "mock://", "Test_CBMS"
@@ -228,7 +228,7 @@ class TaxEngineTests(ComplianceBase):
 class PurchaseTests(ComplianceBase):
     def setUp(self):
         super().setUp()
-        self.supplier = Supplier.objects.create(name="S", pan="301234567")
+        self.supplier = Supplier.objects.create(org=self.w.org, name="S", pan="301234567")
         self.w.p2.input_credit_blocked_pct = 100  # e.g. beverages
         self.w.p2.save()
         self.po = PurchaseOrder.objects.create(branch=self.w.a, supplier=self.supplier, created_by=self.w.manager_a)
@@ -328,8 +328,8 @@ class ComplianceApiTests(ComplianceBase):
         self.assertEqual(r.status_code, 200)
         self.assertTrue(r.data["cbms_password_set"])
         self.assertNotIn("cbms_password", r.data)
-        self.assertEqual(get_settings().cbms_password, "secret")  # stored encrypted, readable by the app
-        self.assertNotIn("secret", get_settings().cbms_password_enc)
+        self.assertEqual(get_settings(self.w.org).cbms_password, "secret")  # stored encrypted, readable by the app
+        self.assertNotIn("secret", get_settings(self.w.org).cbms_password_enc)
 
     def test_org_reports_cover_all_branches_even_with_an_active_branch(self):
         self.enable_cbms()
