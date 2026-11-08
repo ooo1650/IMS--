@@ -5,15 +5,15 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "https://ims-1-94z9.onrender.com/api/:path*"
+      "source": "/api/(.*)",
+      "destination": "https://ims-1-94z9.onrender.com/api/$1"
     },
     {
-      "source": "/media/:path*",
-      "destination": "https://ims-1-94z9.onrender.com/media/:path*"
+      "source": "/media/(.*)",
+      "destination": "https://ims-1-94z9.onrender.com/media/$1"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api/|media/).*)",
       "destination": "/index.html"
     }
   ],

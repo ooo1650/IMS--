@@ -67,6 +67,11 @@ export async function api<T = unknown>(
   // Proxy up but backend unreachable: treat like being offline so cash sales keep working.
   if (res.status === 502 || res.status === 503 || res.status === 504) throw new NetworkError(`Server unavailable (${res.status})`)
   const text = await res.text()
+  // A web page where JSON was expected: the /api forwarding in front of the
+  // backend is wrong (e.g. a hosting rewrite serving the app's index.html).
+  if (res.ok && /^\s*<!doctype html/i.test(text)) {
+    throw new ApiError(502, { detail: 'The server sent a web page instead of data: the /api forwarding to the backend is misconfigured' })
+  }
   let data: unknown = null
   try {
     data = text ? JSON.parse(text) : null
