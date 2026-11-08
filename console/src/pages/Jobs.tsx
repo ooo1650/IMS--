@@ -1,7 +1,7 @@
 /** Maintenance jobs that used to need `manage.py` on the server. Each run is audited. */
 import { useState } from 'react'
-import { Button, ErrorBox, PageHead, fmtDate, useLoad } from '../../src/components/ui'
-import { api } from '../../src/lib/api'
+import { Button, ErrorBox, PageHead, fmtDate, useLoad } from '../shared/ui'
+import { api } from '../shared/api'
 
 interface Job { name: string; label: string; last_run_at: string | null; last_ok: boolean | null }
 

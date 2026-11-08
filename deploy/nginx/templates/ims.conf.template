@@ -121,7 +121,7 @@ server {
     }
 }
 
-# --- Operator console: a separate app (frontend/console) on port 8443 or its
+# --- Operator console: a separate project (console/) on port 8443 or its
 # own subdomain (IMS_CONSOLE_DOMAIN), limited to IMS_CONSOLE_ALLOW networks.
 server {
     include /etc/nginx/runtime/console-listen.inc;
@@ -136,6 +136,7 @@ server {
     ssl_session_tickets off;
     error_page 497 =308 https://$host:$server_port$request_uri;
 
+    include /etc/nginx/runtime/console-realip.inc;
     include /etc/nginx/runtime/console-allow.inc;
     include /etc/nginx/conf.d/ims-headers.inc;
 

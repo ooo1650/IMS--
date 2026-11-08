@@ -1,0 +1,45 @@
+# The operator console on its OWN server (see README.md). Copy .env.example to
+# .env, fill it in, then:
+#   docker compose up -d --build                  # console on http://<host>:CONSOLE_PORT
+#   docker compose --profile https up -d --build  # + automatic HTTPS for CONSOLE_DOMAIN
+# On the IMS server set IMS_CONSOLE_ORIGIN, IMS_CONSOLE_PROXY and IMS_CONSOLE_ALLOW.
+# (On the IMS server itself the console is already served on :8443 by the root
+# docker-compose.yml; this file is only for hosting it somewhere else.)
+
+services:
+  console:
+    build: .
+    image: ims-console
+    restart: unless-stopped
+    environment:
+      IMS_API_URL: ${IMS_API_URL:?set IMS_API_URL in .env, e.g. https://ims.example.com:8443}
+      IMS_API_HOST: ${IMS_API_HOST:-}
+    ports: ["${CONSOLE_PORT:-8080}:8080"]
+    read_only: true
+    tmpfs: [/tmp, /run, /var/cache/nginx, /etc/nginx/conf.d]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    cap_add: [CHOWN, SETUID, SETGID]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/"]
+      interval: 30s
+      retries: 3
+
+  # Optional: HTTPS with an automatic Let's Encrypt certificate for
+  # CONSOLE_DOMAIN (DNS must point here, ports 80 and 443 open).
+  https:
+    image: caddy:2.8.4-alpine
+    profiles: ["https"]
+    restart: unless-stopped
+    environment:
+      CONSOLE_DOMAIN: ${CONSOLE_DOMAIN:-localhost}   # set it in .env; "localhost" = self-signed, for trying it out
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [console]
+
+volumes:
+  caddy_data:
+  caddy_config:

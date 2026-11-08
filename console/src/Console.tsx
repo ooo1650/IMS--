@@ -1,9 +1,9 @@
 /** IMS operator console: create and run businesses without shell commands. */
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
-import { useAuth } from '../src/auth'
-import { Icon, type IconName } from '../src/components/Icon'
-import { Button } from '../src/components/ui'
-import Login from '../src/pages/Login'
+import { useAuth } from './auth'
+import { Icon, type IconName } from './shared/Icon'
+import { Button } from './shared/ui'
+import Login from './Login'
 import Audit from './pages/Audit'
 import Businesses, { BusinessDetail } from './pages/Businesses'
 import Jobs from './pages/Jobs'
@@ -26,14 +26,12 @@ export default function Console() {
   if (!auth.me) return <Login />
   if (!auth.me.is_platform_admin) {
     return (
-      <div className="login-wrap console-denied">
-        <main className="login-main">
-          <div className="login-side">
-            <h2>Operators only</h2>
-            <p className="muted">{auth.me.username} is a business account. The console is for platform admins; business staff use the IMS app</p>
-            <Button onClick={() => void auth.logout()}>Sign out</Button>
-          </div>
-        </main>
+      <div className="console-login">
+        <div className="console-login-card">
+          <h2>Operators only</h2>
+          <p className="muted">{auth.me.username} is a business account. The console is for platform admins; business staff use the IMS app</p>
+          <Button onClick={() => void auth.logout()}>Sign out</Button>
+        </div>
       </div>
     )
   }

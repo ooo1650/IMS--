@@ -1,8 +1,8 @@
 /** People: every account, with roles in any number of businesses (the owner
  *  usually has one in each). Operators (platform admins) hold no business roles. */
 import { useEffect, useRef, useState } from 'react'
-import { Badge, Button, ErrorBox, Field, Modal, PageHead, fmtDate, useLoad } from '../../src/components/ui'
-import { api, qs } from '../../src/lib/api'
+import { Badge, Button, ErrorBox, Field, Modal, PageHead, fmtDate, useLoad } from '../shared/ui'
+import { api, qs } from '../shared/api'
 import type { Business } from './Businesses'
 
 interface Role { org: number; org_name?: string; branch: number | null; branch_code?: string | null; role: string }

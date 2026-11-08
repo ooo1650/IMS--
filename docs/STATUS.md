@@ -37,7 +37,7 @@
 
 **Multi-business + operator console (2026-11-07)**
 - Several separately registered businesses per install (one owner): each its own PAN, catalog, suppliers, customers, invoice series, CBMS login, reports, shop rules and FonePay; staff can hold roles in more than one; the app has a business switcher.
-- Operator console (`frontend/console`, :8443 or `IMS_CONSOLE_DOMAIN`): create businesses with first branch + admin (emailed setup code), branches/registers, people with roles across businesses, rules, tax/CBMS, FonePay, system settings (email with test send, sign-in rules), jobs (CBMS sync, stock reconcile, …), audit.
+- Operator console (`console/`, its own project: :8443, `IMS_CONSOLE_DOMAIN`, or another server): create businesses with first branch + admin (emailed setup code), branches/registers, people with roles across businesses, rules, tax/CBMS, FonePay, system settings (email with test send, sign-in rules), jobs (CBMS sync, stock reconcile, …), audit.
 - Settings moved from `.env` to the database (email, sign-in rules, shop rules); old values copied by migration. `manage.py create_platform_admin` is the only command needed on a new install.
 
 ## Waiting on something external 🟡

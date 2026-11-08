@@ -1,5 +1,4 @@
 /* Console-only additions on top of the IMS tokens (src/index.css). */
-.console-denied .login-main { grid-column: 1 / -1; align-items: center; }
 .biz-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
 .biz-card { display: flex; flex-direction: column; gap: 8px; padding: 20px; text-decoration: none; color: inherit; }
 .biz-card:hover { border-color: var(--border-strong); background: var(--surface-2); }
@@ -15,3 +14,12 @@
 .branch-block-head h3 { margin: 0; color: var(--text-primary); }
 .check-grid { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
 @media (max-width: 760px) { .role-row { grid-template-columns: 1fr; } }
+
+/* Operator sign-in: one quiet card, nothing else (operators only). */
+.console-login { min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 40px 16px; background: var(--bg); }
+.console-login-brand { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+.console-login-card { width: 100%; max-width: 400px; background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; }
+.console-login-card h2 { font-size: 21px; margin: 0 0 16px; }
+.console-login-card form > .muted { margin: -8px 0 16px; }
+.console-login-card form > .console-login-note { margin: 16px 0 0; }
+.console-login-note code { font-family: var(--mono); }

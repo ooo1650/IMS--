@@ -30,6 +30,19 @@ write_allow() {  # write_allow <file> <space-separated CIDRs or private_ranges>
 write_allow "$RUN/admin-allow.inc" "${IMS_ADMIN_ALLOW:-private_ranges}"
 write_allow "$RUN/console-allow.inc" "${IMS_CONSOLE_ALLOW:-private_ranges}"
 
+# A console hosted on another server reaches this one through its own proxy.
+# IMS_CONSOLE_PROXY lists those proxies' addresses: nginx then takes the
+# operator's real address from X-Forwarded-For, so IMS_CONSOLE_ALLOW, lockouts
+# and the audit log see the operator and not the proxy.
+: > "$RUN/console-realip.inc"
+for c in ${IMS_CONSOLE_PROXY:-}; do
+  case "$c" in
+    *[!0-9A-Fa-f:./]*) echo "40-ims: ignoring invalid IMS_CONSOLE_PROXY entry: $c" >&2 ;;
+    *) echo "set_real_ip_from $c;" >> "$RUN/console-realip.inc" ;;
+  esac
+done
+[ -s "$RUN/console-realip.inc" ] && printf 'real_ip_header X-Forwarded-For;\nreal_ip_recursive on;\n' >> "$RUN/console-realip.inc"
+
 # The operator console: port 8443 on the main domain (same certificate), or
 # its own subdomain on 443 when IMS_CONSOLE_DOMAIN is set.
 CONSOLE_DOMAIN="${IMS_CONSOLE_DOMAIN:-}"

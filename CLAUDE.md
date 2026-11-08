@@ -1,6 +1,6 @@
 # IMS — context for the next session
 
-Multi-branch **Inventory Management + POS** for **several separately registered businesses with one owner** (e.g. a grocery chain and a shoe shop: each its own PAN, catalog, invoices, reports and branches; ~10 branches in Nepal), made **Nepal IRD-compliant**. An **operator console** (`frontend/console`, served on :8443 or `IMS_CONSOLE_DOMAIN`) creates businesses, branches and admin accounts and replaces most `.env` settings and CLI jobs.
+Multi-branch **Inventory Management + POS** for **several separately registered businesses with one owner** (e.g. a grocery chain and a shoe shop: each its own PAN, catalog, invoices, reports and branches; ~10 branches in Nepal), made **Nepal IRD-compliant**. An **operator console** (`console/`, its own project; served on :8443 or `IMS_CONSOLE_DOMAIN`, or hosted elsewhere — `console/README.md`) creates businesses, branches and admin accounts and replaces most `.env` settings and CLI jobs.
 Source specs: `ims-design-doc (3).md` (architecture) and `payment.md` (IRD/VAT/CBMS rules). Both are in the repo root.
 
 **IRD compliance work is paused (2026-11-06).** The business is VAT-registered but not applying for IRD listing soon. Keep the existing VAT/invoice/append-only behaviour working, keep CBMS off, and don't start new IRD features (Annex 5/13, live CBMS, listing evidence) unless the owner asks.
@@ -27,13 +27,14 @@ Source specs: `ims-design-doc (3).md` (architecture) and `payment.md` (IRD/VAT/C
 cd backend && .venv/bin/python manage.py migrate && .venv/bin/python manage.py seed_demo   # 2 demo businesses + `operator` (refuses if data exists; `flush` first)
 .venv/bin/python manage.py runserver 127.0.0.1:8000
 cd frontend && npm run dev            # http://localhost:5173  (Vite binds IPv6 localhost, not 127.0.0.1)
-cd frontend && npm run dev:console    # operator console on http://localhost:5174 (sign in as `operator`)
+cd console && npm install && npm run dev   # operator console on http://localhost:5174 (sign in as `operator`)
 cd backend && .venv/bin/python manage.py create_platform_admin --username op --email you@x.com   # first operator on a real install
 # demo logins (password demo-pass-123): admin (owner, both businesses), manager, cashier, cashier_pkr, clerk, viewer, manager_brt, manager_shoes; operator (console)
 
 cd backend && .venv/bin/python manage.py test                 # 201 tests, SQLite (4 Postgres-only skipped)
 .venv/bin/python scripts/test_with_postgres.py                # same suite on embedded Postgres (pgserver) — triggers + concurrency
-cd frontend && npm test && npx tsc -b && npm run build && npm run build:console   # 94 tests; tsc also checks console/
+cd frontend && npm test && npx tsc -b && npm run build   # 94 tests
+cd console && npx tsc -b && npm run build              # console (src/shared/ = copies from frontend/src: `npm run sync-shared`)
 ```
 Last verified: all green on 2026-10-26 (SQLite and embedded Postgres).
 Docker: `cp .env.example .env && docker compose up -d --build` (see `docs/DEPLOYMENT.md`; not yet run on a real Docker host).

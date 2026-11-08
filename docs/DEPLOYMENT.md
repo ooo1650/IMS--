@@ -57,7 +57,11 @@ docker compose start backend worker
 ```
 
 ## Operator console
-A separate app (`frontend/console`, built into the web image as `/srv/console`) for the operator: businesses, branches, registers, admin accounts, shop rules, tax and FonePay settings, email, jobs, audit. Served on **port 8443** of `IMS_DOMAIN` (same certificate), or on its own subdomain with `IMS_CONSOLE_DOMAIN` (DNS must point there; certbot adds it to the certificate). Only networks in `IMS_CONSOLE_ALLOW` (default: private) can open it, and `/api/v1/platform/` answers 404 on the IMS address. Operators always sign in with an emailed code.
+A separate project (`console/`, built into the web image as `/srv/console`; or hosted on another server, see `console/README.md`) for the operator: businesses, branches, registers, admin accounts, shop rules, tax and FonePay settings, email, jobs, audit. Served on **port 8443** of `IMS_DOMAIN` (same certificate), or on its own subdomain with `IMS_CONSOLE_DOMAIN` (DNS must point there; certbot adds it to the certificate). Only networks in `IMS_CONSOLE_ALLOW` (default: private) can open it, and `/api/v1/platform/` answers 404 on the IMS address. Operators always sign in with an emailed code.
+
+The console is its own project (`console/`, own `docker-compose.yml`), so it can also run elsewhere:
+- **Same server, as a separate app** (to rehearse): `docker compose --profile console up -d --build` serves it on `:8081` through the IMS console endpoint; set `IMS_CONSOLE_ORIGIN=http://localhost:8081` to sign in.
+- **Another server:** `cd console && cp .env.example .env && docker compose --profile https up -d --build`; on the IMS server set `IMS_CONSOLE_ORIGIN`, `IMS_CONSOLE_PROXY`, `IMS_CONSOLE_ALLOW` (see `console/README.md`).
 
 ## Settings worth knowing
 - `IMS_ADMIN_ALLOW`: who may open `/django-admin` (CIDRs; default private networks). nginx must see real client IPs. Docker's default iptables port publishing preserves them; with `userland-proxy` everyone appears as a private address.

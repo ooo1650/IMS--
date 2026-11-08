@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
-import { Badge, ErrorBox, PageHead, useLoad } from '../../src/components/ui'
-import { api } from '../../src/lib/api'
+import { Badge, ErrorBox, PageHead, useLoad } from '../shared/ui'
+import { api } from '../shared/api'
 import type { Business } from './Businesses'
 
 interface OverviewData {

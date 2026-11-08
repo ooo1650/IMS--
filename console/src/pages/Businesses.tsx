@@ -2,9 +2,9 @@
  *  reports). Create one with its first branch and admin, then manage it here. */
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Badge, Button, ErrorBox, Field, Modal, PageHead, Tabs, fmtDate, useLoad } from '../../src/components/ui'
-import { api } from '../../src/lib/api'
-import { toPaisa, toRupeesInput } from '../../src/lib/money'
+import { Badge, Button, ErrorBox, Field, Modal, PageHead, Tabs, fmtDate, useLoad } from '../shared/ui'
+import { api } from '../shared/api'
+import { toPaisa, toRupeesInput } from '../shared/money'
 import { PeopleOfBusiness } from './Users'
 
 export interface Business {

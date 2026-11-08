@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { ErrorBox, LoadMore, PageHead, fmtDate, useLoad, usePaged } from '../../src/components/ui'
-import { api, qs } from '../../src/lib/api'
+import { ErrorBox, LoadMore, PageHead, fmtDate, useLoad, usePaged } from '../shared/ui'
+import { api, qs } from '../shared/api'
 import type { Business } from './Businesses'
 
 interface Entry { id: number; at: string; user_name: string | null; business: string | null; branch_code: string | null; action: string; object_type: string; object_id: string; data: Record<string, unknown>; ip: string | null }

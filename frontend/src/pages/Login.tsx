@@ -50,7 +50,13 @@ export default function Login() {
   const [brand, setBrand] = useState<Brand | null>(null)
 
   useEffect(() => {
-    api<Brand>('auth/brand').then(setBrand).catch(() => setBrand(null))
+    // Retry a few times: right after a server restart the first request can fail.
+    let cancelled = false
+    const load = (attempt: number) =>
+      api<Brand>('auth/brand').then((b) => { if (!cancelled) setBrand(b) })
+        .catch(() => { if (!cancelled && attempt < 4) setTimeout(() => load(attempt + 1), 2000 * attempt) })
+    load(1)
+    return () => { cancelled = true }
   }, [])
 
   useEffect(() => {
@@ -101,6 +107,14 @@ export default function Login() {
     const r = await api<{ detail: string }>('auth/password/forgot', { body: { email: email.trim() } })
     setCooldown(60)
     go('reset', r.detail)
+  })
+  /** Same endpoint and reply as "Forgot password?": a code goes out only if an
+   *  active account uses that email, and the reply never says which. */
+  const sendSignupCode = run(async () => {
+    await api('auth/csrf')
+    await api('auth/password/forgot', { body: { email: email.trim() } })
+    setCooldown(60)
+    setNotice(`If ${email.trim()} was added by your administrator, a code is on its way. It expires in 15 minutes`)
   })
   const signup = run(async () => {
     if (newPassword !== confirm) throw new Error('The two passwords don\'t match')
@@ -225,10 +239,18 @@ export default function Login() {
         {step === 'signup' && (
           <form className="login-card" onSubmit={signup}>
             <h2>Create your account</h2>
-            <p className="muted" id="code-help">For people invited by their administrator: use the email the invite went to and the 6-digit code in it</p>
+            <p className="muted" id="code-help">For people your administrator has added: enter the email they used, get a code, then choose your password</p>
+            {notice && <div className="alert alert-good">{notice}</div>}
             <ErrorBox error={error} />
             <Field label="Email">
-              <input autoFocus type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <span className="password-input">
+                <input autoFocus type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required
+                  style={{ paddingRight: 136 }} />
+                <button type="button" className="link" disabled={!email.includes('@') || cooldown > 0 || busy || !online}
+                  title={online ? '' : 'Needs a connection'} onClick={() => void sendSignupCode()}>
+                  {cooldown > 0 ? `Resend in ${cooldown}s` : 'Send me a code'}
+                </button>
+              </span>
             </Field>
             {codeInput()}
             <div className="form-grid">

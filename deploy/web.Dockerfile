@@ -11,7 +11,17 @@ COPY frontend/ ./
 COPY docs/user-manual.md /src/docs/user-manual.md
 # tsc -b also type-checks pricing.test.ts, which imports the shared backend pricing vectors.
 COPY backend/sales/tests/pricing_vectors.json /src/backend/sales/tests/pricing_vectors.json
-RUN npm run build && npx vite build --config vite.console.config.ts
+RUN npm run build
+
+# The operator console is its own project (console/); built here when it is
+# served by this same web container (port 8443). See console/README.md for
+# hosting it on another server instead.
+FROM node:24.11.1-alpine AS console
+WORKDIR /src/console
+COPY console/package.json console/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY console/ ./
+RUN npm run build
 
 FROM python:3.12.11-slim-bookworm AS static
 ENV PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
@@ -30,5 +40,5 @@ COPY deploy/nginx/templates/ /etc/nginx/templates/
 COPY deploy/nginx/snippets/ /etc/nginx/snippets/
 COPY --chmod=0755 deploy/nginx/40-ims.sh /docker-entrypoint.d/40-ims.sh
 COPY --from=spa /src/frontend/dist /srv/spa
-COPY --from=spa /src/frontend/dist-console /srv/console
+COPY --from=console /src/console/dist /srv/console
 COPY --from=static /app/staticfiles /srv/static

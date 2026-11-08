@@ -3,7 +3,8 @@
 # Services: db (Postgres + WAL archive) · migrate (one-shot, DB owner) · backend
 # (gunicorn, least-privilege DB role) · worker (scheduled jobs) · web (nginx:
 # TLS, SPA, security headers, rate limits) · certbot (Let's Encrypt for a public
-# IMS_DOMAIN) · backup (nightly dumps + weekly restore drill).
+# IMS_DOMAIN) · backup (nightly dumps + weekly restore drill) · console (optional,
+# profile "console": the operator console as a separate app on :8081).
 
 x-hardening: &hardening
   restart: unless-stopped
@@ -15,7 +16,7 @@ x-app-env: &app-env
   DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?set DJANGO_SECRET_KEY in .env}
   DJANGO_ALLOWED_HOSTS: ${IMS_DOMAIN:?set IMS_DOMAIN in .env},localhost,127.0.0.1${IMS_CONSOLE_DOMAIN:+,}${IMS_CONSOLE_DOMAIN:-}
   # The IMS app, the operator console on :8443, and the console's own subdomain if set.
-  DJANGO_CSRF_TRUSTED_ORIGINS: https://${IMS_DOMAIN},https://${IMS_DOMAIN}:8443${IMS_CONSOLE_DOMAIN:+,https://}${IMS_CONSOLE_DOMAIN:-}
+  DJANGO_CSRF_TRUSTED_ORIGINS: https://${IMS_DOMAIN},https://${IMS_DOMAIN}:8443${IMS_CONSOLE_DOMAIN:+,https://}${IMS_CONSOLE_DOMAIN:-}${IMS_CONSOLE_ORIGIN:+,}${IMS_CONSOLE_ORIGIN:-}
   IMS_TRUSTED_PROXIES: "1"
   TZ: Asia/Kathmandu
   CBMS_ENCRYPTION_KEY: ${CBMS_ENCRYPTION_KEY:-}
@@ -119,6 +120,7 @@ services:
       IMS_ADMIN_ALLOW: ${IMS_ADMIN_ALLOW:-private_ranges}
       IMS_CONSOLE_ALLOW: ${IMS_CONSOLE_ALLOW:-private_ranges}
       IMS_CONSOLE_DOMAIN: ${IMS_CONSOLE_DOMAIN:-}
+      IMS_CONSOLE_PROXY: ${IMS_CONSOLE_PROXY:-}   # console hosted elsewhere: its proxy's address(es)
       IMS_CSP_CONNECT_EXTRA: ${IMS_CSP_CONNECT_EXTRA:-}
     read_only: true
     tmpfs: [/tmp, /run, /var/cache/nginx, /etc/nginx/conf.d, /etc/nginx/runtime]
@@ -169,6 +171,28 @@ services:
     depends_on:
       db: { condition: service_healthy }
     networks: [data]
+
+  # OPTIONAL: the operator console as a SEPARATE app (the way console/ is hosted
+  # on another server), for trying that setup locally:
+  #   docker compose --profile console up -d --build   -> http://localhost:8081
+  # It talks to the IMS console endpoint (web:8443) like a remote console would.
+  # Normally not needed: `web` already serves the console on :8443.
+  # To sign in through it, add IMS_CONSOLE_ORIGIN=http://localhost:8081 to .env.
+  console:
+    build: ./console
+    image: ims-console
+    profiles: ["console"]
+    <<: *hardening
+    cap_add: [CHOWN, SETUID, SETGID]
+    environment:
+      IMS_API_URL: https://web:8443
+      IMS_API_HOST: localhost        # a name the backend allows (DJANGO_ALLOWED_HOSTS)
+    ports: ["${IMS_CONSOLE_STANDALONE_PORT:-8081}:8080"]
+    read_only: true
+    tmpfs: [/tmp, /run, /var/cache/nginx, /etc/nginx/conf.d]
+    depends_on:
+      web: { condition: service_healthy }
+    networks: [edge]
 
 networks:
   data:

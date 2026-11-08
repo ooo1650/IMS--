@@ -1,8 +1,8 @@
 /** Deployment-wide settings that used to be environment variables. Secrets and
  *  security guard rails stay in the server's .env on purpose (listed below). */
 import { useState } from 'react'
-import { Button, ErrorBox, Field, PageHead, fmtDate, useLoad } from '../../src/components/ui'
-import { api } from '../../src/lib/api'
+import { Button, ErrorBox, Field, PageHead, fmtDate, useLoad } from '../shared/ui'
+import { api } from '../shared/api'
 
 interface SystemData {
   group_name: string; otp_required_roles: string[]; login_window_minutes: number; login_max_per_username: number

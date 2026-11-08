@@ -6,5 +6,6 @@ backend/.env
 **/__pycache__/
 frontend/node_modules/
 frontend/dist/
-frontend/dist-console/
+console/dist/
+console/node_modules/
 .env
