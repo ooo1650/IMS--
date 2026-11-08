@@ -64,6 +64,7 @@ export default function Login() {
             })
           }}>
             <h2>Operator sign-in</h2>
+            <p className="muted">Not for shop staff: the IMS app has its own sign-in</p>
             <ErrorBox error={error} />
             <Field label="Username or email">
               <input autoFocus autoComplete="username" autoCapitalize="none" spellCheck={false} value={identifier}
@@ -112,6 +113,7 @@ export default function Login() {
           </form>
         )}
       </div>
+      <p className="console-login-foot">Restricted to platform operators · every action is recorded in the audit log</p>
       <TestLogin onPick={(u) => run(() => testLogin(u))} />
     </div>
   )

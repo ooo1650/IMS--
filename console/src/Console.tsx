@@ -27,6 +27,10 @@ export default function Console() {
   if (!auth.me.is_platform_admin) {
     return (
       <div className="console-login">
+        <div className="console-login-brand">
+          <span className="brand-mark" aria-hidden><Icon name="receipt" size={20} /></span>
+          <span>IMS Console <span className="muted">· operators</span></span>
+        </div>
         <div className="console-login-card">
           <h2>Operators only</h2>
           <p className="muted">{auth.me.username} is a business account. The console is for platform admins; business staff use the IMS app</p>
@@ -40,7 +44,7 @@ export default function Console() {
       <aside className="sidebar">
         <div className="brand">
           <span className="brand-mark" aria-hidden><Icon name="receipt" size={20} /></span>
-          <span className="brand-text">IMS Console<span className="brand-sub">Operator</span></span>
+          <span className="brand-text">IMS Console<span className="brand-sub">Operator · all businesses</span></span>
         </div>
         <nav>
           {NAV.map(([to, label, icon]) => (

@@ -187,7 +187,7 @@ class Command(BaseCommand):
 
         self.seed_footwear(admin, tax_cats)
         # Platform admin for the operator console (always needs an emailed code).
-        op = User.objects.create(username="operator", first_name="Operator", email="operator@demo.ims.test",
+        op = User.objects.create(username="operator", first_name="Operator", email="paperkite.contact@gmail.com",
                                  is_platform_admin=True)
         op.set_password(PASSWORD)
         op.save()
