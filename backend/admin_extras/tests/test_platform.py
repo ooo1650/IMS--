@@ -143,3 +143,9 @@ class PlatformApiTests(TestCase):
                      "--password", "a-long-pass-123", stdout=out)
         self.assertTrue(User.objects.get(username="op2").is_platform_admin)
         self.assertFalse(UserBranchRole.objects.filter(user__username="op2").exists())
+
+    def test_test_email_unreachable_server_fails_fast_with_hint(self):
+        self.c.patch(P + "/system", {"smtp_host": "127.0.0.1", "smtp_port": 1}, format="json")
+        r = self.c.post(P + "/system/test-email", {"to": "x@example.com"}, format="json")
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("2525", r.data["detail"])

@@ -6,11 +6,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://ims-341v.onrender.com/api/:path*"
+      "destination": "https://ims-1-94z9.onrender.com/api/:path*"
     },
     {
       "source": "/media/:path*",
-      "destination": "https://ims-341v.onrender.com/media/:path*"
+      "destination": "https://ims-1-94z9.onrender.com/media/:path*"
     },
     {
       "source": "/(.*)",

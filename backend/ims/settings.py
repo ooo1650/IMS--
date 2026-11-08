@@ -92,13 +92,21 @@ DATABASES = {
         default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}", conn_max_age=60
     )
 }
+# Connection strings copied from an ORM tab (Prisma) carry options libpq
+# rejects ("invalid connection option"): drop them. pgbouncer=true marks a
+# transaction-mode pooler.
+_db_opts = DATABASES["default"].setdefault("OPTIONS", {})
+_pgbouncer = str(_db_opts.pop("pgbouncer", "")).lower() == "true"
+for _k in ("connection_limit", "pool_timeout", "schema", "statement_cache_size"):
+    _db_opts.pop(_k, None)
+
 # Transaction-mode poolers (Supabase/Supavisor port 6543, PgBouncer
 # pool_mode=transaction) hand each transaction a different server connection:
 # no prepared statements, no server-side cursors, no session advisory locks
 # (run_scheduler skips them). Detected from port 6543, or set
 # IMS_DB_TRANSACTION_POOLER. Session mode (Supabase pooler port 5432) needs none of this.
 IMS_DB_TRANSACTION_POOLER = env_bool(
-    "IMS_DB_TRANSACTION_POOLER", str(DATABASES["default"].get("PORT")) == "6543")
+    "IMS_DB_TRANSACTION_POOLER", _pgbouncer or str(DATABASES["default"].get("PORT")) == "6543")
 if IMS_DB_TRANSACTION_POOLER:
     DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True
     DATABASES["default"].setdefault("OPTIONS", {})["prepare_threshold"] = None

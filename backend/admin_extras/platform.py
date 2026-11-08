@@ -534,11 +534,25 @@ class TestEmailView(PlatformView):
         s = system_settings()
         if not s.smtp_host:
             return Response({"detail": "No mail server is set: codes are written to the backend log"}, status=400)
+        # Reach the server first, briefly: a blocked port drops packets silently,
+        # and waiting out the SMTP timeout would outlast the proxy's.
+        import socket
+
+        try:
+            socket.create_connection((s.smtp_host, s.smtp_port), timeout=6).close()
+        except OSError as e:
+            log_action(request.user, "platform.test_email_failed", request=request, to=to, error=str(e)[:200])
+            return Response({"ok": False, "detail": (
+                f"Can't reach {s.smtp_host} on port {s.smtp_port} ({e or type(e).__name__}). Some hosts block "
+                "outgoing mail ports 25, 465 and 587 (Render's free plan does); if your mail provider offers "
+                "port 2525, use that.")}, status=400)
         try:
             send_mail("IMS test email", "Mail from IMS is working.", from_address(), [to])
         except Exception as e:  # noqa: BLE001 — show the operator exactly what the server said
             log_action(request.user, "platform.test_email_failed", request=request, to=to, error=str(e)[:200])
-            return Response({"ok": False, "detail": f"{type(e).__name__}: {e}"[:300]}, status=502)
+            # 400, not 502: the client treats 502 as "server unreachable" and hides the detail.
+            return Response({"ok": False, "detail": f"The mail server refused: {type(e).__name__}: {e}"[:300]},
+                            status=400)
         log_action(request.user, "platform.test_email_sent", request=request, to=to)
         return Response({"ok": True, "detail": f"Sent to {to}"})
 
