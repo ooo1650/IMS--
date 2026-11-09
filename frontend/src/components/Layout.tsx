@@ -6,7 +6,7 @@ import { ErrorBoundary } from './ErrorBoundary'
 import { SyncQueue } from './SyncQueue'
 import { Icon, initials, type IconName } from './Icon'
 
-export interface NavItem {
+interface NavItem {
   to: string
   label: string
   icon: IconName
@@ -127,10 +127,15 @@ export function Layout() {
               Test sign-in is on: anyone on this network can sign in as any user. Set <code>IMS_TEST_LOGIN=false</code> before real use
             </div>
           )}
+          {!auth.branch && auth.me?.org_role && (auth.me?.branches.length ?? 0) > 0 && (
+            <div className="alert alert-info" role="note">
+              No branch chosen: stock, the till, sales and branch reports appear once you pick one in the <strong>branch picker</strong> (top of the sidebar).
+            </div>
+          )}
           {auth.branch || auth.me?.org_role ? <ErrorBoundary key={location.pathname}><Outlet /></ErrorBoundary>
             : auth.me?.is_platform_admin && !auth.me.businesses.length
               ? <div className="empty">This is an operator account. Businesses, branches and admin accounts are managed in the operator console</div>
-              : <div className="empty">Select a branch to continue</div>}
+              : <div className="empty">Select a branch to continue (the branch picker at the top of the sidebar).{!(auth.me?.branches.length) && ' You have no branch yet: ask an administrator to give you a role at one.'}</div>}
         </main>
       </div>
     </div>

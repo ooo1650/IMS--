@@ -174,10 +174,15 @@ function Cbms() {
       {msg && <div className="alert alert-good">{msg}</div>}
       {s && (
         <div className="tiles">
-          <div className={`tile ${s.pending ? 'tile-warn' : ''}`}><div className="tile-label">Pending</div><div className="tile-value">{s.pending}</div>
-            {s.oldest_pending_at && <div className="tile-sub">oldest {fmtDate(s.oldest_pending_at)}</div>}</div>
-          <div className="tile"><div className="tile-label">Synced</div><div className="tile-value">{s.synced}</div></div>
-          <div className={`tile ${s.failed ? 'tile-bad' : ''}`}><div className="tile-label">Failed</div><div className="tile-value">{s.failed}</div></div>
+          {/* Each tile opens its list below. */}
+          <button type="button" className={`tile tile-button ${s.pending ? 'tile-warn' : ''} ${filter === 'pending' ? 'tile-active' : ''}`} aria-pressed={filter === 'pending'} onClick={() => setFilter('pending')}>
+            <div className="tile-label">Pending</div><div className="tile-value">{s.pending}</div>
+            {s.oldest_pending_at && <div className="tile-sub">oldest {fmtDate(s.oldest_pending_at)}</div>}</button>
+          <button type="button" className={`tile tile-button ${filter === 'synced' ? 'tile-active' : ''}`} aria-pressed={filter === 'synced'} onClick={() => setFilter('synced')}>
+            <div className="tile-label">Synced</div><div className="tile-value">{s.synced}</div></button>
+          <button type="button" className={`tile tile-button ${s.failed ? 'tile-bad' : ''} ${filter === 'failed' ? 'tile-active' : ''}`} aria-pressed={filter === 'failed'} onClick={() => setFilter('failed')}>
+            <div className="tile-label">Failed</div><div className="tile-value">{s.failed}</div>
+            {s.failed > 0 && <div className="tile-sub">see why below, then Retry failed</div>}</button>
         </div>
       )}
       <div className="toolbar">
@@ -404,6 +409,7 @@ function TaxForm({ cat, onClose, onSaved }: { cat: TaxCat | null; onClose: () =>
       <div className="modal-foot">
         <Button onClick={onClose}>Cancel</Button>
         <Button kind="primary" onClick={async () => {
+          setError(null)
           try {
             const target = cat ?? await api<TaxCat>('compliance/tax-categories/', { body: { code: f.code, name: f.name, kind: f.kind, levy_type: f.levy_type } })
             await api(`compliance/tax-categories/${target.id}/rates/`, { body: { effective_from: f.effective_from, vat_rate: f.vat_rate, levy_rate: f.levy_rate, note: f.note } })

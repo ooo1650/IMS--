@@ -12,7 +12,6 @@ type Listener = () => void
 const listeners = new Set<Listener>()
 let online = navigator.onLine
 let syncing = false
-let lastSyncReport: { synced: number; failed: number; gaps: number[]; at: number } | null = null
 
 function emit() {
   listeners.forEach((l) => l())
@@ -67,25 +66,14 @@ function provisionalRef(q: QueuedSale) {
   return String(q.payload.provisional_ref ?? `P-${q.register_id}-${String(q.receipt_seq).padStart(6, '0')}`)
 }
 
-export function getLastSyncReport() {
-  return lastSyncReport
-}
-
 export async function syncQueue(): Promise<void> {
   if (syncing || !online) return
   syncing = true
-  let synced = 0
-  let failed = 0
-  let gaps: number[] = []
-  let failedShiftCloses = 0
   try {
     for (const q of await listQueue()) {
-      if (q.status === 'error' && q.attempts >= 3) {
-        failed++
-        continue
-      }
+      if (q.status === 'error' && q.attempts >= 3) continue // waits for "Retry failed" in the sync panel
       try {
-        const res = await api<{ receipt_seq: number; fiscal_year: string; receipt_gaps: number[] }>('pos/checkout/sync', {
+        const res = await api<{ receipt_seq: number }>('pos/checkout/sync', {
           body: {
             ...q.payload, idempotency_key: q.idempotency_key, register_id: q.register_id, fiscal_year: q.fiscal_year,
             created_at: q.created_at,
@@ -97,8 +85,6 @@ export async function syncQueue(): Promise<void> {
         })
         await removeQueued(q.idempotency_key)
         if (!q.provisional) await syncLocalSeq(q.branch_id, q.register_id, q.fiscal_year, res.receipt_seq + 1)
-        gaps = res.receipt_gaps ?? []
-        synced++
       } catch (e) {
         if (e instanceof NetworkError) {
           setOnline(false)
@@ -110,7 +96,6 @@ export async function syncQueue(): Promise<void> {
         // 403 is about this sale (register deactivated, role removed at that
         // branch): mark it and carry on, so it can't hold up the sales behind it.
         await updateQueued({ ...q, status: 'error', attempts: q.attempts + 1, error: e instanceof ApiError ? e.message : String(e) })
-        failed++
       }
     }
     // Shifts closed while offline post after their sales (§10.3 step 5).
@@ -126,12 +111,10 @@ export async function syncQueue(): Promise<void> {
             continue
           }
           // Anything else (signed out, server error): keep the count and retry later.
-          failedShiftCloses++
         }
       }
   } finally {
     syncing = false
-    if (synced || failed || failedShiftCloses) lastSyncReport = { synced, failed: failed + failedShiftCloses, gaps, at: Date.now() }
     emit()
   }
 }

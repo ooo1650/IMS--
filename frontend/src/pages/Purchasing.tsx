@@ -1,8 +1,9 @@
 import { useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { Icon, initials } from '../components/Icon'
 import { ProductPicker } from '../components/ProductPicker'
-import { Button, ErrorBox, Field, fmtDate, Guide, LoadMore, Modal, PageHead, QtyInput, Status, Tabs, useLoad, usePaged } from '../components/ui'
+import { Button, ErrorBox, Field, fmtDate, Guide, LoadMore, Modal, PageHead, QtyInput, Status, Tabs, useLoad, usePaged, ViewOnly } from '../components/ui'
 import { api, qs } from '../lib/api'
 import { moneyProblem, npr, toPaisa, toRupeesInput } from '../lib/money'
 
@@ -18,14 +19,23 @@ export default function Purchasing() {
   const { branch, can, canOrg } = useAuth()
   const [tab, setTab] = useState<'open' | 'all' | 'returns' | 'suppliers'>('open')
   const { items, loading, error, reload, more } = usePaged<PO>(tab === 'returns' || tab === 'suppliers' ? null : `purchase-orders/${qs({ status: tab === 'open' ? 'draft,ordered,partial' : null, b: branch?.id })}`)
-  const [editing, setEditing] = useState<PO | 'new' | null>(null)
-  const [open, setOpen] = useState<PO | null>(null)
   const manage = can('purchasing.manage')
+  // Arriving from Inventory → "Order these": open a new PO already holding those items.
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [prefill] = useState(() => (location.state as { reorder?: Draft['lines']; supplier?: number | null } | null) ?? null)
+  const [editing, setEditing] = useState<PO | 'new' | null>(() => (manage && prefill?.reorder?.length ? 'new' : null))
+  const [open, setOpen] = useState<PO | null>(null)
+  const closeForm = () => {
+    setEditing(null)
+    if (location.state) navigate(location.pathname, { replace: true, state: null }) // a reload won't reopen it
+  }
   return (
     <div>
       <PageHead title="Purchasing" sub="Purchase orders, receiving, returns and suppliers">
         {manage && tab !== 'suppliers' && <Button kind="primary" onClick={() => setEditing('new')}><Icon name="plus" size={16} /> New PO</Button>}
       </PageHead>
+      {!manage && <ViewOnly>Creating and receiving purchase orders needs a purchasing role at this branch. Ask your manager.</ViewOnly>}
       <Guide id="purchasing" title="Buying stock">
         <ol>
           <li>Add your suppliers on the <strong>Suppliers</strong> tab.</li>
@@ -57,25 +67,34 @@ export default function Purchasing() {
         <LoadMore more={more} loading={loading} />
       </div>
       </>)}
-      {editing && <POForm po={editing === 'new' ? null : editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); reload() }} />}
+      {editing && (
+        <POForm po={editing === 'new' ? null : editing}
+          draft={editing === 'new' && prefill?.reorder ? { lines: prefill.reorder, supplier: prefill.supplier ?? null } : undefined}
+          onClose={closeForm} onSaved={() => { closeForm(); reload() }} />
+      )}
       {open && <PODetail po={open} manage={manage} onEdit={() => { setEditing(open); setOpen(null) }} onClose={() => { setOpen(null); reload() }} />}
     </div>
   )
 }
 
-function POForm({ po, onClose, onSaved }: { po: PO | null; onClose: () => void; onSaved: () => void }) {
+interface Draft { lines: { product: number; name: string; qty: number; cost: string }[]; supplier: number | null }
+
+function POForm({ po, draft, onClose, onSaved }: { po: PO | null; draft?: Draft; onClose: () => void; onSaved: () => void }) {
   const suppliers = useLoad(() => api<{ id: number; name: string }[]>('suppliers/'), [])
-  const [supplier, setSupplier] = useState(po ? String(po.supplier) : '')
+  const [supplier, setSupplier] = useState(po ? String(po.supplier) : draft?.supplier ? String(draft.supplier) : '')
   const [newSupplier, setNewSupplier] = useState('')
   const [newSupplierPan, setNewSupplierPan] = useState('')
   const [expected, setExpected] = useState(po?.expected_at ?? '')
   const [note, setNote] = useState(po?.note ?? '')
-  const [lines, setLines] = useState(po?.lines.map((l) => ({ product: l.product, name: l.name, qty: l.qty_ordered, cost: toRupeesInput(l.unit_cost_paisa) })) ?? [])
+  const [lines, setLines] = useState(po?.lines.map((l) => ({ product: l.product, name: l.name, qty: l.qty_ordered, cost: toRupeesInput(l.unit_cost_paisa) })) ?? draft?.lines ?? [])
   const [error, setError] = useState<string | null>(null)
 
   async function save() {
+    setError(null)
     try {
       let sup = supplier
+      if (!sup) throw new Error('Choose a supplier (or add a new one)')
+      if (!lines.length) throw new Error('Add at least one product')
       if (sup === 'new') sup = String((await api<{ id: number }>('suppliers/', { body: { name: newSupplier, pan: newSupplierPan } })).id)
       const body = {
         supplier: Number(sup), expected_at: expected || null, note,
@@ -95,6 +114,13 @@ function POForm({ po, onClose, onSaved }: { po: PO | null; onClose: () => void; 
   return (
     <Modal title={po ? `Edit PO-${po.id}` : 'New purchase order'} onClose={onClose} wide>
       <ErrorBox error={error} />
+      {!po && draft && (
+        <div className="alert alert-info">
+          Started from Inventory with {draft.lines.length} product{draft.lines.length === 1 ? '' : 's'} that need restocking.
+          Quantities are each product's reorder quantity (or enough for twice its reorder point) and costs are the current
+          average cost: check them against the supplier's prices before saving.
+        </div>
+      )}
       <div className="form-grid">
         <Field label="Supplier">
           <select value={supplier} onChange={(e) => setSupplier(e.target.value)}>
@@ -124,7 +150,8 @@ function POForm({ po, onClose, onSaved }: { po: PO | null; onClose: () => void; 
       </table>
       <div className="modal-foot">
         <Button onClick={onClose}>Cancel</Button>
-        <Button kind="primary" disabled={!supplier || !lines.length} onClick={() => void save()}>Save draft</Button>
+        <Button kind="primary" disabled={!supplier || !lines.length} why={!supplier ? 'Choose a supplier to save' : 'Add at least one product to save'}
+          onClick={() => void save()}>Save draft</Button>
       </div>
     </Modal>
   )
@@ -284,7 +311,9 @@ function PurchaseReturnForm({ onClose, onSaved }: { onClose: () => void; onSaved
       </table>
       <div className="modal-foot">
         <Button onClick={onClose}>Cancel</Button>
-        <Button kind="primary" disabled={!supplier || !lines.length || !reason.trim()} onClick={async () => {
+        <Button kind="primary" disabled={!supplier || !lines.length || !reason.trim()}
+          why={!supplier ? 'Choose the supplier' : !lines.length ? 'Add the products going back' : 'Enter a reason for the return'} onClick={async () => {
+          setError(null)
           try {
             await api('purchase-returns/', { body: { supplier: Number(supplier), reason, supplier_note_ref: noteRef, lines: lines.map((l) => ({ product: l.product, qty: l.qty })) } })
             onSaved()
@@ -357,6 +386,7 @@ function SupplierForm({ supplier, onClose, onSaved }: { supplier: Supplier | nul
       <div className="modal-foot">
         <Button onClick={onClose}>Discard</Button>
         <Button kind="primary" busy={busy} disabled={!f.name.trim()} onClick={async () => {
+          setError(null)
           setBusy(true)
           try {
             await api(supplier ? `suppliers/${supplier.id}/` : 'suppliers/', { method: supplier ? 'PATCH' : 'POST', body: f })

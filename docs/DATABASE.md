@@ -20,6 +20,7 @@ Checked against the live models on 2026-10-26: **37 application tables, 17 migra
 - Rates are `Decimal(5,2)` percent. Basis points (`_bp`) = 1/100 of a percent.
 - `DateTimeField`s are UTC-aware. BS dates are `CHAR(10)` `YYYY.MM.DD` (`*_bs`). Fiscal year label `2083-84`.
 - Nothing financial is deleted: products are archived (`archived_at`), users deactivated (`is_active`), invoices cancelled (status + reason).
+- **Value ranges** are checked by model validators (no database constraint, so no schema change): money settings and prices 0 to Rs 100 billion (`10**13` paisa), VAT/levy rates 0–100 %, basis points ≤ 10000, reorder point/quantity ≥ 0, barcode `pack_qty` 1–100000. Request numbers are read through `ims.api.to_int` with the same caps.
 - ★ in the tables below = **append-only once issued** (model guard `compliance.appendonly.AppendOnlyModel` + Postgres triggers).
 
 ## ER overview
@@ -193,11 +194,13 @@ Not part of PostgreSQL, but it holds data that matters if a till is lost.
 | `kv` | cached login (salted hash), POS config per branch, local receipt counters per register, remembered branch/register, **`devices`** (printer connection and paired USB/serial device, paper width, drawer, pole display, scanner options) |
 | `catalog` | per-branch sale catalog snapshot (no costs) |
 | `queue` | offline cash sales waiting to sync (pending / error) |
+| `kv` `cartdraft:<branch>` | the unfinished POS sale, restored after a reload for the same cashier within 12 hours; deleted when the cart empties |
+| `kv` `shiftclose:<id>` | a shift closed offline, posted after its sales sync |
 
-A queued sale that never syncs is a lost sale; **Register tools → Export offline queue** saves a copy.
+A queued sale that never syncs is a lost sale; **Register tools → Export offline queue** or the sidebar's queued-sales panel (**Download a copy**) saves one.
 
 ## Operations
-- **Backups**: `deploy/backup.sh` nightly `pg_dump --format=custom` with SHA-256; keeps daily dumps 90 days and the 1st-of-month dump ~7 years (IRD needs 6). WAL archiving in `docker-compose.yml` allows point-in-time recovery between dumps. `deploy/restore-drill.sh` tests a restore.
+- **Backups**: `deploy/backup.sh` nightly `pg_dump --format=custom` with SHA-256; keeps daily dumps 90 days and the 1st-of-month dump ~7 years (IRD needs 6). Weekly `pg_basebackup` (newest 2 kept) plus the gzipped WAL archive give point-in-time recovery (`deploy/pitr-prepare.sh`); older WAL is pruned. Optional gpg encryption (`BACKUP_PASSPHRASE`). `deploy/restore-drill.sh` tests a restore weekly. See `docs/DEPLOYMENT.md`.
 - **Stock check**: `manage.py reconcile_stock` compares `quantity_on_hand` with the ledger sum.
 - **Auditor views**: `manage.py refresh_auditor_views` (nightly).
 - **Reset dev data**: `flush` + `seed_demo` (dev only; `flush` also removes the seeded tax categories, which `seed_demo` re-creates).

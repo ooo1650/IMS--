@@ -1,16 +1,35 @@
 import { useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { Icon } from '../components/Icon'
 import { Availability, ProductDetail } from '../components/ProductDetail'
-import { Badge, Button, ErrorBox, Field, fmtDate, Guide, LoadMore, Modal, PageHead, QtyInput, Tabs, useLoad, usePaged } from '../components/ui'
-import { api, qs } from '../lib/api'
-import { npr } from '../lib/money'
+import { Badge, Button, ErrorBox, Field, fmtDate, Guide, LoadMore, Modal, PageHead, QtyInput, Tabs, useLoad, usePaged, ViewOnly } from '../components/ui'
+import { api, cursorPath, qs, type Page } from '../lib/api'
+import { npr, toRupeesInput } from '../lib/money'
 import { Tile } from './Dashboard'
 
 interface Item {
   id: number; product: number; sku: string; name: string; unit: string; category: string | null
   quantity_on_hand: number; reorder_point: number; reorder_qty: number; weighted_avg_cost_paisa: number
-  allow_negative: boolean; value_paisa: number
+  allow_negative: boolean; value_paisa: number; supplier: number | null
+}
+
+/** What a purchase order line starts at when ordering from Inventory. */
+interface ReorderLine { product: number; name: string; qty: number; cost: string }
+
+/** Suggested order: the item's reorder quantity, or else enough to get back to
+ *  twice its reorder point (at least 1). */
+function reorderLine(i: Item): ReorderLine {
+  const qty = i.reorder_qty > 0 ? i.reorder_qty : Math.max(1, i.reorder_point * 2 - Math.max(i.quantity_on_hand, 0))
+  return { product: i.product, name: i.name, qty, cost: toRupeesInput(i.weighted_avg_cost_paisa) }
+}
+
+const FILTERS: Filter[] = ['all', 'low', 'out', 'negative']
+const EMPTY: Record<Filter, string> = {
+  all: 'No stock at this branch yet. Add products with opening stock, receive a purchase, or use Adjust → In.',
+  low: "Nothing is at or below its reorder point. Products only show here once they have a reorder point: set one with the gear icon.",
+  out: 'Nothing is out of stock.',
+  negative: 'Nothing is below zero.',
 }
 interface Movement {
   id: number; sku: string; name: string; type: string; qty: number; unit_cost_paisa: number; ref: string
@@ -23,7 +42,13 @@ type Filter = 'all' | 'low' | 'out' | 'negative'
 export default function Inventory() {
   const { can, branch } = useAuth()
   const [tab, setTab] = useState<'stock' | 'movements'>('stock')
-  const [filter, setFilter] = useState<Filter>('all')
+  // The filter lives in the URL (?filter=low), so the dashboard's "Low stock" can link straight here.
+  const [params, setParams] = useSearchParams()
+  const filter: Filter = FILTERS.includes(params.get('filter') as Filter) ? (params.get('filter') as Filter) : 'all'
+  const setFilter = (f: Filter) => setParams(f === 'all' ? {} : { filter: f }, { replace: true })
+  const navigate = useNavigate()
+  const [ordering, setOrdering] = useState(false)
+  const [orderError, setOrderError] = useState<string | null>(null)
   const [q, setQ] = useState('')
   const [adjusting, setAdjusting] = useState<Item | null>(null)
   const [settings, setSettings] = useState<Item | null>(null)
@@ -32,6 +57,30 @@ export default function Inventory() {
   const stock = usePaged<Item>(tab === 'movements' ? null : `inventory/${qs({ q, low: filter === 'low' ? 1 : null, out: filter === 'out' ? 1 : null, negative: filter === 'negative' ? 1 : null, b: branch?.id })}`)
   const moves = usePaged<Movement>(tab === 'movements' ? `movements/${qs({ b: branch?.id })}` : null)
   const canAdjust = can('inventory.adjust')
+  const canOrder = can('purchasing.manage')
+  const order = (items: Item[]) => {
+    const suppliers = new Set(items.map((i) => i.supplier))
+    navigate('/purchasing', { state: { reorder: items.map(reorderLine), supplier: suppliers.size === 1 ? [...suppliers][0] : null } })
+  }
+  /** Every item in the current filter (not just the loaded page), then a new PO with them. */
+  const orderAll = async () => {
+    setOrdering(true)
+    setOrderError(null)
+    try {
+      const all: Item[] = []
+      let path: string | null = `inventory/${qs({ low: filter === 'low' ? 1 : null, out: filter === 'out' ? 1 : null, negative: filter === 'negative' ? 1 : null, b: branch?.id })}`
+      while (path && all.length < 500) {
+        const page: Page<Item> = await api<Page<Item>>(path)
+        all.push(...page.results)
+        path = page.next ? cursorPath(page.next) : null
+      }
+      order(all)
+    } catch (e) {
+      setOrderError((e as Error).message)
+    } finally {
+      setOrdering(false)
+    }
+  }
   const s = summary.data
   const refresh = () => { stock.reload(); summary.reload() }
 
@@ -45,6 +94,7 @@ export default function Inventory() {
           </span>
         )}
       </PageHead>
+      {!canAdjust && <ViewOnly>Adjusting stock and reorder points needs a stock role at this branch (manager or inventory clerk). Ask your manager if something here looks wrong.</ViewOnly>}
       <Guide id="inventory" title="Stock at this branch">
         <ul>
           <li>Each row is what this branch has on hand. Every change is logged under <strong>Movements</strong>.</li>
@@ -53,11 +103,17 @@ export default function Inventory() {
         </ul>
       </Guide>
       <div className="tiles">
-        <Tile label="Products tracked" value={s?.items ?? '—'} />
+        <Tile label="Products tracked" value={s?.items ?? '—'} active={tab === 'stock' && filter === 'all'}
+          onClick={() => { setTab('stock'); setFilter('all') }} action="Show all" />
         <Tile label="Stock value" value={s ? npr(s.inventory_value_paisa) : '—'} sub="on hand × weighted-avg cost" />
-        <Tile label="Low stock" value={s?.low_stock ?? '—'} tone={s?.low_stock ? 'warn' : undefined} sub="at or below reorder point" />
+        <Tile label="Low stock" value={s?.low_stock ?? '—'} tone={s?.low_stock ? 'warn' : undefined} sub="at or below reorder point"
+          active={tab === 'stock' && filter === 'low'} onClick={() => { setTab('stock'); setFilter('low') }}
+          action={s?.low_stock ? 'Show items' : 'Set reorder points'} />
         <Tile label="Out of stock" value={s?.out_of_stock ?? '—'} tone={s?.out_of_stock ? 'bad' : undefined}
-          sub={s?.negative_stock ? `${s.negative_stock} below zero — recount` : 'nothing on hand'} />
+          sub={s?.negative_stock ? `${s.negative_stock} below zero — recount` : 'nothing on hand'}
+          active={tab === 'stock' && (filter === 'out' || filter === 'negative')}
+          onClick={() => { setTab('stock'); setFilter(s?.negative_stock && !s.out_of_stock ? 'negative' : 'out') }}
+          action={s?.out_of_stock || s?.negative_stock ? 'Show items' : undefined} />
       </div>
       <Tabs value={tab} onChange={setTab} tabs={[['stock', 'Stock on hand'], ['movements', 'Movements']]} />
       <ErrorBox error={stock.error || moves.error || summary.error} />
@@ -70,6 +126,24 @@ export default function Inventory() {
               ))}
             </div>
           </div>
+          {(filter === 'low' || filter === 'out') && stock.items.length > 0 && (
+            <div className="alert alert-warn restock-bar">
+              <span>
+                {filter === 'low' ? `${s?.low_stock ?? stock.items.length} product(s) at or below their reorder point.` : `${s?.out_of_stock ?? stock.items.length} product(s) with nothing on hand.`}
+                {' '}Order them from a supplier, or ask another branch to send some: the sending branch starts the
+                transfer from its own <strong>Transfers</strong> screen.
+              </span>
+              <span className="row-actions">
+                {canOrder
+                  ? <Button kind="primary" busy={ordering} onClick={() => void orderAll()}><Icon name="truck" size={16} /> Order these</Button>
+                  : <span className="muted small">Ask someone with purchasing access to order them.</span>}
+              </span>
+            </div>
+          )}
+          <ErrorBox error={orderError} />
+          {filter === 'negative' && stock.items.length > 0 && (
+            <div className="alert alert-warn">Below zero means more was sold than the system knew about. Count these shelves and correct them with <strong>Adjust</strong>, or start a <strong>Stocktake</strong>.</div>
+          )}
           <div className="card flush">
             <table className="table">
               <thead>
@@ -96,12 +170,15 @@ export default function Inventory() {
                     <td className="num">{npr(i.value_paisa)}</td>
                     <td><Availability onHand={i.quantity_on_hand} reorderPoint={i.reorder_point} /></td>
                     <td className="row-actions" onClick={(e) => e.stopPropagation()}>
+                      {canOrder && i.quantity_on_hand <= i.reorder_point && (
+                        <Button kind="ghost" title="New purchase order for this product" onClick={() => order([i])}>Order</Button>
+                      )}
                       {canAdjust && <Button kind="ghost" onClick={() => setAdjusting(i)}>Adjust</Button>}
                       {canAdjust && <button className="icon-btn" title="Stock settings" aria-label="Stock settings" onClick={() => setSettings(i)}><Icon name="settings" size={16} /></button>}
                     </td>
                   </tr>
                 ))}
-                {!stock.items.length && !stock.loading && <tr><td colSpan={8} className="empty">Nothing here</td></tr>}
+                {!stock.items.length && !stock.loading && <tr><td colSpan={8} className="empty">{q ? `No products match “${q}”.` : EMPTY[filter]}</td></tr>}
               </tbody>
             </table>
             <LoadMore more={stock.more} loading={stock.loading} />
@@ -174,7 +251,9 @@ function AdjustModal({ item, onClose, onDone }: { item: Item; onClose: () => voi
         <Button
           kind="primary"
           disabled={!(n > 0) || !reason.trim()}
+          why={!(n > 0) ? 'Enter a quantity' : 'Enter a reason (it goes in the stock movement log)'}
           onClick={async () => {
+            setError(null)
             try {
               await api('inventory/adjust/', { body: { product: item.product, qty: dir === 'in' ? n : -n, reason } })
               onDone()
@@ -207,6 +286,7 @@ function SettingsModal({ item, onClose, onDone }: { item: Item; onClose: () => v
       <div className="modal-foot">
         <Button onClick={onClose}>Cancel</Button>
         <Button kind="primary" onClick={async () => {
+          setError(null)
           try {
             await api(`inventory/${item.id}/`, { method: 'PATCH', body: f })
             onDone()

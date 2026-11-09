@@ -19,7 +19,7 @@ import type { DocumentCtx, PrintResult, RegisterCfg } from './types'
 const WIDTH = 42 // characters on 80mm paper
 
 /** Plain-text layout for thermal printers (Latin only — thermal fonts lack Devanagari). */
-export function receiptText(d: DocumentCtx, width = WIDTH): string[] {
+function receiptText(d: DocumentCtx, width = WIDTH): string[] {
   const pad = (left: string, right: string) => padLine(left, right, width)
   const out: string[] = []
   const center = (s: string) => ' '.repeat(Math.max(0, Math.floor((width - s.length) / 2))) + s
@@ -66,7 +66,7 @@ function wrap(text: string, width = WIDTH): string[] {
   return lines
 }
 
-export interface PrinterDriver {
+interface PrinterDriver {
   print(job: { html: string; document: DocumentCtx }): Promise<void>
   openDrawer(): Promise<void>
 }

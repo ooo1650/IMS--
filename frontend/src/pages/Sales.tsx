@@ -18,7 +18,11 @@ interface SaleRow {
 
 export default function Sales() {
   const [params, setParams] = useSearchParams()
-  const [filter, setFilter] = useState<Filter>('all')
+  // ?filter=review / conflicts / … opens the list already filtered (links from "Needs attention").
+  const [filter, setFilter] = useState<Filter>(() => {
+    const f = params.get('filter')
+    return (['unprinted', 'conflicts', 'review', 'offline', 'cancelled'] as string[]).includes(f ?? '') ? (f as Filter) : 'all'
+  })
   const [q, setQ] = useState('')
   const { branch } = useAuth()
   const path = `sales/${qs({
@@ -222,12 +226,13 @@ function SaleDetail({ id, onClose }: { id: number; onClose: () => void }) {
               </>
             )}
             {mode === 'cancel' && (
-              <Button kind="danger" disabled={!reason.trim()} onClick={() => act(async () => { await api(`sales/${sale.id}/void/`, { body: { reason } }); setMode(null) })}>
+              <Button kind="danger" disabled={!reason.trim()} why="Enter the cancellation reason" onClick={() => act(async () => { await api(`sales/${sale.id}/void/`, { body: { reason } }); setMode(null) })}>
                 Confirm cancellation
               </Button>
             )}
             {mode === 'debit' && (
-              <Button kind="primary" disabled={!reason.trim() || !toPaisa(amount) || !rate} onClick={() => act(async () => {
+              <Button kind="primary" disabled={!reason.trim() || !toPaisa(amount) || !rate}
+                why={!toPaisa(amount) ? 'Enter the amount' : !rate ? 'Choose the VAT rate' : 'Enter a reason'} onClick={() => act(async () => {
                 await api(`sales/${sale.id}/debit-note/`, { body: { taxable_paisa: toPaisa(amount), reason, tax_rate: rate } })
                 setMode(null)
               })}>

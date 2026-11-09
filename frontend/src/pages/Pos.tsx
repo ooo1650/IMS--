@@ -914,7 +914,8 @@ function CashModal({ total, needsApproval, online, onClose, onPay }: {
       {needsApproval && <ApproverFields value={approver} onChange={setApprover} />}
       <div className="modal-foot">
         <Button onClick={onClose}>Cancel</Button>
-        <Button kind="primary" busy={busy} disabled={tendered == null || tendered < total || (needsApproval && !approver.username)} onClick={() => void pay()}>
+        <Button kind="primary" busy={busy} disabled={tendered == null || tendered < total || (needsApproval && !approver.username)}
+          why={tendered != null && tendered >= total && needsApproval && !approver.username ? 'Needs a manager to approve the discount' : null} onClick={() => void pay()}>
           Complete sale
         </Button>
       </div>
@@ -1115,7 +1116,8 @@ function OtherPaymentModal({ totalFor, needsApproval, onClose, onPay }: {
       {needsApproval && <ApproverFields value={approver} onChange={setApprover} />}
       <div className="modal-foot">
         <Button onClick={onClose}>Cancel</Button>
-        <Button kind="primary" busy={busy} disabled={!ref.trim() || (needsApproval && !approver.username)} onClick={async () => {
+        <Button kind="primary" busy={busy} disabled={!ref.trim() || (needsApproval && !approver.username)}
+          why={!ref.trim() ? 'Enter the slip or transaction ID' : 'Needs a manager to approve the discount'} onClick={async () => {
           setBusy(true)
           setError(null)
           try {
@@ -1149,7 +1151,9 @@ function OpenShift({ register, online, onOpened }: { register: RegisterCfg; onli
         kind="primary"
         busy={busy}
         disabled={cash == null || !online}
+        why={!online ? 'Needs a connection' : moneyProblem(raw) ? null : 'Enter the cash in the drawer (0 if empty)'}
         onClick={async () => {
+          setError(null)
           setBusy(true)
           try {
             await api('pos/shifts/open/', { body: { register_id: register.id, opening_cash_paisa: cash } })
@@ -1204,7 +1208,9 @@ function CloseShiftModal({ shift, online, onClose, onClosed }: { shift: Shift; o
             <Button
               kind="primary"
               disabled={counted == null}
+              why={moneyProblem(raw) ? null : 'Enter the cash you counted (0 if empty)'}
               onClick={async () => {
+                setError(null)
                 try {
                   if (!online) {
                     await kvSet(`shiftclose:${shift.id}`, { shift_id: shift.id, counted_cash_paisa: counted })
@@ -1274,7 +1280,7 @@ function HeldModal({ register, cart, saleDiscount, catalog, onClose, onHeld, onR
           <span>
             <Button
               disabled={cart.length > 0}
-              title={cart.length ? 'Hold or clear the current sale first' : ''}
+              why="Hold or clear the current sale first"
               onClick={async () => {
                 const items = h.cart.items.flatMap((i) => {
                   const p = byId.get(i.product_id)
@@ -1364,6 +1370,7 @@ function ReturnModal({ register, threshold, onClose, onDone }: { register: Regis
             <Button
               kind="primary"
               disabled={!estimate || !reason.trim()}
+              why={!estimate ? 'Choose how many of each item come back' : 'Enter the reason for the return'}
               onClick={async () => {
                 setError(null)
                 try {

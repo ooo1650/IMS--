@@ -12,7 +12,7 @@ export type DiscountType = 'none' | 'amount' | 'percent'
 export type TaxKind = 'standard' | 'reduced' | 'zero' | 'exempt'
 export type LevyType = '' | 'hst' | 'esf'
 
-export interface LineInput {
+interface LineInput {
   unit_price_paisa: number
   qty: number
   tax_rate: string // e.g. "13" or "12.50"
@@ -25,7 +25,7 @@ export interface LineInput {
   levy_rate?: string // percent
 }
 
-export interface LineResult {
+interface LineResult {
   gross_paisa: number
   line_discount_paisa: number
   sale_discount_share_paisa: number
@@ -91,12 +91,12 @@ function floor(x: Frac): bigint {
 }
 const HALF = frac(1n, 2n)
 
-export function roundHalfUp(x: Frac): bigint {
+function roundHalfUp(x: Frac): bigint {
   if (cmp(x, int(0)) >= 0) return floor(add(x, HALF))
   return -floor(add(frac(-x.n, x.d), HALF))
 }
 
-export function parseRate(rate: string): Frac {
+function parseRate(rate: string): Frac {
   const s = String(rate).trim()
   const m = /^(\d+)(?:\.(\d+))?$/.exec(s)
   if (!m) throw new Error(`bad tax rate ${rate}`)
@@ -118,7 +118,7 @@ function rateKey(r: Frac): string {
   return `${whole}.${digits}`
 }
 
-export function discountAmount(base: number, dtype: DiscountType, value: number): number {
+function discountAmount(base: number, dtype: DiscountType, value: number): number {
   if (dtype === 'none' || !value) return 0
   let amt: number
   if (dtype === 'amount') amt = value
@@ -130,7 +130,7 @@ export function discountAmount(base: number, dtype: DiscountType, value: number)
   return amt
 }
 
-export function allocate(total: number, weights: Frac[]): number[] {
+function allocate(total: number, weights: Frac[]): number[] {
   const wsum = weights.reduce(add, int(0))
   if (total === 0 || wsum.n === 0n) return weights.map(() => 0)
   const exact = weights.map((w) => div(mul(int(total), w), wsum))

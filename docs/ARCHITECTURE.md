@@ -104,7 +104,15 @@ Outbox row created in the document's transaction → cron `cbms_sync` every minu
 - `pages/*`: one file per screen. `Pos.tsx` is the largest (cart, buyer, payments, offline, returns, shifts).
 
 ## 6. Deployment
-`docker-compose.yml` runs `db` (Postgres 16 with WAL archiving), `backend` (gunicorn) and `web` (nginx serving the SPA and proxying the API; `certbot` keeps its Let's Encrypt certificate renewed). Migrations run as a release step (`--profile release`). Cron jobs live in `deploy/crontab`: CBMS sync, expiry, FonePay reconciliation, stock reconciliation, auditor view refresh, backup, weekly restore drill. Secrets go in `backend/.env` (see `.env.example`).
+`docker-compose.yml` runs:
+- `db`: Postgres 16, gzipped WAL archive (`walarchive` volume), `deploy/postgres/pg_hba.conf`;
+- `migrate`: one-shot, as the DB owner (`migrate` + `ensure_db_roles`), before anything else starts;
+- `backend`: gunicorn (gthread workers) as the least-privilege role `ims_app`;
+- `worker`: `manage.py run_scheduler` (FonePay expiry, CBMS sync, reconciliations, auditor views);
+- `web`: nginx (SPA, console on :8443, static/media, proxy, rate limits, JSON 429/413); `certbot` renews Let's Encrypt;
+- `backup`: nightly `pg_dump`, weekly base backup + WAL pruning, weekly restore drill, optional gpg encryption and off-site copy.
+
+Secrets and guard rails go in `.env` (see `.env.example`); everything else is in the database (operator console). `deploy/crontab` is only for installs without Docker. Details: `docs/DEPLOYMENT.md`.
 
 ## 7. Decisions worth knowing
 - Session auth instead of JWT: one first-party SPA, and revocation is instant (`is_active=False` takes effect on the next request).

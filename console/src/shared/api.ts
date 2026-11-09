@@ -28,7 +28,7 @@ export class ApiError extends Error {
 }
 
 /** What to tell the user when the server gave no sentence of its own. */
-export function statusMessage(status: number): string {
+function statusMessage(status: number): string {
   if (status === 401) return "You're signed out. Sign in again to continue."
   if (status === 403) return "You don't have permission for this, or your session expired. Reload the page and try again."
   if (status === 404) return 'Not found. Reload the page; if it keeps happening, tell your administrator.'
@@ -64,7 +64,7 @@ const LABELS: Record<string, string> = {
 const ITEM: Record<string, string> = { lines: 'Line', barcodes: 'Barcode', rates: 'Rate', roles: 'Role' }
 const SILENT = new Set(['detail', 'non_field_errors', 'lines', 'barcodes'])
 
-export function fieldLabel(key: string): string {
+function fieldLabel(key: string): string {
   if (LABELS[key]) return LABELS[key]
   const words = key.replace(/_(paisa|bp|id|pct)$/, '').replace(/_/g, ' ').trim()
   return words.charAt(0).toUpperCase() + words.slice(1)

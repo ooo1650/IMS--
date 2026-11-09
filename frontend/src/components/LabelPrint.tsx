@@ -21,7 +21,7 @@ const LAYOUTS: Record<string, Layout> = {
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
-export type LabelProduct = Pick<Product, 'id' | 'sku' | 'name' | 'barcodes' | 'sale_price_paisa' | 'branch_price_paisa' | 'tax_inclusive'>
+type LabelProduct = Pick<Product, 'id' | 'sku' | 'name' | 'barcodes' | 'sale_price_paisa' | 'branch_price_paisa' | 'tax_inclusive'>
 
 function labelHtml(p: LabelProduct, opts: { price: boolean; name: boolean; small: boolean }) {
   const code = p.barcodes[0]?.code || p.sku
@@ -118,7 +118,8 @@ export function LabelPrint({ products, onClose }: { products: LabelProduct[]; on
       <p className="muted small">In the print dialog choose the label printer (or A4 printer), set margins to <strong>None</strong> and scale to <strong>100%</strong>.</p>
       <div className="modal-foot">
         <Button onClick={onClose}>Cancel</Button>
-        <Button kind="primary" disabled={!total} onClick={() => {
+        <Button kind="primary" disabled={!total} why="Set how many labels to print for at least one product" onClick={() => {
+          setError(null)
           try {
             const items = products.map((p) => ({ product: p, copies: copies[p.id] ?? 0 })).filter((i) => i.copies > 0)
             void printHtml(labelsDocument(items, layout, { price, name, skip: sheet ? skip : 0 }), 'Labels')

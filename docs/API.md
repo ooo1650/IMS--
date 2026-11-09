@@ -102,7 +102,7 @@ One backend serves several businesses. `X-Org-Id` (or the session) picks the act
 | `POST pos/checkout/sync` | branch:pos.sell | Offline sale: Cart (lines include `unit_price_paisa, tax_rate, tax_inclusive`) + `{register_id, idempotency_key, tendered_paisa, fiscal_year, created_at, receipt_seq (register series) \| provisional_ref (branch series), client_total_paisa, offline_discount_approved}` → Sale + `receipt_gaps` |
 | `GET/POST pos/held/`, `DELETE pos/held/{id}/` | branch:pos.sell | `{register, label, cart}` |
 | `GET pos/registers/{id}/receipt-gaps` | branch:reports.view | `?fiscal_year=` |
-| `GET/POST/PATCH customers/…` | branch:pos.sell | `?q=` |
+| `GET/POST/PATCH customers/…` | branch:pos.sell | `?q=`. `phone`: 7–15 digits (spaces, `+`, `-` allowed); `tax_id` (PAN): blank or 9 digits. A checkout's `customer_id` must be this branch's or a business-wide customer. |
 
 **Cart** (shared by checkout, initiate, sync):
 ```json
@@ -136,7 +136,7 @@ Rules: discounts need a reason. Discounts above `cashier_max_discount_bp` need `
 ## Inventory
 | Method & path | Perm | Notes |
 |---|---|---|
-| `GET inventory/` | branch:inventory.view | `?q=`, `?low=1`, `?out=1` (on hand ≤ 0), `?negative=1` |
+| `GET inventory/` | branch:inventory.view | `?q=`, `?low=1`, `?out=1` (on hand ≤ 0), `?negative=1`. Each item includes `supplier` (the product's usual supplier id, or null). |
 | `GET inventory/summary/` | branch:inventory.view | `{items, inventory_value_paisa, low_stock, out_of_stock, negative_stock}`, same counts as the dashboards (`reporting.queries.stock_summary`). |
 | `PATCH inventory/{id}/` | branch:inventory.adjust | `{reorder_point, reorder_qty, allow_negative}` |
 | `POST inventory/adjust/` | branch:inventory.adjust | `{product, qty (signed), reason}` |

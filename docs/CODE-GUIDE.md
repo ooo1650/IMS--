@@ -9,19 +9,22 @@ IMS/
 ├── README.md                 run/deploy overview
 ├── ims-design-doc (3).md     original architecture spec
 ├── payment.md                Nepal IRD / VAT / CBMS requirements
-├── docker-compose.yml        Postgres + gunicorn + nginx + certbot
-├── deploy/                   nginx/ (config templates, TLS setup), certbot-loop.sh, crontab, backup.sh, restore-drill.sh
+├── docker-compose.yml        db, migrate, backend, worker, web (nginx), certbot, backup
+├── .github/workflows/ci.yml  CI: backend on Postgres + ruff, frontend, console, image build
+├── deploy/                   nginx/ (templates, snippets incl. JSON errors), postgres/pg_hba.conf, certbot-loop.sh,
+│                             backup.sh, restore-drill.sh, pitr-prepare.sh, crontab (no-Docker installs only)
 ├── docs/                     these docs + IRD questions, templates, user manual
 ├── backend/
-│   ├── ims/                  settings.py, urls.py (all routes), api.py (error handler, BranchScopedMixin), testutils.py
+│   ├── ims/                  settings.py, urls.py (all routes), api.py (error handler, to_int, mixins), errors.py, testutils.py
 │   ├── tenancy/ accounts/ catalog/ inventory/ sales/ purchasing/ reporting/ admin_extras/ compliance/
-│   ├── scripts/              gen_pricing_vectors.py, test_with_postgres.py
+│   ├── scripts/              gen_pricing_vectors.py, test_with_postgres.py, export_schema.py
+│   ├── ruff.toml             backend lint (`ruff check .`)
 │   ├── fonts/                Noto Sans Devanagari (PDF rendering)
 │   └── requirements*.txt
 └── frontend/
     ├── src/{App,main,auth}.tsx, index.css
-    ├── src/components/       Layout, ui (Button/Modal/Field/useLoad/usePaged…), charts, ProductPicker, ErrorBoundary, Icon (inline SVG icons, part of an in-progress restyle)
-    ├── src/lib/              api, pricing (+test), offline, sync, printer, money, types
+    ├── src/components/       Layout, ui (Button/Modal/Field/QtyInput/MoneyInput/useLoad/usePaged…), SyncQueue, charts, ProductPicker, ErrorBoundary, Icon
+    ├── src/lib/              api (+test), pricing (+test), money (+test), offline, sync (+test), printer, types
     ├── src/pages/            one screen per file
     └── public/               sw.js (service worker), manifest
 ```
@@ -29,13 +32,18 @@ IMS/
 ## Backend, file by file
 
 ### `ims/`
-- `settings.py`: env-driven config. `IMS = {...}` holds business knobs (cash rounding, discount limit, return threshold). FonePay guard rails only (`FONEPAY_MOCK_ALLOWED`, `FONEPAY_ALLOWED_HOSTS`); its real configuration is in the database.
+- `settings.py`: env-driven config: secrets and guard rails only (`IMS_TRUSTED_PROXIES`, `IMS_PLATFORM_*`, `IMS_TEST_LOGIN`, FonePay `FONEPAY_MOCK_ALLOWED` / `FONEPAY_ALLOWED_HOSTS`). Shop rules (cash rounding, discount limit, return threshold) are per business in `tenancy.BusinessRules`; email and sign-in limits in `admin_extras.SystemSettings`; tax in `ComplianceSettings`.
 - `urls.py`: **every API route** (router + explicit paths) under `/api/v1/`.
-- `api.py`: `exception_handler` (ValidationError → 400, adds `short_lines` for stock errors) and `BranchScopedMixin` (filters querysets to `request.branch`, stamps branch on create).
+- `api.py`:
+  - `exception_handler`: service `ValidationError` → 400 (adds `short_lines` for stock errors); DRF wording rewritten to plain sentences (`plain_errors`); CSRF / signed-out messages in plain words; a late `OverflowError`/`DataError` becomes a 400; logs a failed manager approval (`failed_login_key`) after the rollback.
+  - `to_int(value, field, default, min_value, max_value)` and `lines_of(request)`: the only way views read raw numbers and line lists (caps `MAX_PAISA`, `MAX_QTY`, `MAX_INT`).
+  - `BranchScopedMixin` / `OrgScopedMixin` / `OrgFieldsMixin`: tenant scoping.
+- `errors.py`: JSON instead of Django's HTML for `/api/` (CSRF failure, 400, 404, 500).
+- `test_input_numbers.py`: fires bad numbers at every write endpoint; add new numeric inputs there.
 - `testutils.py`: `World` test fixture (2 branches, a register each, users per role, 3 products with stock).
 
 ### `accounts/`
-`roles.py` (roles → permission strings), `models.py` (`User.has_branch_perm`, `accessible_branch_ids`), `permissions.py` (`HasBranchPerm`, `HasOrgPerm`, `PerActionPermissionMixin`, `can()`, `verify_approver()` for manager overrides), `views.py` (login/logout/me/active-branch, users CRUD).
+`roles.py` (roles → permission strings), `models.py` (`User.has_branch_perm`, `accessible_branch_ids`), `permissions.py` (`HasBranchPerm`, `HasOrgPerm`, `PerActionPermissionMixin`, `can()`, `verify_approver()` for manager overrides, which shares the sign-in lockout), `otp.py` (emailed codes; `can_send` returns a `Wait` with `retry_after`), `views.py` (login/logout/me/active-branch, users CRUD; `too_many()` builds every 429 with `code` + `retry_after`; `login_locked_out()` returns the seconds left).
 
 ### `catalog/`
 `models.py`: Product (has `tax_category`, `hs_code`, `excise_rate`, `input_credit_blocked_pct`) and `tax_profile(product, date)` → `(vat_rate, kind, levy_type, levy_rate, code)`, which honours effective-dated rates. `views.py`: product CRUD with archive/restore/branch price, and `PosCatalogView` (the offline catalog, no costs).
@@ -72,22 +80,25 @@ IMS/
 | `management/commands/` | `cbms_sync`, `refresh_auditor_views`, `generate_listing_evidence` |
 
 ### `admin_extras/`
-`models.py` (`AuditLog`, `log_action()`), `audit.py` (signals on the models in `AUDITED`, recording before/after), `imports.py` (CSV import with dry run), `management/commands/seed_demo.py`.
+`models.py` (`AuditLog`, `log_action()`), `audit.py` (signals on the models in `AUDITED`, recording before/after), `imports.py` (CSV or .xlsx import with dry run), `platform.py` (operator console API), `management/commands/` (`seed_demo`, `run_scheduler`, `create_platform_admin`, `ensure_db_roles`).
 
 ### Management commands
 `seed_demo`, `expire_open_sales`, `reconcile_fonepay`, `reconcile_stock [--fix]`, `cbms_sync [--force]`, `refresh_auditor_views`, `generate_listing_evidence --out DIR [--create-test-bills]`.
 
 ## Frontend, file by file
-- `lib/api.ts`: `api<T>(path, {method, body, form, branch})`. Throws `ApiError` (HTTP error, `.data` has field errors) or `NetworkError` (offline).
+- `lib/api.ts`: `api<T>(path, {method, body, form, branch})`. Throws `ApiError` (`.message` is a readable sentence with field labels and row numbers, `.code` the server's reason, `.retryAfter` seconds for 429s) or `NetworkError` (offline). `formatWait()` for countdowns.
+- `lib/money.ts`: `npr()` to show; `toPaisa()` / `toBasisPoints()` / `parseWhole()` to read what people type ("Rs 500", "500/-", "10%", Nepali digits); `moneyProblem()` / `percentProblem()` / `wholeProblem()` say why an entry can't be used.
 - `lib/pricing.ts`: port of `sales/pricing.py`. **Keep in sync.**
 - `lib/offline.ts`: IndexedDB stores (`kv`, `catalog`, `queue`), offline login, `queueOfflineSale` (atomic with the local counter).
-- `lib/sync.ts`: online state (`useOnline`), queue sync loop, offline shift-close posting.
+- `lib/sync.ts`: online state (`useOnline`), queue sync loop (a 401 pauses it, any other refusal marks that sale and carries on), offline shift-close posting. `components/SyncQueue.tsx` is the sidebar panel for queued/failed sales.
 - `lib/printer.ts`: `printDocument(register, job)` / `printResult`. Full invoices and notes → HTML print dialog (Devanagari). Abbreviated invoices and offline slips → ESC/POS when the till has a thermal printer; the drawer pulse rides on the same job (sent once).
 - `lib/devices/`: browser-only hardware. `settings.ts` (per-till settings in IndexedDB, `useDeviceSettings`), `transport.ts` (WebUSB / WebSerial / HTTP byte sinks), `escpos.ts` (+test: command builder, ASCII transliteration, pole display bytes), `scanner.ts` (+test: keyboard-wedge detection, beep), `display.ts` (customer display over BroadcastChannel + pole display).
 - `lib/barcode.ts` (+test, round-tripped through ZXing's readers): EAN-13/UPC-A check digits, in-store `2…` codes, EAN-13 and Code 128 SVG for labels.
 - `components/DeviceSettings.tsx` (POS → Devices), `CameraScanner.tsx` (native BarcodeDetector, lazy ZXing fallback), `LabelPrint.tsx` (Products → select → Print labels), `ProductDetail.tsx`. `pages/CustomerDisplay.tsx` is served at `/customer-display` without login.
-- `components/ui.tsx`: `useLoad(fn, deps)`, `usePaged(path)` (cursor pages), Button/Modal/Field/Badge/Status/Tabs.
-- `pages/Pos.tsx`: cart, invoice-type logic (mirrors the server), payment modals, offline sale, returns, held carts, shifts, register tools.
+- `components/ui.tsx`: `useLoad(fn, deps)`, `usePaged(path)` (cursor pages), `Button` (`why=` says why it's disabled), `Modal` (won't close on a stray click once edited), `Field` (`error=`), `QtyInput`, `MoneyInput`, `ViewOnly`, Badge/Status/Tabs.
+- `pages/Dashboard.tsx`: also exports `Tile` (clickable with `onClick`/`action`) and `AttentionList` (rows link with `to`), used by Inventory and the branch report.
+- `pages/Pos.tsx`: cart (kept in IndexedDB as `cartdraft:<branch>` and restored after a reload), invoice-type logic (mirrors the server), payment modals, offline sale, returns, held carts, shifts, register tools.
+- `pages/Inventory.tsx`: filter in the URL (`?filter=low|out|negative`); *Order these* hands the items to `pages/Purchasing.tsx` through router state, which opens a pre-filled PO.
 - `pages/Compliance.tsx`: Tax & IRD (reports + export, CBMS, turnover, settings, tax categories).
 
 ## How to…
@@ -118,9 +129,13 @@ Subclass `AppendOnlyModel`, implement `is_issued()` / `MUTABLE_AFTER_ISSUE`, add
 - Every write that matters calls `log_action(...)` (business event). Audited models also get automatic before/after rows.
 - Comments explain *why* and cite the spec section (`§10.2`, `payment.md Step 2`).
 - Frontend: one page per file, no UI framework, tokens in `index.css` (light/dark), `npr()` for display, `toPaisa()` for input.
+- Inputs: quantities with `QtyInput`, rupees with `MoneyInput` + `moneyProblem()` in `<Field error=…>`; never `<input type="number">`. A disabled button gets `why=`. Every submit handler starts with `setError(null)`.
+- A number on screen that someone has to act on links to the list behind it (`Tile onClick`, `AttentionList to`).
+- Pages a role can open but not change show `<ViewOnly>` instead of silently missing buttons.
 
 ## Testing
 - `backend/*/tests/`: unit and integration tests using `ims.testutils.World`.
 - Postgres-only tests (triggers, concurrency) skip on SQLite. Run them with `scripts/test_with_postgres.py`.
-- `frontend/src/lib/pricing.test.ts` runs the shared vectors.
+- `frontend/src/lib/pricing.test.ts` runs the shared vectors; `api`, `money` and `sync` have their own tests.
+- Lint: `ruff check .` (backend), `npm run lint` (oxlint, frontend). CI runs all of it on every push.
 - Before saying "done": backend tests on both databases, `npx tsc -b`, `npm test`, `npm run build`, and click through the changed screen in a browser.

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../auth'
 import { ProductPicker } from '../components/ProductPicker'
-import { Button, ErrorBox, Field, fmtDate, Guide, LoadMore, Modal, PageHead, QtyInput, Status, useLoad, usePaged } from '../components/ui'
+import { Button, ErrorBox, Field, fmtDate, Guide, LoadMore, Modal, PageHead, QtyInput, Status, useLoad, usePaged, ViewOnly } from '../components/ui'
 import { api, qs } from '../lib/api'
 import { npr } from '../lib/money'
 
@@ -21,6 +21,7 @@ export default function Transfers() {
       <PageHead title="Stock transfers">
         {can('transfer.manage') && <Button kind="primary" onClick={() => setCreating(true)}>New transfer</Button>}
       </PageHead>
+      {!can('transfer.manage') && <ViewOnly>Sending and receiving transfers needs a stock role at this branch. Ask your manager.</ViewOnly>}
       <Guide id="transfers" title="Moving stock between branches">
         <ol>
           <li><strong>New transfer</strong>: pick the branch it goes to and the items.</li>
@@ -87,7 +88,8 @@ function NewTransfer({ onClose, onSaved }: { onClose: () => void; onSaved: () =>
       </table>
       <div className="modal-foot">
         <Button onClick={onClose}>Cancel</Button>
-        <Button kind="primary" disabled={!to || !lines.length} onClick={async () => {
+        <Button kind="primary" disabled={!to || !lines.length} why={!to ? 'Choose the branch to send to' : 'Add the products to send'} onClick={async () => {
+          setError(null)
           try {
             await api('transfers/', { body: { to_branch: Number(to), note, lines: lines.map((l) => ({ product: l.product, qty_sent: l.qty })) } })
             onSaved()

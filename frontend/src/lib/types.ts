@@ -129,7 +129,7 @@ export interface PosConfig {
   registers: RegisterCfg[]
 }
 
-export interface SaleLine {
+interface SaleLine {
   id: number
   product: number
   sku: string
@@ -147,7 +147,7 @@ export interface SaleLine {
 
 export type PayMethod = 'cash' | 'fonepay' | 'card' | 'wallet' | 'bank'
 
-export interface Payment {
+interface Payment {
   id: number
   method: PayMethod
   amount_paisa: number

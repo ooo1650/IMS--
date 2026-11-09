@@ -9,7 +9,7 @@ import { padLine, poleDisplayBytes } from './escpos'
 import { deviceSettings } from './settings'
 import { serialSink } from './transport'
 
-export interface DisplayLine { name: string; qty: number; amount: string }
+interface DisplayLine { name: string; qty: number; amount: string }
 export interface DisplayState {
   mode: 'idle' | 'cart' | 'pay' | 'done'
   store: string

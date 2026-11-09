@@ -12,7 +12,7 @@ export function plain(paisa: number): string {
 
 const DEVANAGARI_DIGITS = '०१२३४५६७८९'
 /** Largest amount anyone types: Rs 100 billion (the server's limit too). */
-export const MAX_PAISA = 10 ** 13
+const MAX_PAISA = 10 ** 13
 
 /**
  * How people actually type numbers at a Nepali counter, made plain:

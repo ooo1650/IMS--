@@ -6,7 +6,7 @@ import { api, qs } from '../shared/api'
 import type { Business } from './Businesses'
 
 interface Role { org: number; org_name?: string; branch: number | null; branch_code?: string | null; role: string }
-export interface Person {
+interface Person {
   id: number; username: string; first_name: string; last_name: string; email: string; email_verified: boolean
   is_active: boolean; is_platform_admin: boolean; last_login: string | null; roles: Role[]
 }

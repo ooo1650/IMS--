@@ -1,4 +1,6 @@
 # Install for the app user on the backend host: crontab deploy/crontab
+# Point-in-time recovery: also set BACKUP_DIR and WAL_ARCHIVE (the archive_command target) for backup.sh,
+# and BACKUP_PASSPHRASE to encrypt. Without WAL_ARCHIVE it takes nightly dumps only.
 * * * * *  cd /app && python manage.py expire_open_sales >> /var/log/ims/expire.log 2>&1
 * * * * *  cd /app && python manage.py cbms_sync >> /var/log/ims/cbms.log 2>&1
 30 2 * * * cd /app && python manage.py reconcile_fonepay >> /var/log/ims/reconcile.log 2>&1

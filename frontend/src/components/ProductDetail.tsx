@@ -9,7 +9,7 @@ import { Badge, ErrorBox, LoadMore, Modal, Tabs, fmtDate, useLoad, usePaged } fr
 
 interface Supplier { id: number; name: string; pan: string; phone: string; email: string; address: string }
 interface Movement { id: number; type: string; qty: number; unit_cost_paisa: number; ref: string; ref_type: string; at: string; by_name: string | null; reason: string }
-export interface StockInfo { quantity_on_hand: number; reorder_point: number; reorder_qty: number; weighted_avg_cost_paisa: number; value_paisa: number }
+interface StockInfo { quantity_on_hand: number; reorder_point: number; reorder_qty: number; weighted_avg_cost_paisa: number; value_paisa: number }
 
 export function Availability({ onHand, reorderPoint }: { onHand: number | null | undefined; reorderPoint?: number }) {
   if (onHand == null) return <span className="muted">—</span>

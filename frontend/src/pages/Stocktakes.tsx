@@ -68,6 +68,7 @@ function StartModal({ onClose, onStarted }: { onClose: () => void; onStarted: (s
       <div className="modal-foot">
         <Button onClick={onClose}>Cancel</Button>
         <Button kind="primary" onClick={async () => {
+          setError(null)
           try {
             onStarted(await api<Stocktake>('stocktakes/', { body: { category: category || null } }))
           } catch (e) {
@@ -118,7 +119,9 @@ function CountModal({ stocktake, onClose }: { stocktake: Stocktake; onClose: () 
             {lines.map((l) => {
               const d = dirty[l.id]
               const counted = d ? d.counted_qty : l.counted_qty == null ? '' : String(l.counted_qty)
-              const variance = counted === '' ? null : Number(counted) - l.system_qty
+              // parseWhole: "६८" counts as 68; an unusable entry ("2.5") shows no variance yet.
+              const countedN = counted.trim() === '' ? null : parseWhole(counted)
+              const variance = countedN == null || countedN < 0 ? null : countedN - l.system_qty
               return (
                 <tr key={l.id}>
                   <td>{l.name} <span className="muted small">{l.sku}</span></td>
@@ -146,7 +149,7 @@ function CountModal({ stocktake, onClose }: { stocktake: Stocktake; onClose: () 
       </div>
       {counting && (
         <div className="modal-foot">
-          <Button disabled={!Object.keys(dirty).length} onClick={() => void save().catch((e) => setError(e.message))}>Save counts</Button>
+          <Button disabled={!Object.keys(dirty).length} onClick={() => { setError(null); void save().catch((e) => setError(e.message)) }}>Save counts</Button>
           <Button kind="primary" onClick={async () => {
             setError(null)
             try {

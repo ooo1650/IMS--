@@ -1,32 +1,18 @@
-# React + TypeScript + Vite
+# IMS frontend (shop app + POS)
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React 19 + TypeScript + Vite PWA. The dev server proxies `/api` to the Django
+backend on `127.0.0.1:8000` (same origin, so session cookies and CSRF work).
 
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev      # http://localhost:5173
+npm test         # vitest: pricing parity with the backend, input parsing, API errors, offline sync
+npm run lint     # oxlint
+npm run build    # tsc -b + vite build
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Where things are and the conventions (money as integer paisa, `QtyInput` /
+`MoneyInput`, `lib/pricing.ts` mirrors `backend/sales/pricing.py`) are in
+`docs/CODE-GUIDE.md` at the repository root. `console/src/shared/` holds copies
+of a few files from here: after changing `components/ui.tsx`, `components/Icon.tsx`,
+`lib/api.ts`, `lib/money.ts` or `index.css`, run `npm run sync-shared` in `console/`.

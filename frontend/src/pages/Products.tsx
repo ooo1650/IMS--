@@ -66,9 +66,19 @@ export default function Products() {
       </PageHead>
       <Guide id="products" title="Your catalog">
         <ul>
-          <li><strong>Add product</strong>: name, sale price and VAT are enough to start. For a new product you can enter its <strong>opening stock</strong> for this branch in the same form.</li>
-          <li>One catalog for the whole business. A branch can charge a different price: open the product → <strong>Branch price</strong>.</li>
-          <li>Stock counts live in <strong>Inventory</strong>, not here. Many products at once: <strong>Import</strong>.</li>
+          {manage ? (
+            <>
+              <li><strong>Add product</strong>: name, sale price and VAT are enough to start. For a new product you can enter its <strong>opening stock</strong> for this branch in the same form.</li>
+              <li>One catalog for the whole business. A branch can charge a different price: open the product → <strong>Branch price</strong>.</li>
+              <li>Stock counts live in <strong>Inventory</strong>, not here. Many products at once: <strong>Import</strong>.</li>
+            </>
+          ) : (
+            <>
+              <li>Products and prices are set up for the whole business by its owner or an administrator. Ask them to add a product or change a price.</li>
+              <li>Tick products to <strong>print shelf labels</strong>. Click one to see its details and stock.</li>
+              <li>Stock counts and adjustments are in <strong>Inventory</strong>.</li>
+            </>
+          )}
         </ul>
       </Guide>
       <Tabs value={view} onChange={setView} tabs={[['active', 'Active'], ['archived', 'Archived']]} />

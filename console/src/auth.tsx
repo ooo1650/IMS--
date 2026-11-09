@@ -4,7 +4,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { api } from './shared/api'
 
-export interface Me {
+interface Me {
   id: number
   username: string
   name: string

@@ -61,7 +61,8 @@ export default function Import() {
         <div className="inline-form">
           <input type="file" accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(e) => { setFile(e.target.files?.[0] ?? null); setResult(null) }} />
           <Button busy={busy} disabled={!file} onClick={() => void run(true)}>Preview (dry run)</Button>
-          <Button kind="primary" busy={busy} disabled={!file || !result?.ok || !result.dry_run} onClick={() => void run(false)}>Commit import</Button>
+          <Button kind="primary" busy={busy} disabled={!file || !result?.ok || !result.dry_run}
+            why={!file ? null : !result ? 'Preview first' : !result.ok ? 'Fix the rows listed below, then preview again' : null} onClick={() => void run(false)}>Commit import</Button>
         </div>
         <ErrorBox error={error} />
         {result && (

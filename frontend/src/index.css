@@ -175,7 +175,6 @@ input[type='checkbox'] { accent-color: var(--accent); width: 16px; height: 16px;
 .badge-warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); background: var(--warn-bg); }
 .badge-bad { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, transparent); background: var(--bad-bg); }
 .badge-info { color: var(--info); border-color: color-mix(in srgb, var(--info) 40%, transparent); }
-.badge-outline { background: var(--surface-1); border-color: var(--border-strong); color: var(--text-secondary); }
 .flags { display: flex; gap: 4px; flex-wrap: wrap; }
 .status-quiet { color: var(--text-secondary); }
 
@@ -501,8 +500,6 @@ input[type='checkbox'] { accent-color: var(--accent); width: 16px; height: 16px;
 .qr img { background: #fff; padding: 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); }
 .mock-box { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; padding: 8px; border: 1px dashed var(--border-strong); border-radius: var(--radius-sm); }
 .done { text-align: center; }
-.invoice-box { display: flex; flex-direction: column; gap: 8px; }
-.invoice-type { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 
 .picker { position: relative; margin-bottom: 8px; }
 .picker input { width: 100%; }
@@ -729,3 +726,18 @@ textarea { resize: vertical; }
 /* Text that opens something, inside a line of text (sidebar sync count). */
 .link-btn { background: none; border: 0; padding: 0; font: inherit; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 2px; }
 .link-btn:focus-visible { outline: 2px solid var(--accent, #14573f); outline-offset: 2px; border-radius: 4px; }
+
+/* Tiles and attention rows that open the list behind their number. */
+.tile-button { font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.tile-button:hover { border-color: var(--border-strong, var(--text-muted)); }
+.tile-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tile-active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.tile-action { margin-top: 4px; font-size: 13px; font-weight: 500; color: var(--accent); display: inline-flex; align-items: center; gap: 2px; }
+.attention-link { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; color: inherit; text-decoration: none; }
+.attention-link:hover span:first-child { text-decoration: underline; text-underline-offset: 2px; }
+.attention-link strong { display: inline-flex; align-items: center; gap: 2px; }
+.restock-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: space-between; }
+.h2-link { font-weight: 500; margin-left: 8px; }
+/* A box holding something that can't be used (QtyInput "2.5", MoneyInput "1.234"). */
+input[aria-invalid="true"] { border-color: var(--bad); box-shadow: 0 0 0 1px var(--bad); }
+.foot-why { align-self: center; max-width: 32ch; text-align: right; }

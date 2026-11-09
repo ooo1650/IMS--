@@ -3,9 +3,16 @@
 ## Signing in
 - Sign in with your username and password. If you work at more than one branch, pick the branch at the top. Your role (cashier, manager…) applies only at that branch.
 - **Offline:** if you signed in on this till within the last 24 hours, you can sign in without internet and take **cash** sales.
+- **Too many wrong passwords** lock the account for a while: the Sign in button counts down until you can try again. An administrator can check the account if you're stuck.
+- **No branch chosen?** Owners and admins pick one in the **branch picker** at the top of the sidebar; stock, the till and branch reports appear once a branch is chosen.
+
+## Typing amounts and quantities
+- Amounts can be typed as `500`, `500.50`, `Rs 500`, `500/-` or in Nepali digits (`५००`). At most 2 decimal places (paisa).
+- Quantities are whole numbers. A box with something it can't use turns red and says why underneath; a grey button says what is missing next to it.
+- Clicking into a box selects what's there, so typing replaces it.
 
 ## Selling (POS)
-1. **Open a shift**: count the drawer and enter the opening cash.
+1. **Open a shift**: count the drawer and enter the opening cash (0 if it's empty).
 2. **Add items**: scan a barcode, or type a name or SKU and press Enter. A case barcode adds the whole pack. F2 jumps to the search box.
 3. **Discounts**: click *Add* on a line, or use *Sale discount*. Every discount needs a reason, and large discounts need a manager's approval at the till. Discounts are taken **before VAT**.
 4. **Buyer details**: click *Buyer* to enter the name, address and PAN.
@@ -16,12 +23,13 @@
    - **Cash (F9)**: enter the amount tendered; the change is shown.
    - **FonePay QR**: the customer scans the QR. The sale completes when FonePay confirms (needs internet).
    - **Card / Wallet / Bank**: enter the slip or transaction reference.
-6. **Printing**: the first print is the **original**. Every later print is stamped **"COPY OF ORIGINAL — Copy #n"**. Goods over Rs 10,000 can also get a **Delivery copy**.
+6. **Unfinished sale**: if the page reloads, the browser closes or you have to sign in again mid-sale, the cart comes back when you return to the POS (same cashier, within 12 hours). Choose *Start a new sale instead* if you don't want it.
+7. **Printing**: the first print is the **original**. Every later print is stamped **"COPY OF ORIGINAL — Copy #n"**. Goods over Rs 10,000 can also get a **Delivery copy**.
 
 ### When the internet is down
-- The top bar shows **Offline**. Only cash sales work. FonePay, returns, held sales and stock changes need the server.
+- The status line at the bottom of the sidebar shows **Offline**. Only cash sales work. FonePay, returns, held sales and stock changes need the server.
 - With per-branch invoice numbering (the default), the till prints a **provisional slip**. The tax invoice is issued when the till reconnects. Print it from **Sales → Unprinted** and hand it to the customer if they need it.
-- Queued sales sync automatically. If a sale can't sync, the top bar shows it in red and your manager will review it.
+- Queued sales sync automatically. The sidebar shows **N queued** (and **failed** in red if the server refused one). Click it to see each sale and why it failed, **Retry failed**, or **Download a copy**. Keep a copy before clearing the browser's data: queued sales live only on that till.
 
 ### Returns, cancellations and corrections
 - **Return / refund**: POS → *Return*, enter the invoice number, choose the quantities and a reason. This issues a **credit note (CN-…)**.
@@ -32,16 +40,21 @@
 Count the drawer and enter the counted cash. The variance is recorded.
 
 ## Stock
-- **Inventory**: stock on hand, low stock, negative stock, and every movement.
+- **Inventory**: stock on hand, low stock, negative stock, and every movement. Click a number at the top (*Low stock*, *Out of stock*) to list those products.
+- **Reorder points**: the gear icon on a product sets when it counts as low and how much to reorder. Products without a reorder point never show as low.
+- **Restocking**: in the *Low stock* or *Out of stock* list, **Order these** starts a purchase order with those products (quantity = reorder quantity, cost = current average cost; check both before saving). A single product: **Order** on its row.
 - **Adjust**: remove damaged/expired stock or add found stock, always with a reason. *Found* stock without a purchase record shows up as **excess stock** in the reconciliation report, so record the supplier invoice where you can.
 - **Transfers**: create, dispatch (stock leaves), receive (record any shortfall with a reason).
 - **Stocktakes**: start a full or category count, enter counts, then finish. Big variances need a reason.
 
 ## Purchasing
-1. Create a purchase order and *Mark ordered*.
+1. Create a purchase order (or start one from Inventory → *Order these*) and *Mark ordered*.
 2. When goods arrive, *Receive goods*: enter the **supplier invoice number and date** (needed for the purchase book) and the actual cost. Partial deliveries are fine.
 3. Goods going back to the supplier: **Purchasing → Purchase returns**. This reverses the input VAT.
 4. Make sure suppliers have their **PAN** recorded.
+
+## Importing products and opening stock
+**Import** → download the template, fill it in a spreadsheet and save it as **CSV or Excel (.xlsx)** (for Excel the first sheet is read). Upload it, press **Preview** (nothing is saved), fix any rows it lists, then **Commit import**. Importing the same file twice never doubles stock.
 
 ## Tax & IRD (managers, accountants)
 - **Reports** (choose the fiscal year and BS month): Sales book (Schedule-9), Purchase book (Schedule-8), Sales and purchase return registers, **VAT return working** (with due date and nil-return flag), Cancelled bills, Stock vs purchase-book reconciliation, CBMS sync, Audit trail. Every report exports to **Excel, XML, PDF and CSV**.

@@ -9,7 +9,7 @@
  */
 
 /** Must match MEDIA_CACHE in public/sw.js. */
-export const MEDIA_CACHE = 'ims-media-v1'
+const MEDIA_CACHE = 'ims-media-v1'
 
 const idle = () =>
   new Promise<void>((resolve) =>

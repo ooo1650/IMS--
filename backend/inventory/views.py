@@ -21,11 +21,13 @@ class InventoryItemSerializer(serializers.ModelSerializer):
     unit = serializers.CharField(source="product.unit", read_only=True)
     category = serializers.CharField(source="product.category.name", read_only=True, default=None)
     value_paisa = serializers.SerializerMethodField()
+    # The product's usual supplier: "Order these" preselects it on the new purchase order.
+    supplier = serializers.IntegerField(source="product.supplier_id", read_only=True, default=None)
 
     class Meta:
         model = InventoryItem
         fields = ["id", "product", "sku", "name", "unit", "category", "quantity_on_hand", "reorder_point",
-                  "reorder_qty", "weighted_avg_cost_paisa", "allow_negative", "value_paisa"]
+                  "reorder_qty", "weighted_avg_cost_paisa", "allow_negative", "value_paisa", "supplier"]
         read_only_fields = ["product", "quantity_on_hand", "weighted_avg_cost_paisa"]
         extra_kwargs = {"reorder_point": {"min_value": 0, "max_value": MAX_QTY},
                         "reorder_qty": {"min_value": 0, "max_value": MAX_QTY}}

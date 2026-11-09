@@ -28,7 +28,7 @@ export interface DeviceSettings {
   scanner: { anywhere: boolean; beep: boolean }
 }
 
-export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
+const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
   printer: { connection: 'register', paper: 80, baudRate: 9600, receiptBarcode: true },
   drawer: { enabled: true },
   display: { pole: false, baudRate: 9600, welcome: 'WELCOME' },
@@ -49,7 +49,8 @@ function merge(saved: Partial<DeviceSettings> | undefined): DeviceSettings {
   }
 }
 
-export const loaded = kvGet<Partial<DeviceSettings>>(KEY)
+// Load the saved settings once, when this module is first imported.
+void kvGet<Partial<DeviceSettings>>(KEY)
   .then((s) => {
     current = merge(s)
     listeners.forEach((l) => l())
@@ -60,7 +61,7 @@ export function deviceSettings(): DeviceSettings {
   return current
 }
 
-export async function saveDeviceSettings(next: DeviceSettings) {
+async function saveDeviceSettings(next: DeviceSettings) {
   current = next
   listeners.forEach((l) => l())
   await kvSet(KEY, next)

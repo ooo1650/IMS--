@@ -6,7 +6,9 @@ What protects the system, where it lives, and what is still open. Checked 2026-1
 | Area | Control | Where |
 |---|---|---|
 | Authentication | Session cookies (HttpOnly, Secure, SameSite=Lax, 12 h) + CSRF; no tokens in JS | `ims/settings.py` |
-| Brute force | Lockout after 5 failed sign-ins per username or 20 per IP in 15 min (HTTP 429), counted from the audit log so it holds across workers and restarts | `accounts/views.py` `login_locked_out`, `LOGIN_LOCKOUT` |
+| Brute force | Lockout after failed sign-ins per username or per IP within a window (defaults 5 / 20 in 15 min; set in the operator console), counted from the audit log so it holds across workers and restarts. The 429 says how long is left. Manager passwords typed at the till for approvals count toward the same lockout. | `accounts/views.py` `login_locked_out`, `accounts/permissions.py` `verify_approver` |
+| Input validation | Request numbers go through `ims.api.to_int` with ranges; serializers and models carry min/max validators; a late database overflow is a 400, never a 500. `ims/test_input_numbers.py` checks every write endpoint. Checkout refuses customers and idempotency keys of other branches/businesses. | `ims/api.py`, `sales/services.py` |
+| Error replies | Every `/api/` error is JSON with a plain message (also Django's CSRF/404/500 pages and nginx's 429/413), so no stack traces or server pages reach users | `ims/errors.py`, `deploy/nginx/snippets/ims-json-errors.conf` |
 | Passwords | PBKDF2 (Django default); min 10 chars, not common, not numeric-only, not similar to the username | `AUTH_PASSWORD_VALIDATORS` |
 | Offline sign-in | PBKDF2-SHA256, 150k iterations, salted, max 24 h old | `frontend/src/lib/offline.ts` |
 | Authorization | Deny-by-default role → permission map, checked per branch on every endpoint; branch isolation via `BranchScopedMixin` | `accounts/roles.py`, `accounts/permissions.py`, `ims/api.py` |

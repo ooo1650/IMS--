@@ -27,16 +27,25 @@ interface DashboardData extends ReportLists {
   fonepay_mismatches: { id: number; branch__code: string | null; prn: string; kind: string; found_at: string }[]
 }
 
-export function Tile({ label, value, sub, tone }: {
+/** A number on a card. With `onClick` it is a button that opens the items
+ *  behind the number (e.g. "Low stock 3" -> the three products); `action`
+ *  says what clicking does, and `active` marks the tile whose list is shown. */
+export function Tile({ label, value, sub, tone, onClick, action, active }: {
   label: string; value: string | number; sub?: string; tone?: 'bad' | 'warn'
+  onClick?: () => void; action?: string; active?: boolean
 }) {
-  return (
-    <div className={`tile ${tone ? `tile-${tone}` : ''}`}>
+  const body = (
+    <>
       <div className="tile-label">{label}</div>
       <div className="tile-value">{value}</div>
       {sub && <div className="tile-sub">{sub}</div>}
-    </div>
+      {onClick && action && <div className="tile-action">{action} <Icon name="chevron-right" size={14} /></div>}
+    </>
   )
+  const cls = `tile ${tone ? `tile-${tone}` : ''} ${active ? 'tile-active' : ''}`
+  return onClick
+    ? <button type="button" className={`${cls} tile-button`} aria-pressed={active} onClick={onClick}>{body}</button>
+    : <div className={cls}>{body}</div>
 }
 
 export function OverviewStat({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
@@ -49,15 +58,26 @@ export function OverviewStat({ label, value, sub }: { label: string; value: stri
 }
 
 /** Exceptions as a quiet list: a number per row, and a status dot only when it needs action. */
-export function AttentionList({ rows }: { rows: { label: string; value: number; tone?: 'warn' | 'bad'; hint?: string }[] }) {
+/** Counts that need someone. A row with something in it and a `to` links to
+ *  the list where it gets dealt with (a router path, or "#id" on this page). */
+export function AttentionList({ rows }: { rows: { label: string; value: number; tone?: 'warn' | 'bad'; hint?: string; to?: string }[] }) {
   return (
     <ul className="attention">
       {rows.map((r) => {
         const flagged = r.value > 0 && r.tone
+        const inner = (
+          <>
+            <span>{flagged && <span className="status-dot" aria-hidden />}{r.label}{r.hint && <span className="muted small"> · {r.hint}</span>}</span>
+            <strong className="fig">{r.value}{r.value > 0 && r.to && <Icon name="chevron-right" size={14} />}</strong>
+          </>
+        )
         return (
           <li key={r.label} className={flagged ? `attention-${r.tone}` : ''}>
-            <span>{flagged && <span className="status-dot" aria-hidden />}{r.label}{r.hint && <span className="muted small"> · {r.hint}</span>}</span>
-            <strong className="fig">{r.value}</strong>
+            {r.value > 0 && r.to
+              ? r.to.startsWith('#')
+                ? <a className="attention-link" href={r.to}>{inner}</a>
+                : <Link className="attention-link" to={r.to}>{inner}</Link>
+              : inner}
           </li>
         )
       })}
@@ -65,11 +85,12 @@ export function AttentionList({ rows }: { rows: { label: string; value: number; 
   )
 }
 
-export function ReportTables({ data }: { data: ReportLists }) {
+/** `branchLinks`: the lists are this branch's, so they can link to its Inventory and Sales screens. */
+export function ReportTables({ data, branchLinks }: { data: ReportLists; branchLinks?: boolean }) {
   return (
     <div className="grid-2">
-      <section className="card">
-        <h2>Low &amp; out of stock</h2>
+      <section className="card" id="low-stock">
+        <h2>Low &amp; out of stock {branchLinks && data.low_stock.length > 0 && <Link className="small h2-link" to="/inventory?filter=low">Order or restock in Inventory</Link>}</h2>
         <table className="table">
           <thead><tr><th>Branch</th><th>Product</th><th className="num">On hand</th><th className="num">Reorder at</th></tr></thead>
           <tbody>
@@ -92,8 +113,8 @@ export function ReportTables({ data }: { data: ReportLists }) {
           </tbody>
         </table>
       </section>
-      <section className="card">
-        <h2>Stock conflicts to resolve</h2>
+      <section className="card" id="stock-conflicts">
+        <h2>Stock conflicts to resolve {branchLinks && data.stock_conflicts.length > 0 && <Link className="small h2-link" to="/sales?filter=conflicts">Resolve in Sales</Link>}</h2>
         <table className="table">
           <thead><tr><th>Branch</th><th>Receipt</th><th className="num">Total</th><th>When</th></tr></thead>
           <tbody>
@@ -162,11 +183,11 @@ export default function Dashboard() {
         <section className="card">
           <h2>Needs attention</h2>
           <AttentionList rows={[
-            { label: 'Stock conflicts', value: data.totals.stock_conflicts, tone: 'bad', hint: 'oversold' },
-            { label: 'FonePay mismatches', value: data.fonepay_mismatches.length, tone: 'bad' },
-            { label: 'Sales to review', value: data.branches.reduce((a, b) => a + b.needs_review, 0), tone: 'warn' },
-            { label: 'Low stock', value: data.totals.low_stock, tone: 'warn' },
-            { label: 'Purchase orders pending', value: data.totals.pending_pos },
+            { label: 'Stock conflicts', value: data.totals.stock_conflicts, tone: 'bad', hint: 'oversold', to: '#stock-conflicts' },
+            { label: 'FonePay mismatches', value: data.fonepay_mismatches.length, tone: 'bad', to: '#fonepay-mismatches' },
+            { label: 'Sales to review', value: data.branches.reduce((a, b) => a + b.needs_review, 0), tone: 'warn', hint: 'per branch below', to: '#branch-comparison' },
+            { label: 'Low stock', value: data.totals.low_stock, tone: 'warn', to: '#low-stock' },
+            { label: 'Purchase orders pending', value: data.totals.pending_pos, to: '/purchasing' },
           ]} />
         </section>
       </div>
@@ -174,7 +195,7 @@ export default function Dashboard() {
       <SalesAnalytics branches={data.branches.map((b) => ({ id: b.branch_id, code: b.code, name: b.name }))} />
       <h2 className="section-title">Branches &amp; stock</h2>
       <TurnoverMeter />
-      <section className="card">
+      <section className="card" id="branch-comparison">
         <h2>Branch comparison</h2>
         <div className="table-scroll">
           <table className="table">
@@ -204,7 +225,7 @@ export default function Dashboard() {
       </section>
       <ReportTables data={data} />
       {data.fonepay_mismatches.length > 0 && (
-        <section className="card">
+        <section className="card" id="fonepay-mismatches">
           <h2>FonePay reconciliation mismatches</h2>
           <table className="table">
             <thead><tr><th>Branch</th><th>PRN</th><th>Kind</th><th>Found</th></tr></thead>

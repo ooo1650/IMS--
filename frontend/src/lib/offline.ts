@@ -26,7 +26,7 @@ export interface QueuedSale {
   attempts: number
 }
 
-export interface CachedCatalog {
+interface CachedCatalog {
   branch_id: number
   generated_at: string
   /** Server content hash (absent in catalogs saved by older builds). */
@@ -34,7 +34,7 @@ export interface CachedCatalog {
   products: PosProduct[]
 }
 
-export interface CachedLogin {
+interface CachedLogin {
   username: string
   salt: string
   hash: string

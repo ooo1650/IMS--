@@ -42,6 +42,7 @@ const PATHS: Record<string, string> = {
   tag: 'M3 3h8l10 10-8 8L3 11zM7.5 7.5h.01',
   layers: 'M12 2 2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
   chevron: 'M6 9l6 6 6-6',
+  'chevron-right': 'M9 6l6 6-6 6',
   sync: 'M21 12a9 9 0 0 1-15.5 6.2L3 16M3 12a9 9 0 0 1 15.5-6.2L21 8M21 3v5h-5M3 21v-5h5',
 }
 

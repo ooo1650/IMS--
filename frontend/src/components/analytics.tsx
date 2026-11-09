@@ -26,7 +26,7 @@ export const pct = (bp: number | null | undefined) => (bp == null ? '—' : `${(
 
 const dayFmt = new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' })
 const longDayFmt = new Intl.DateTimeFormat('en', { weekday: 'short', month: 'short', day: 'numeric' })
-export const shortDate = (iso: string) => dayFmt.format(new Date(`${iso}T00:00:00`))
+const shortDate = (iso: string) => dayFmt.format(new Date(`${iso}T00:00:00`))
 export const longDate = (iso: string) => longDayFmt.format(new Date(`${iso}T00:00:00`))
 
 /** Clean axis: 0 and up to 4 round steps covering ``max``. */
@@ -90,7 +90,7 @@ export function StatTile({ label, value, delta, sub }: {
 
 // --- trend line: this period vs the previous one ----------------------------------
 
-export interface TrendPoint { date: string; value: number; previous?: number; extra?: [string, string][] }
+interface TrendPoint { date: string; value: number; previous?: number; extra?: [string, string][] }
 
 export function TrendChart({ points, format, axisFormat, seriesLabel, previousLabel, title }: {
   points: TrendPoint[]; format: (v: number) => string; axisFormat: (v: number) => string
@@ -260,7 +260,7 @@ export function heatmapRows(cells: HeatCell[]) {
 
 // --- ranked horizontal bars -----------------------------------------------------------
 
-export interface RankedRow { key: string; label: string; sub?: string; value: number; display: string; note?: ReactNode }
+interface RankedRow { key: string; label: string; sub?: string; value: number; display: string; note?: ReactNode }
 
 export function RankedBars({ rows, label }: { rows: RankedRow[]; label: string }) {
   const max = Math.max(1, ...rows.map((r) => r.value))

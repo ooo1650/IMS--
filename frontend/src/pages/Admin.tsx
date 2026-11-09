@@ -271,6 +271,7 @@ function UserForm({ user, branches, onClose, onSaved }: { user: User | null; bra
       <div className="modal-foot">
         <Button onClick={onClose}>Cancel</Button>
         <Button kind="primary" onClick={async () => {
+          setError(null)
           try {
             const body: Record<string, unknown> = { ...f, roles: roles.map((r) => ({ branch: r.branch, role: r.role })) }
             if (!f.password) delete body.password
@@ -468,6 +469,7 @@ function BranchForm({ branch, onClose, onSaved }: { branch: Branch | null; onClo
       <div className="modal-foot">
         <Button onClick={onClose}>Cancel</Button>
         <Button kind="primary" onClick={async () => {
+          setError(null)
           try {
             await api(branch ? `branches/${branch.id}/` : 'branches/', { method: branch ? 'PATCH' : 'POST', body: f })
             onSaved()
@@ -501,6 +503,7 @@ function RegisterForm({ reg, onClose, onSaved }: { reg: Register | { branch: num
       <div className="modal-foot">
         <Button onClick={onClose}>Cancel</Button>
         <Button kind="primary" onClick={async () => {
+          setError(null)
           try {
             const body = { branch: reg.branch, code: f.code, name: f.name, printer_driver: f.printer_driver, printer_config: f.url ? { url: f.url } : {}, is_active: f.is_active }
             await api(existing ? `registers/${existing.id}/` : 'registers/', { method: existing ? 'PATCH' : 'POST', body })

@@ -50,14 +50,19 @@ export function usePaged<T>(path: string | null) {
   return { items, loading, error, reload, more: next ? () => load(cursorPath(next), true) : null }
 }
 
+/** `why`: shown next to the button while it is disabled, so a grey button
+ *  always says what's missing ("Choose a supplier to save"). */
 export function Button({
-  kind = 'default', busy, children, ...rest
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { kind?: 'default' | 'primary' | 'danger' | 'ghost'; busy?: boolean }) {
-  return (
-    <button {...rest} className={`btn btn-${kind} ${rest.className ?? ''}`} disabled={rest.disabled || busy}>
+  kind = 'default', busy, why, children, ...rest
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & { kind?: 'default' | 'primary' | 'danger' | 'ghost'; busy?: boolean; why?: string | null }) {
+  const button = (
+    <button {...rest} className={`btn btn-${kind} ${rest.className ?? ''}`} disabled={rest.disabled || busy}
+      title={rest.title || (rest.disabled && why) || undefined}>
       {busy ? '…' : children}
     </button>
   )
+  if (!(rest.disabled && why && !busy)) return button
+  return <><span className="muted small foot-why" role="note">{why}</span>{button}</>
 }
 
 /** A labelled input. `error` (shown in red, replacing the hint) says what's wrong with what was typed. */
@@ -75,8 +80,9 @@ export function Field({ label, hint, error, children }: { label: string; hint?: 
  * Whole-number box for quantities. Unlike <input type="number">: the mouse
  * wheel can't change it, it can be emptied while typing (no jump back to 1, so
  * backspace + 5 gives 5, not 15), Nepali digits work, and decimals/letters are
- * refused as you type. The parent only ever gets a whole number in [min, max];
- * an empty or too-small box snaps back to `min` when you leave it.
+ * refused as you type (a "." shows "Whole numbers only" rather than turning 1.5 into 15). The parent only ever gets a whole number in [min, max];
+ * an empty or too-small box snaps back to `min` when you leave it. Focus
+ * selects the number, so typing replaces it.
  */
 export function QtyInput({ value, onChange, min = 0, max, className = 'input-sm', ...rest }: {
   value: number; onChange: (n: number) => void; min?: number; max?: number
@@ -85,7 +91,17 @@ export function QtyInput({ value, onChange, min = 0, max, className = 'input-sm'
   useEffect(() => {
     setText((t) => (parseWhole(t) === value ? t : String(value)))
   }, [value])
-  const take = (raw: string) => {
+  const take = (raw: string, el: HTMLInputElement) => {
+    // A decimal point or comma is never dropped (that turned "1.5" into 15): the
+    // box shows what was typed, outlined as invalid with the browser's bubble
+    // saying why, and goes back to the last whole number when you leave it.
+    if (/[.,]/.test(raw)) {
+      setText(raw) // shown as typed and marked invalid; the parent keeps the last whole number
+      el.setCustomValidity('Whole numbers only (no decimals or commas)')
+      el.reportValidity()
+      return
+    }
+    el.setCustomValidity('')
     // Digits only (and a leading minus when negatives are allowed); over max becomes max.
     let clean = normalizeNumber(raw).replace(min < 0 ? /(?!^-)\D/g : /\D/g, '')
     const typed = parseWhole(clean)
@@ -96,8 +112,16 @@ export function QtyInput({ value, onChange, min = 0, max, className = 'input-sm'
   }
   return (
     <input {...rest} className={className} inputMode="numeric" autoComplete="off" value={text}
-      onChange={(e) => take(e.target.value)}
+      onFocus={(e) => { e.target.select(); rest.onFocus?.(e) }}
+      onChange={(e) => take(e.target.value, e.target)}
+      aria-invalid={/[.,]/.test(text) || undefined}
       onBlur={(e) => {
+        e.target.setCustomValidity('')
+        if (/[.,]/.test(text)) {
+          setText(String(value))
+          rest.onBlur?.(e)
+          return
+        }
         const n = parseWhole(text)
         if (n == null || n < min) {
           setText(String(min))
@@ -116,8 +140,10 @@ export function QtyInput({ value, onChange, min = 0, max, className = 'input-sm'
 export function MoneyInput({ value, onChange, ...rest }: {
   value: string; onChange: (raw: string) => void
 } & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange'>) {
+  // Focus selects what's there, so typing replaces a pre-filled amount (the
+  // tendered box opens with the total) instead of appending to it.
   return <input {...rest} inputMode="decimal" autoComplete="off" value={value} aria-invalid={!!moneyProblem(value)}
-    onChange={(e) => onChange(e.target.value)} />
+    onFocus={(e) => { e.target.select(); rest.onFocus?.(e) }} onChange={(e) => onChange(e.target.value)} />
 }
 
 /**
@@ -240,4 +266,10 @@ export function Guide({ id, title, children }: { id: string; title: string; chil
       <div className="guide-body">{children}</div>
     </aside>
   )
+}
+
+/** For people who can open a page but not change anything on it: says so,
+ *  instead of leaving them looking for buttons their role doesn't get. */
+export function ViewOnly({ children }: { children: ReactNode }) {
+  return <div className="alert alert-info" role="note"><strong>View only.</strong> {children}</div>
 }

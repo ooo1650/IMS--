@@ -30,7 +30,6 @@ from .models import CbmsPost, MockCbmsRecord, get_settings
 
 OK, CRED_MISMATCH, ALREADY_EXISTS, SAVE_ERROR, UNKNOWN, INVALID, NOT_FOUND = (
     "200", "100", "101", "102", "103", "104", "105")
-RETRYABLE = {SAVE_ERROR, UNKNOWN, INVALID, "network"}
 MAX_BACKOFF = timedelta(hours=1)
 
 

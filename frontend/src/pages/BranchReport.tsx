@@ -27,18 +27,18 @@ export default function BranchReport() {
         <section className="card">
           <h2>Needs attention</h2>
           <AttentionList rows={[
-            { label: 'Stock conflicts', value: s.stock_conflicts, tone: 'bad', hint: 'oversold' },
-            { label: 'Negative stock', value: s.negative_stock, tone: 'bad', hint: 'recount' },
-            { label: 'Sales to review', value: s.needs_review, tone: 'warn' },
-            { label: 'Low stock', value: s.low_stock, tone: 'warn' },
-            { label: 'Purchase orders pending', value: s.pending_pos },
+            { label: 'Stock conflicts', value: s.stock_conflicts, tone: 'bad', hint: 'oversold', to: '/sales?filter=conflicts' },
+            { label: 'Negative stock', value: s.negative_stock, tone: 'bad', hint: 'recount', to: '/inventory?filter=negative' },
+            { label: 'Sales to review', value: s.needs_review, tone: 'warn', to: '/sales?filter=review' },
+            { label: 'Low stock', value: s.low_stock, tone: 'warn', to: '/inventory?filter=low' },
+            { label: 'Purchase orders pending', value: s.pending_pos, to: '/purchasing' },
           ]} />
         </section>
       </div>
       <h2 className="section-title">Sales analytics</h2>
       <SalesAnalytics key={branch?.id} />
       <h2 className="section-title">Stock</h2>
-      <ReportTables data={data} />
+      <ReportTables data={data} branchLinks />
     </div>
   )
 }
