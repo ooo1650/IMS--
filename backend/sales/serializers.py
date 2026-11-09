@@ -1,4 +1,8 @@
+import re
+
 from rest_framework import serializers
+
+from ims.api import MAX_INT, MAX_PAISA, MAX_QTY
 
 from .models import CashierShift, CreditNote, CreditNoteLine, Customer, DebitNote, HeldCart, Payment, Sale, SaleLine
 from .pricing import AMOUNT, NONE, PERCENT
@@ -8,23 +12,23 @@ DISCOUNT_CHOICES = [NONE, AMOUNT, PERCENT]
 
 
 class CartLineIn(serializers.Serializer):
-    product_id = serializers.IntegerField()
-    qty = serializers.IntegerField(min_value=1)
+    product_id = serializers.IntegerField(min_value=1, max_value=MAX_INT)
+    qty = serializers.IntegerField(min_value=1, max_value=MAX_QTY)
     discount_type = serializers.ChoiceField(DISCOUNT_CHOICES, default=NONE)
-    discount_value = serializers.IntegerField(min_value=0, default=0)
+    discount_value = serializers.IntegerField(min_value=0, max_value=MAX_PAISA, default=0)
     discount_reason = serializers.CharField(required=False, allow_blank=True, default="")
     # Offline sync only.
-    unit_price_paisa = serializers.IntegerField(min_value=0, required=False)
-    tax_rate = serializers.DecimalField(max_digits=5, decimal_places=2, required=False)
+    unit_price_paisa = serializers.IntegerField(min_value=0, max_value=MAX_PAISA, required=False)
+    tax_rate = serializers.DecimalField(max_digits=5, decimal_places=2, min_value=0, max_value=100, required=False)
     tax_inclusive = serializers.BooleanField(required=False)
 
 
 class CartIn(serializers.Serializer):
     lines = CartLineIn(many=True)
     sale_discount_type = serializers.ChoiceField(DISCOUNT_CHOICES, default=NONE)
-    sale_discount_value = serializers.IntegerField(min_value=0, default=0)
+    sale_discount_value = serializers.IntegerField(min_value=0, max_value=MAX_PAISA, default=0)
     sale_discount_reason = serializers.CharField(required=False, allow_blank=True, default="")
-    customer_id = serializers.IntegerField(required=False, allow_null=True)
+    customer_id = serializers.IntegerField(required=False, allow_null=True, min_value=1, max_value=MAX_INT)
     buyer_name = serializers.CharField(required=False, allow_blank=True, default="", max_length=200)
     buyer_address = serializers.CharField(required=False, allow_blank=True, default="", max_length=255)
     buyer_pan = serializers.CharField(required=False, allow_blank=True, default="", max_length=9)
@@ -56,24 +60,24 @@ class CartIn(serializers.Serializer):
 
 
 class CashCheckoutIn(CartIn):
-    register_id = serializers.IntegerField()
+    register_id = serializers.IntegerField(min_value=1, max_value=MAX_INT)
     idempotency_key = serializers.CharField(max_length=64)
-    tendered_paisa = serializers.IntegerField(min_value=0, default=0)
+    tendered_paisa = serializers.IntegerField(min_value=0, max_value=MAX_PAISA, default=0)
     method = serializers.ChoiceField(["cash", "card", "wallet", "bank"], default="cash")
     payment_ref = serializers.CharField(required=False, allow_blank=True, default="", max_length=64)
 
 
 class FonepayInitiateIn(CartIn):
-    register_id = serializers.IntegerField()
+    register_id = serializers.IntegerField(min_value=1, max_value=MAX_INT)
     idempotency_key = serializers.CharField(max_length=64)
 
 
 class OfflineSyncIn(CashCheckoutIn):
-    receipt_seq = serializers.IntegerField(min_value=1, required=False, allow_null=True)
+    receipt_seq = serializers.IntegerField(min_value=1, max_value=MAX_INT, required=False, allow_null=True)
     provisional_ref = serializers.CharField(required=False, allow_blank=True, default="", max_length=40)
     fiscal_year = serializers.CharField(max_length=9)
     created_at = serializers.DateTimeField()
-    client_total_paisa = serializers.IntegerField(required=False)
+    client_total_paisa = serializers.IntegerField(required=False, min_value=0, max_value=MAX_PAISA)
     offline_discount_approved = serializers.BooleanField(default=False)
 
 
@@ -194,6 +198,20 @@ class CustomerSerializer(serializers.ModelSerializer):
         model = Customer
         fields = ["id", "branch", "name", "phone", "email", "address", "tax_id", "created_at"]
         read_only_fields = ["created_at"]
+
+    def validate_phone(self, value):
+        """Digits with the usual separators: "98-4123 4567", "+977 1 4412345"."""
+        value = value.strip()
+        digits = re.sub(r"\D", "", value)
+        if value and (re.search(r"[^\d\s+()\-]", value) or not 7 <= len(digits) <= 15):
+            raise serializers.ValidationError("Enter a phone number: 7 to 15 digits (spaces, + and - are fine).")
+        return value
+
+    def validate_tax_id(self, value):
+        value = (value or "").strip()
+        if value and not (value.isdigit() and len(value) == 9):
+            raise serializers.ValidationError("A PAN is 9 digits.")
+        return value
 
 
 class HeldCartSerializer(serializers.ModelSerializer):

@@ -19,6 +19,9 @@ class World:
     """Two branches, a register each, users per role, three products in stock."""
 
     def __init__(self):
+        from django.core.cache import cache
+
+        cache.clear()  # per-process throttles (e.g. FonePay polls) must not leak between tests
         self.org = Organization.objects.create(name="Org", code="org")
         self.a = Branch.objects.create(org=self.org, name="A", code="A")
         self.b = Branch.objects.create(org=self.org, name="B", code="B")

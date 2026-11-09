@@ -10,7 +10,7 @@ def HasBranchPerm(*perms):
     """
 
     class _HasBranchPerm(BasePermission):
-        message = "You do not have permission for this action at the active branch."
+        message = "Your role at this branch doesn't allow this. Ask a manager or administrator if you need it."
 
         def has_permission(self, request, view):
             user = request.user
@@ -18,7 +18,7 @@ def HasBranchPerm(*perms):
                 return False
             branch = getattr(request._request, "branch", None)
             if branch is None:
-                self.message = "No active branch selected, or you have no role at it."
+                self.message = "Choose a branch first (the branch picker in the sidebar). If yours isn't listed, ask an administrator for access."
                 return False
             return all(user.has_branch_perm(p, branch) for p in perms)
 
@@ -31,7 +31,7 @@ def HasOrgPerm(*perms):
     the active business (``request.org``)."""
 
     class _HasOrgPerm(BasePermission):
-        message = "This action needs a business-wide role in the active business."
+        message = "This needs a business-wide role (owner or admin) in this business. Ask an administrator if you need it."
 
         def has_permission(self, request, view):
             user = request.user
@@ -70,16 +70,40 @@ def require_branch_perm(request, perm):
         raise PermissionDenied(f"Missing permission {perm}")
 
 
-def verify_approver(branch, username, password, perm):
+class ApprovalDenied(PermissionDenied):
+    """Wrong manager credentials at the register. ``failed_login_key`` is the
+    account to charge with a failed sign-in; ``ims.api.exception_handler``
+    writes that audit row after the checkout transaction has rolled back (a row
+    written inside it would vanish and never count toward the lockout)."""
+
+    def __init__(self, detail, failed_login_key=None):
+        super().__init__(detail)
+        self.failed_login_key = failed_login_key
+
+
+def verify_approver(branch, username, password, perm, request=None):
     """Manager override at the register: a manager types their credentials on
-    the cashier's screen. Returns the approving user or raises PermissionDenied."""
+    the cashier's screen. Returns the approving user or raises ApprovalDenied.
+
+    Shares the sign-in lockout: wrong passwords here count as failed sign-ins
+    for that manager, so a register can't be used to guess a password."""
     from django.contrib.auth import authenticate
 
+    from accounts.views import _login_key, login_locked_out
+    from ims.net import client_ip
+
     if not username or not password:
-        raise PermissionDenied("Manager approval required")
-    approver = authenticate(username=username, password=password)
-    if approver is None or not approver.has_branch_perm(perm, branch):
-        raise PermissionDenied("Approver credentials invalid or lack permission")
+        raise ApprovalDenied("Manager approval required")
+    key = _login_key(str(username)[:254])
+    if locked := login_locked_out(key, client_ip(request) if request is not None else None):
+        from accounts.otp import wait_text
+
+        raise ApprovalDenied(f"Too many wrong passwords for this manager. Try again in {wait_text(locked)}.")
+    approver = authenticate(request, username=username, password=password)
+    if approver is None or not approver.is_active:
+        raise ApprovalDenied("Approver credentials invalid or lack permission", failed_login_key=key)
+    if not approver.has_branch_perm(perm, branch):
+        raise ApprovalDenied("Approver credentials invalid or lack permission")
     return approver
 
 

@@ -155,6 +155,7 @@ SESSION_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_AGE = 60 * 60 * 12
 CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SECURE = not DEBUG
+CSRF_FAILURE_VIEW = "ims.errors.csrf_failure"  # JSON for /api/ (the app shows its message)
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS", "http://localhost:5173")
 
 # Production serves SPA + API from one origin, so CORS stays off unless configured.

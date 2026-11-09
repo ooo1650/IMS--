@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../auth'
 import { Button, ErrorBox, Field, LoadMore, Modal, PageHead, Status, fmtDate, useLoad, usePaged, Guide } from '../components/ui'
+import { parseWhole, wholeProblem } from '../lib/money'
 import { api, qs } from '../lib/api'
 
 interface Stocktake { id: number; status: string; started_at: string; finished_at: string | null; by_name: string; scope: { category_name?: string }; line_count: number; counted_count: number }
@@ -92,7 +93,12 @@ function CountModal({ stocktake, onClose }: { stocktake: Stocktake; onClose: () 
   }, [stocktake.id, q])
 
   const save = async () => {
-    const updates = Object.entries(dirty).map(([id, v]) => ({ id: Number(id), counted_qty: v.counted_qty === '' ? null : Number(v.counted_qty), reason: v.reason }))
+    // Check every typed count first and name the product, so nobody hunts for the bad row.
+    const bad = Object.entries(dirty)
+      .map(([id, v]) => ({ line: lines.find((l) => l.id === Number(id)), problem: v.counted_qty.trim() === '' ? null : wholeProblem(v.counted_qty) }))
+      .filter((x) => x.problem)
+    if (bad.length) throw new Error(bad.map((x) => `${x.line?.name ?? 'A product'}: ${x.problem}`).join('; '))
+    const updates = Object.entries(dirty).map(([id, v]) => ({ id: Number(id), counted_qty: v.counted_qty.trim() === '' ? null : parseWhole(v.counted_qty), reason: v.reason }))
     if (!updates.length) return
     setLines(await api<Line[]>(`stocktakes/${stocktake.id}/lines/${qs({ q })}`, { body: { lines: updates } }))
     setDirty({})
@@ -119,7 +125,8 @@ function CountModal({ stocktake, onClose }: { stocktake: Stocktake; onClose: () 
                   <td className="num">{l.system_qty}</td>
                   <td className="num">
                     {counting ? (
-                      <input className="input-sm" type="number" value={counted}
+                      <input className="input-sm" inputMode="numeric" autoComplete="off" value={counted}
+                        aria-label={`Counted quantity of ${l.name}`} aria-invalid={counted.trim() !== '' && !!wholeProblem(counted)}
                         onChange={(e) => setDirty({ ...dirty, [l.id]: { counted_qty: e.target.value, reason: d?.reason ?? l.reason } })} />
                     ) : (l.counted_qty ?? '—')}
                   </td>

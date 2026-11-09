@@ -41,8 +41,15 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - walarchive:/wal_archive
-    command: ["postgres", "-c", "wal_level=replica", "-c", "archive_mode=on",
-              "-c", "archive_command=test ! -f /wal_archive/%f && cp %p /wal_archive/%f",
+      - ./deploy/postgres/pg_hba.conf:/etc/ims/pg_hba.conf:ro
+    # A new volume is root-owned and Postgres runs as "postgres": hand the WAL
+    # archive over first, or every archive_command fails and pg_wal fills the disk.
+    entrypoint: ["sh", "-c", "chown postgres:postgres /wal_archive && chmod 700 /wal_archive && exec docker-entrypoint.sh \"$$@\"", "--"]
+    # WAL is gzipped into the archive (a quiet 16 MB segment shrinks to a few KB) and
+    # archived at least every 10 minutes, so point-in-time recovery loses at most that.
+    command: ["postgres", "-c", "wal_level=replica", "-c", "archive_mode=on", "-c", "archive_timeout=600",
+              "-c", "archive_command=test ! -f /wal_archive/%f.gz && gzip -c %p > /wal_archive/%f.tmp && mv /wal_archive/%f.tmp /wal_archive/%f.gz",
+              "-c", "hba_file=/etc/ims/pg_hba.conf",
               "-c", "password_encryption=scram-sha-256", "-c", "log_connections=on"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ims -d ims"]
@@ -83,7 +90,10 @@ services:
     pull_policy: never  # built by the migrate service
     <<: *hardening
     command: ["web"]
-    environment: *app-env
+    environment:
+      <<: *app-env
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-3}
+      GUNICORN_THREADS: ${GUNICORN_THREADS:-8}
     read_only: true
     tmpfs: [/tmp]
     volumes:
@@ -157,17 +167,26 @@ services:
   backup:
     image: postgres:16.6
     <<: *hardening
+    cap_add: [DAC_OVERRIDE, FOWNER]  # prune the WAL archive, which belongs to the db's "postgres" user
     entrypoint: ["/deploy/backup-loop.sh"]
     environment:
       DATABASE_URL: postgres://ims:${POSTGRES_PASSWORD}@db:5432/ims
       ADMIN_URL: postgres://ims:${POSTGRES_PASSWORD}@db:5432/postgres
       BACKUP_DIR: /srv/ims-backups
       MEDIA_DIR: /srv/media
+      WAL_ARCHIVE: /wal_archive
+      # Encrypt every dump and base backup (gpg, AES-256). Keep this passphrase
+      # somewhere other than this server: without it the backups can't be read.
+      BACKUP_PASSPHRASE: ${BACKUP_PASSPHRASE:-}
+      # Off-site copy: mount a disk or network share here in a compose override
+      # (docs/DEPLOYMENT.md, "Backups"); empty = no copy.
+      BACKUP_OFFSITE_DIR: ${BACKUP_OFFSITE_DIR:-}
       TZ: Asia/Kathmandu
     volumes:
       - ./deploy:/deploy:ro
       - backups:/srv/ims-backups
       - media:/srv/media:ro
+      - walarchive:/wal_archive
     depends_on:
       db: { condition: service_healthy }
     networks: [data]

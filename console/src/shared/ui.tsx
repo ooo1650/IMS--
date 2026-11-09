@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { api, cursorPath, type Page } from './api'
+import { moneyProblem, normalizeNumber, parseWhole } from './money'
 
 export function useLoad<T>(fn: () => Promise<T>, deps: unknown[]) {
   const [data, setData] = useState<T | null>(null)
@@ -59,25 +60,84 @@ export function Button({
   )
 }
 
-export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+/** A labelled input. `error` (shown in red, replacing the hint) says what's wrong with what was typed. */
+export function Field({ label, hint, error, children }: { label: string; hint?: string; error?: string | null; children: ReactNode }) {
   return (
     <label className="field">
       <span className="field-label">{label}</span>
       {children}
-      {hint && <span className="field-hint">{hint}</span>}
+      {error ? <span className="field-hint bad" role="alert">{error}</span> : hint && <span className="field-hint">{hint}</span>}
     </label>
   )
 }
 
-export function Modal({ title, onClose, children, wide }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
+/**
+ * Whole-number box for quantities. Unlike <input type="number">: the mouse
+ * wheel can't change it, it can be emptied while typing (no jump back to 1, so
+ * backspace + 5 gives 5, not 15), Nepali digits work, and decimals/letters are
+ * refused as you type. The parent only ever gets a whole number in [min, max];
+ * an empty or too-small box snaps back to `min` when you leave it.
+ */
+export function QtyInput({ value, onChange, min = 0, max, className = 'input-sm', ...rest }: {
+  value: number; onChange: (n: number) => void; min?: number; max?: number
+} & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'min' | 'max'>) {
+  const [text, setText] = useState(String(value))
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    setText((t) => (parseWhole(t) === value ? t : String(value)))
+  }, [value])
+  const take = (raw: string) => {
+    // Digits only (and a leading minus when negatives are allowed); over max becomes max.
+    let clean = normalizeNumber(raw).replace(min < 0 ? /(?!^-)\D/g : /\D/g, '')
+    const typed = parseWhole(clean)
+    if (typed != null && max != null && typed > max) clean = String(max)
+    setText(clean)
+    const n = parseWhole(clean)
+    if (n != null && n >= min) onChange(n)
+  }
+  return (
+    <input {...rest} className={className} inputMode="numeric" autoComplete="off" value={text}
+      onChange={(e) => take(e.target.value)}
+      onBlur={(e) => {
+        const n = parseWhole(text)
+        if (n == null || n < min) {
+          setText(String(min))
+          onChange(min)
+        }
+        rest.onBlur?.(e)
+      }} />
+  )
+}
+
+/**
+ * Rupee box: keeps what you type as text (so "12" can become "120.50" without
+ * the cursor jumping), accepts "Rs 500", "500/-" and Nepali digits, and shows
+ * why an amount isn't usable. `onChange` gets the text; parse with toPaisa().
+ */
+export function MoneyInput({ value, onChange, ...rest }: {
+  value: string; onChange: (raw: string) => void
+} & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange'>) {
+  return <input {...rest} inputMode="decimal" autoComplete="off" value={value} aria-invalid={!!moneyProblem(value)}
+    onChange={(e) => onChange(e.target.value)} />
+}
+
+/**
+ * Dialog. Once something has been typed into it, a stray click on the
+ * backdrop no longer closes it (a half-filled form used to vanish), and Escape
+ * asks first. The × button and the form's own Cancel close it as before.
+ */
+export function Modal({ title, onClose, children, wide }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
+  const edited = useRef(false)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (!edited.current || window.confirm('Close without saving? What you typed here will be lost.')) onClose()
+    }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
   return (
-    <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className={`modal ${wide ? 'modal-wide' : ''}`} role="dialog" aria-label={title}>
+    <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && !edited.current && onClose()}>
+      <div className={`modal ${wide ? 'modal-wide' : ''}`} role="dialog" aria-label={title} onInput={() => { edited.current = true }}>
         <div className="modal-head">
           <h2>{title}</h2>
           <button className="icon-btn" onClick={onClose} aria-label="Close">×</button>
@@ -147,5 +207,37 @@ export function Tabs<T extends string>({ value, onChange, tabs }: { value: T; on
         </button>
       ))}
     </div>
+  )
+}
+
+/** "How this page works": a short note at the top of a page. Hidden per
+ *  browser once dismissed, and brought back with the small link it leaves. */
+export function Guide({ id, title, children }: { id: string; title: string; children: ReactNode }) {
+  const key = `ims.guide.${id}`
+  const [open, setOpen] = useState(() => {
+    try {
+      return localStorage.getItem(key) !== 'hidden'
+    } catch {
+      return true
+    }
+  })
+  const toggle = (v: boolean) => {
+    setOpen(v)
+    try {
+      if (v) localStorage.removeItem(key)
+      else localStorage.setItem(key, 'hidden')
+    } catch {
+      /* private mode: just this visit */
+    }
+  }
+  if (!open) return <button type="button" className="link guide-reopen" onClick={() => toggle(true)}>How this page works</button>
+  return (
+    <aside className="guide" aria-label={title}>
+      <div className="guide-head">
+        <strong>{title}</strong>
+        <button type="button" className="link" onClick={() => toggle(false)}>Hide</button>
+      </div>
+      <div className="guide-body">{children}</div>
+    </aside>
   )
 }

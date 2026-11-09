@@ -4,7 +4,7 @@ import { barcodeSvg } from '../lib/barcode'
 import { npr } from '../lib/money'
 import { printHtml } from '../lib/printer'
 import type { Product } from '../lib/types'
-import { Button, ErrorBox, Field, Modal } from './ui'
+import { Button, ErrorBox, Field, Modal, QtyInput } from './ui'
 
 interface Layout {
   name: string
@@ -87,7 +87,7 @@ export function LabelPrint({ products, onClose }: { products: LabelProduct[]; on
           </Field>
           {sheet && (
             <Field label="Skip used labels" hint="Start part-way through a sheet that already has labels peeled off">
-              <input type="number" min={0} max={sheet.cols * sheet.rows - 1} value={skip} onChange={(e) => setSkip(Math.max(0, Number(e.target.value)))} />
+              <QtyInput className="" min={0} max={sheet.cols * sheet.rows - 1} value={skip} onChange={setSkip} />
             </Field>
           )}
           <label className="check"><input type="checkbox" checked={name} onChange={(e) => setName(e.target.checked)} /> Product name</label>
@@ -106,8 +106,8 @@ export function LabelPrint({ products, onClose }: { products: LabelProduct[]; on
                   <td>{p.name}</td>
                   <td className="mono small">{p.barcodes[0]?.code ?? <span className="muted">SKU {p.sku}</span>}</td>
                   <td className="num">
-                    <input className="input-sm" type="number" min={0} value={copies[p.id] ?? 0}
-                      onChange={(e) => setCopies({ ...copies, [p.id]: Math.max(0, Number(e.target.value)) })} />
+                    <QtyInput min={0} max={1000} aria-label={`Copies of ${p.name}`} value={copies[p.id] ?? 0}
+                      onChange={(n) => setCopies({ ...copies, [p.id]: n })} />
                   </td>
                 </tr>
               ))}

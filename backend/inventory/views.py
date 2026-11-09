@@ -9,7 +9,7 @@ from accounts.permissions import PerActionPermissionMixin
 from admin_extras.models import log_action
 from catalog.models import Category
 from reporting.queries import stock_summary
-from ims.api import BranchScopedMixin
+from ims.api import MAX_QTY, BranchScopedMixin, lines_of, to_int
 
 from . import services
 from .models import InventoryItem, StockMovement, StockTransfer, StockTransferLine, Stocktake, StocktakeLine
@@ -27,6 +27,8 @@ class InventoryItemSerializer(serializers.ModelSerializer):
         fields = ["id", "product", "sku", "name", "unit", "category", "quantity_on_hand", "reorder_point",
                   "reorder_qty", "weighted_avg_cost_paisa", "allow_negative", "value_paisa"]
         read_only_fields = ["product", "quantity_on_hand", "weighted_avg_cost_paisa"]
+        extra_kwargs = {"reorder_point": {"min_value": 0, "max_value": MAX_QTY},
+                        "reorder_qty": {"min_value": 0, "max_value": MAX_QTY}}
 
     def get_value_paisa(self, item):
         return max(item.quantity_on_hand, 0) * item.weighted_avg_cost_paisa
@@ -76,8 +78,8 @@ class InventoryItemViewSet(BranchScopedMixin, mixins.ListModelMixin, mixins.Retr
 
     @action(detail=False, methods=["post"])
     def adjust(self, request):
-        product_id = int(request.data["product"])
-        delta = int(request.data["qty"])
+        product_id = to_int(request.data.get("product"), "product", min_value=1)
+        delta = to_int(request.data.get("qty"), "qty", min_value=-MAX_QTY, max_value=MAX_QTY)
         reason = request.data.get("reason", "")
         with transaction.atomic():
             item = services.adjust_stock(request.branch, product_id, delta, request.user, reason)
@@ -181,8 +183,9 @@ class TransferViewSet(PerActionPermissionMixin, mixins.CreateModelMixin, mixins.
     @action(detail=True, methods=["post"])
     def receive(self, request, pk=None):
         received = {
-            int(l["id"]): (int(l["qty_received"]), l.get("variance_reason", ""))
-            for l in request.data.get("lines", [])
+            to_int(l.get("id"), "id"): (to_int(l.get("qty_received"), "qty_received", min_value=0, max_value=MAX_QTY),
+                                        l.get("variance_reason", ""))
+            for l in lines_of(request)
         }
         with transaction.atomic():
             transfer = self._locked("to")
@@ -246,12 +249,11 @@ class StocktakeViewSet(BranchScopedMixin, mixins.ListModelMixin, mixins.Retrieve
         if request.method == "POST":
             if st.status != Stocktake.COUNTING:
                 raise serializers.ValidationError({"detail": "Stocktake is not open for counting"})
-            updates = {int(u["id"]): u for u in request.data.get("lines", [])}
+            updates = {to_int(u.get("id"), "id"): u for u in lines_of(request)}
             lines = list(st.lines.filter(id__in=updates))
             for line in lines:
                 u = updates[line.id]
-                counted = u.get("counted_qty")
-                line.counted_qty = None if counted in (None, "") else int(counted)
+                line.counted_qty = to_int(u.get("counted_qty"), "counted_qty", None, min_value=0, max_value=MAX_QTY)
                 line.reason = u.get("reason", line.reason) or ""
             StocktakeLine.objects.bulk_update(lines, ["counted_qty", "reason"])
         qs = st.lines.select_related("product").order_by("product__name")

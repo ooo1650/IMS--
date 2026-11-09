@@ -14,7 +14,8 @@ A browsable list is at `GET /api/v1/` (DRF API root) when logged in.
 | Dates | ISO-8601 UTC datetimes; BS dates as `"2083.07.08"`; fiscal year `"2083-84"`. |
 | Lists | Cursor pagination `{results, next, previous}` (50 per page; `?page_size=` up to 500). Small reference lists (branches, categories, suppliers, users, tax categories) return a plain array. |
 | Errors | `400 {"detail": "..."}` or field errors `{"field": ["msg"]}`; stock errors add `short_lines: [{sku, available, qty}]`. `403` permission/branch, `404` not found or other branch. |
-| Idempotency | Checkout endpoints take `idempotency_key` (UUID). A retry returns the existing sale (`200` instead of `201`). |
+| Error codes | Every error on `/api/` is JSON, including the ones Django and nginx produce (CSRF failure, unknown path, crash, rate limit, upload too large: `ims/errors.py`, `deploy/nginx/snippets/ims-json-errors.conf`). Where the app can act, the body has `code`: `locked` (failed sign-ins), `rate_limited` (nginx), `otp_wait` / `reset_limit` (code-sending limits), `otp_invalid`, `otp_spent` (5 wrong tries: ask for a new code), `login_expired` (start sign-in again), `csrf`, `not_authenticated`, `not_found`, `server_error`, `too_large`. Every `429` also has `retry_after` (seconds) and a matching `Retry-After` header; the sign-in screen counts down from it. |
+| Idempotency | Checkout endpoints take `idempotency_key` (UUID). A retry at the same branch returns the existing sale (`200` instead of `201`); a key already used at another branch is a `400`. |
 | Exports | Reports take **`?export=xlsx|pdf|xml|csv`** (not `format`, which DRF reserves). |
 | Methods | DELETE is not allowed anywhere except `pos/held/{id}/` (legal records are append-only). |
 
@@ -125,7 +126,7 @@ Rules: discounts need a reason. Discounts above `cashier_max_discount_bp` need `
 | `POST sales/{id}/print/` | branch:pos.sell | `{kind: original\|delivery}` → `{kind, copy_no, document, html}`. The first print is the original; later ones are "COPY OF ORIGINAL — Copy #n". |
 | `POST sales/{id}/void/` | branch:pos.void | `{reason}`, cancels. Refused if credit/debit notes exist. |
 | `POST sales/{id}/returns/` | branch:returns.create | `{register_id, reason, refund_method, lines:[{sale_line_id, qty}], approver_username?, approver_password?}` → CreditNote |
-| `POST sales/{id}/debit-note/` | branch:pos.void | `{taxable_paisa, reason, tax_rate?}` → DebitNote |
+| `POST sales/{id}/debit-note/` | branch:pos.void | `{taxable_paisa, reason, tax_rate}` (rate required) → DebitNote |
 | `POST sales/{id}/resolve-conflict/` | branch:conflicts.resolve | `{resolution: accepted\|refunded, reason?}` |
 | `GET credit-notes/`, `…/{id}/`; `POST credit-notes/{id}/print/` | branch:returns.create | |
 | `GET debit-notes/`, `…/{id}/`; `POST debit-notes/{id}/print/` | branch:reports.view | |

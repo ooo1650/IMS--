@@ -6,7 +6,6 @@ All functions must be called inside ``transaction.atomic()``.
 """
 from dataclasses import dataclass
 
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
@@ -24,7 +23,8 @@ def lock_items(branch, product_ids):
     # Stock only moves for this branch's own business's products.
     own = set(Product.objects.filter(id__in=ids, org_id=branch.org_id).values_list("id", flat=True))
     if len(own) != len(ids):
-        raise ValidationError(f"Unknown products: {sorted(set(ids) - own)}")
+        raise ValidationError("Some products here aren't in this business's catalog (they may have been deleted, "
+                              "or the page is out of date). Reload the page and try again.")
     existing = set(
         InventoryItem.objects.filter(branch=branch, product_id__in=ids).values_list("product_id", flat=True)
     )

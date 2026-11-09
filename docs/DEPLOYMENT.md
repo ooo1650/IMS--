@@ -11,7 +11,7 @@ One VM (in Nepal, for data residency) running Docker Engine 24+ with the Compose
 | `worker` | `ims-backend` | `run_scheduler`: sale expiry and CBMS sync every minute; FonePay reconciliation 02:30, stock reconciliation 03:00, auditor views 03:15 (Asia/Kathmandu). | `data`, `edge` |
 | `web` | `ims-web` | nginx (`deploy/nginx/`): HTTPS, serves the SPA + admin static files and photos, proxies `/api`, security headers, rate limits (sign-in 30/min, POS 20/s, other API 50/s per IP), admin IP allowlist. Certificate: Let's Encrypt from `certbot`, else self-signed (`localhost`, LAN names, IPs). | `edge` (ports 80/443) |
 | `certbot` | `certbot/certbot` | `deploy/certbot-loop.sh`: gets a Let's Encrypt certificate for a public `IMS_DOMAIN` (webroot challenge on port 80) and renews it; `web` installs new certificates within 5 minutes. Idle for non-public names. | `edge` |
-| `backup` | `postgres:16.6` | `backup.sh` nightly at 01:45, `restore-drill.sh` Sundays 04:00. | `data` |
+| `backup` | `postgres:16.6` | `backup.sh` nightly at 01:45 (dump every night, base backup + WAL pruning on Sundays), `restore-drill.sh` Sundays 04:00. | `data` |
 
 Volumes: `pgdata`, `walarchive`, `backups`, `letsencrypt` (TLS certificates and the ACME account; keep it), `acme` (challenge files), `media` (product photos: written by `backend`, served read-only by `web` at `/media/` with `immutable` caching, mirrored nightly into `backups/media`).
 
@@ -45,16 +45,56 @@ Take a manual backup first if the release has migrations: `docker compose exec b
 | Django command | `docker compose run --rm migrate manage <command>` (owner) or `docker compose exec backend python manage.py <command>` (app role) |
 | Manual backup | `docker compose exec backup /deploy/backup.sh` |
 | Restore drill now | `docker compose exec backup /deploy/restore-drill.sh` |
-| Copy backups off the VM | `docker run --rm -v ims_backups:/b -v "$PWD":/out alpine tar czf /out/ims-backups.tgz -C /b .` (keep the copy inside Nepal) |
+| Copy backups off the VM (one-off) | `docker run --rm -v ims_backups:/b -v "$PWD":/out alpine tar czf /out/ims-backups.tgz -C /b .` (keep the copy inside Nepal; for nightly copies set `BACKUP_OFFSITE_DIR`, see Backups) |
 | Health | `curl -fsS https://<IMS_DOMAIN>/api/v1/health` |
+
+## Backups
+What `deploy/backup.sh` keeps in the `backups` volume:
+
+| What | When | Kept | Used for |
+|---|---|---|---|
+| `daily/ims-YYYY-MM-DD.dump[.gpg]` (pg_dump) | every night | 90 days | restoring a whole day; the weekly drill |
+| `monthly/…` (copy of the 1st) | 1st of the month | ~7 years | the 6-year record-keeping rule |
+| `base/<date>/base.tar.gz[.gpg]` (pg_basebackup) | Sundays (and the first run) | newest 2 | point-in-time recovery, with the `walarchive` volume |
+
+* **Encryption:** set `BACKUP_PASSPHRASE` in `.env` and every new file is gpg-encrypted (AES-256). Keep the passphrase off this server (password manager, sealed envelope). The restore drill decrypts the newest dump each week, so a wrong or lost passphrase shows up within a week.
+* **Off-site copy:** mount a second disk or network share into the `backup` service and set `BACKUP_OFFSITE_DIR` to that path; new dumps and base backups are copied there each night. Example `docker-compose.override.yml`:
+  ```yaml
+  services:
+    backup:
+      volumes: ["/mnt/nas/ims-backups:/offsite"]
+  ```
+  with `BACKUP_OFFSITE_DIR=/offsite` in `.env`. Keep the copy inside Nepal.
+* **WAL archive:** the `db` service gzips each WAL file into `walarchive` (at least every 10 minutes); the Sunday base backup prunes WAL older than the oldest base backup kept, so the volume stays bounded (about two weeks of changes). Check it is working: `docker compose exec db psql -U ims -d ims -c "select archived_count, failed_count from pg_stat_archiver"` (`failed_count` should stay 0).
+* Take a base backup now (e.g. right after setting this up): `docker compose exec -e BASE_BACKUP=force backup /deploy/backup.sh`.
+* **Installs from before 2026-11-09:** WAL archiving never worked (the archive volume was owned by root, so every `archive_command` failed and `pg_wal` kept growing). After `docker compose up -d` with this version, check `pg_stat_archiver` shows new archived files, then take a base backup as above.
 
 ## Restore from a dump
 ```bash
 docker compose stop backend worker
-docker compose exec backup sh -c 'pg_restore --clean --if-exists --no-owner -d "$DATABASE_URL" /srv/ims-backups/daily/ims-YYYY-MM-DD.dump'
+# Encrypted dumps: decrypt first (gpg asks for BACKUP_PASSPHRASE)
+docker compose exec backup sh -c 'gpg -d -o /tmp/ims.dump /srv/ims-backups/daily/ims-YYYY-MM-DD.dump.gpg'
+docker compose exec backup sh -c 'pg_restore --clean --if-exists --no-owner -d "$DATABASE_URL" /tmp/ims.dump'
 docker compose run --rm migrate          # re-applies role grants
 docker compose start backend worker
 ```
+
+## Point-in-time recovery
+Brings the database back to a moment (e.g. just before a bad import), from the newest base backup taken *before* that moment plus the WAL archive. WAL is archived at least every 10 minutes (`archive_timeout`), so `latest` can miss up to the last 10 minutes. Tested end to end on 2026-11-09 in a local staging run (encrypted base backup, to a target time and to `latest`).
+```bash
+docker compose stop backend worker web db
+# 1. Prepare a recovered copy in a NEW volume (the damaged one is left as it is).
+docker volume create ims_pgdata_recovered
+docker run --rm -v ims_backups:/b:ro -v ims_pgdata_recovered:/d -v "$PWD/deploy":/deploy:ro \
+  -e BACKUP_PASSPHRASE --entrypoint /deploy/pitr-prepare.sh postgres:16.6 \
+  /b/base/<date> "2026-11-09 14:05:00+05:45" /d/data        # or: ... /b/base/<date> latest /d/data
+# 2. Start it on its own and check the data.
+docker run -d --name ims-recovered -e PGDATA=/var/lib/postgresql/data/data \
+  -v ims_pgdata_recovered:/var/lib/postgresql/data -v ims_walarchive:/wal_archive:ro postgres:16.6
+docker logs -f ims-recovered          # wait for "archive recovery complete"
+docker exec -it ims-recovered psql -U ims -d ims
+```
+`ls` the backups volume to pick `<date>` (`docker run --rm -v ims_backups:/b alpine ls /b/base`); the target must be after that base backup and inside the archived WAL, or Postgres stops with "recovery ended before configured recovery target was reached". When the data is right, stop `ims-recovered` and make it the live database: either dump it and restore that dump into `db` (see "Restore from a dump"), or point the `db` service's `pgdata` volume at `ims_pgdata_recovered` with `PGDATA=/var/lib/postgresql/data/data`. Then `docker compose up -d` and take a fresh base backup (`BASE_BACKUP=force`).
 
 ## Operator console
 A separate project (`console/`, built into the web image as `/srv/console`; or hosted on another server, see `console/README.md`) for the operator: businesses, branches, registers, admin accounts, shop rules, tax and FonePay settings, email, jobs, audit. Served on **port 8443** of `IMS_DOMAIN` (same certificate), or on its own subdomain with `IMS_CONSOLE_DOMAIN` (DNS must point there; certbot adds it to the certificate). Only networks in `IMS_CONSOLE_ALLOW` (default: private) can open it, and `/api/v1/platform/` answers 404 on the IMS address. Operators always sign in with an emailed code.

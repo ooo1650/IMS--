@@ -46,7 +46,7 @@ export default function Import() {
       </PageHead>
       <Guide id="import" title="Loading many records at once">
         <ol>
-          <li>Download the template and fill one row per product (or stock line).</li>
+          <li>Download the template and fill one row per product (or stock line). Save it as CSV or Excel (.xlsx); for Excel the first sheet is read.</li>
           <li>Upload it and press <strong>Preview (dry run)</strong>: nothing is saved, you see what would change.</li>
           <li>If it looks right, <strong>Commit import</strong>.</li>
         </ol>
@@ -59,7 +59,7 @@ export default function Import() {
             : 'Writes opening stock at the given cost and sets the weighted average. A SKU already imported for this branch is skipped, so re-uploading never doubles stock.'}
         </p>
         <div className="inline-form">
-          <input type="file" accept=".csv,text/csv" onChange={(e) => { setFile(e.target.files?.[0] ?? null); setResult(null) }} />
+          <input type="file" accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(e) => { setFile(e.target.files?.[0] ?? null); setResult(null) }} />
           <Button busy={busy} disabled={!file} onClick={() => void run(true)}>Preview (dry run)</Button>
           <Button kind="primary" busy={busy} disabled={!file || !result?.ok || !result.dry_run} onClick={() => void run(false)}>Commit import</Button>
         </div>

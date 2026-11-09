@@ -22,21 +22,24 @@ What protects the system, where it lives, and what is still open. Checked 2026-1
 | Admin site | `/django-admin` reachable only from `IMS_ADMIN_ALLOW` networks | `deploy/nginx/40-ims.sh` |
 | Containers | Non-root app user, read-only root filesystems, all capabilities dropped, `no-new-privileges`, database on an internal network with no published port, 10 MB request limit | `backend/Dockerfile`, `docker-compose.yml` |
 | Dependencies | `npm audit`: 0 vulnerabilities; `pip-audit`: none known (2026-10-26) | re-run before each release |
-| Backups | Nightly dumps with checksums, ~7-year retention, weekly automated restore drill, WAL for point-in-time recovery | `deploy/backup.sh`, `deploy/restore-drill.sh` |
+| Backups | Nightly dumps with checksums, ~7-year retention, weekly automated restore drill; weekly base backups + gzipped WAL archive for point-in-time recovery; optional gpg encryption (`BACKUP_PASSPHRASE`) and off-site copy (`BACKUP_OFFSITE_DIR`) | `deploy/backup.sh`, `deploy/restore-drill.sh`, `deploy/pitr-prepare.sh` |
 
 | Businesses | Every business-owned query filters on the active business; another business's product/supplier/category/branch IDs are refused; CBMS posts each business with its own credentials, and bad credentials pause only that business | `tenancy/tests/test_multibusiness.py` |
 | Operator console | Platform admins only (`IsPlatformAdmin`), emailed code always required, IP allowlist `IMS_CONSOLE_ALLOW`, `/api/v1/platform/` returns 404 on the IMS host, every action audited | `admin_extras/platform.py`, `deploy/nginx/` |
 
 ## Open items
 1. **Two-factor sign-in**: done as an emailed 6-digit code (`accounts/otp.py`), required for `IMS_2FA_REQUIRED_ROLES` (default SuperAdmin, OrgAdmin, BranchManager), opt-in for others. Not built: authenticator-app (TOTP) codes, which would work when email is down.
-2. **Backups leave the VM?** Copying `backups` off-site (inside Nepal) is a manual step; automate it.
-3. **Backup encryption at rest**: dumps are plain `pg_dump` files. Encrypt the volume or the copies.
+2. **Backups leave the VM**: done when `BACKUP_OFFSITE_DIR` points at a mounted second disk/share (docs/DEPLOYMENT.md "Backups"); still needs that mount set up on the server.
+3. **Backup encryption at rest**: done with `BACKUP_PASSPHRASE` (gpg AES-256 for dumps and base backups; the weekly drill proves it decrypts). Off by default: set it. The WAL archive volume itself is not encrypted (it sits next to the live database).
 4. **Image pinning by digest** and rebuilding monthly for OS security patches; add a scanner (Trivy/Grype) in CI once CI exists.
 5. **Session revocation**: done. A password change or reset, "Sign out other devices" (My account) and the admin's "Sign out of every device" bump `User.session_epoch`, which is part of the session hash.
 6. **Proxy-level rate limits**: done in nginx (per client IP: sign-in/reset 30/min burst 20, POS 20/s burst 40, other API 50/s burst 100). Several tills behind one office NAT share a limit; raise the numbers if a busy branch sees 429s.
 7. **Penetration test** before go-live, and a review of the FonePay integration once the bank's API docs arrive.
 8. **Login CSRF**: fixed. Sign-in, code, forgot and reset endpoints are `csrf_protect`ed.
-9. **Device trust**: offline sign-in and the offline sales queue live in the till's browser; tills need OS accounts, disk encryption and screen locks.
+9. **Hosted split (Render) client IPs**: with `IMS_TRUSTED_PROXIES=2`, a caller hitting the `onrender.com` address directly can choose the IP the app sees (per-IP lockout, audit IPs, `IMS_PLATFORM_ALLOW`). The per-account lockout still holds. Acceptable for the temporary demo hosting; never enable `IMS_TEST_LOGIN` there. The Docker deployment is not affected (only nginx can reach the backend).
+10. **Device trust**: offline sign-in and the offline sales queue live in the till's browser; tills need OS accounts, disk encryption and screen locks.
+
+Fixed 2026-11-09 (review): checkout accepted any customer ID (another business's customer name came back in the response); idempotency keys were looked up across branches (a known key returned another branch's sale); manager-approval passwords typed at the register bypassed the sign-in lockout. Each has a regression test in `sales/tests/test_review_fixes.py`.
 
 ## Reporting a problem
 Tell the system owner privately; don't open a public issue with exploit details.

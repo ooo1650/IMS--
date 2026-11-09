@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from './auth'
 import { Icon } from './shared/Icon'
 import { Button, ErrorBox, Field } from './shared/ui'
-import { api } from './shared/api'
+import { ApiError, api, formatWait } from './shared/api'
 
 export default function Login() {
   const { login, verifyOtp, resendOtp, testLogin } = useAuth()
@@ -32,6 +32,12 @@ export default function Login() {
     try {
       await fn()
     } catch (e) {
+      if (e instanceof ApiError) {
+        if (e.code === 'login_expired') { setStep('signin'); setCode('') }
+        if (e.code === 'otp_wait' && e.retryAfter) setCooldown(e.retryAfter)
+        if (e.code === 'otp_spent') { setCode(''); setCooldown(0) }
+        if (e.code === 'csrf') await api('auth/csrf').catch(() => {})
+      }
       setError((e as Error).message)
     } finally {
       setBusy(false)
@@ -107,7 +113,7 @@ export default function Login() {
                 setSentTo(await resendOtp())
                 setCooldown(60)
                 setNotice('A new code is on its way')
-              })}>{cooldown > 0 ? `Resend code in ${cooldown}s` : 'Resend code'}</button>
+              })}>{cooldown > 0 ? `Resend code in ${formatWait(cooldown)}` : 'Resend code'}</button>
               <button type="button" className="link" onClick={() => { setStep('signin'); setCode(''); setError(null) }}>Back</button>
             </p>
           </form>

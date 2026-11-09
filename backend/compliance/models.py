@@ -5,6 +5,7 @@ from datetime import date
 from decimal import Decimal
 
 from django.db import models
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils import timezone
 
 from . import crypto
@@ -47,8 +48,8 @@ class TaxCategory(models.Model):
 class TaxCategoryRate(models.Model):
     category = models.ForeignKey(TaxCategory, on_delete=models.CASCADE, related_name="rates")
     effective_from = models.DateField()
-    vat_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("0"))
-    levy_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("0"))
+    vat_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("0"), validators=[MinValueValidator(0), MaxValueValidator(100)])
+    levy_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("0"), validators=[MinValueValidator(0), MaxValueValidator(100)])
     note = models.CharField(max_length=200, blank=True, help_text="e.g. Finance Act 2083 §…")
 
     class Meta:
@@ -66,13 +67,13 @@ class ComplianceSettings(models.Model):
     invoice_series = models.CharField(max_length=8, default=BRANCH,
                                       choices=[(BRANCH, "Per branch + fiscal year"),
                                                (REGISTER, "Per register + fiscal year")])
-    abbreviated_invoice_limit_paisa = models.BigIntegerField(default=10_000 * 100)
-    delivery_copy_limit_paisa = models.BigIntegerField(default=10_000 * 100)
+    abbreviated_invoice_limit_paisa = models.BigIntegerField(default=10_000 * 100, validators=[MinValueValidator(0), MaxValueValidator(10 ** 13)])
+    delivery_copy_limit_paisa = models.BigIntegerField(default=10_000 * 100, validators=[MinValueValidator(0), MaxValueValidator(10 ** 13)])
     require_buyer_pan_over_limit = models.BooleanField(default=False)
 
     # Digital-payment VAT discount — OFF until IRD publishes the procedure.
     digital_vat_discount_enabled = models.BooleanField(default=False)
-    digital_vat_discount_bp = models.PositiveIntegerField(default=1000, help_text="share of VAT, basis points")
+    digital_vat_discount_bp = models.PositiveIntegerField(default=1000, validators=[MaxValueValidator(10000)], help_text="share of VAT, basis points")
     digital_vat_discount_methods = models.JSONField(default=list, blank=True)
 
     # CBMS
@@ -81,15 +82,15 @@ class ComplianceSettings(models.Model):
                                      help_text='Use "mock://" for the built-in test double')
     cbms_username = models.CharField(max_length=100, blank=True)
     cbms_password_enc = models.TextField(blank=True)
-    cbms_realtime_window_minutes = models.PositiveIntegerField(default=10)
+    cbms_realtime_window_minutes = models.PositiveIntegerField(default=10, validators=[MinValueValidator(1), MaxValueValidator(1440)])
     cbms_paused_reason = models.CharField(max_length=255, blank=True)
-    cbms_threshold_paisa = models.BigIntegerField(default=10 * CRORE, help_text="warn: CBMS line (budget)")
-    cbms_mandatory_threshold_paisa = models.BigIntegerField(default=20 * CRORE, help_text="CBMS notice 2083/01/04")
+    cbms_threshold_paisa = models.BigIntegerField(default=10 * CRORE, validators=[MinValueValidator(0), MaxValueValidator(10 ** 13)], help_text="warn: CBMS line (budget)")
+    cbms_mandatory_threshold_paisa = models.BigIntegerField(default=20 * CRORE, validators=[MinValueValidator(0), MaxValueValidator(10 ** 13)], help_text="CBMS notice 2083/01/04")
 
     # VAT registration thresholds (for non-registered sellers' turnover alert)
-    vat_threshold_goods_paisa = models.BigIntegerField(default=50 * LAKH)
-    vat_threshold_services_paisa = models.BigIntegerField(default=30 * LAKH)
-    excess_stock_fine_bp = models.PositiveIntegerField(default=5000, help_text="fine on excess stock, basis points")
+    vat_threshold_goods_paisa = models.BigIntegerField(default=50 * LAKH, validators=[MinValueValidator(0), MaxValueValidator(10 ** 13)])
+    vat_threshold_services_paisa = models.BigIntegerField(default=30 * LAKH, validators=[MinValueValidator(0), MaxValueValidator(10 ** 13)])
+    excess_stock_fine_bp = models.PositiveIntegerField(default=5000, validators=[MaxValueValidator(10000)], help_text="fine on excess stock, basis points")
 
     updated_at = models.DateTimeField(auto_now=True)
 

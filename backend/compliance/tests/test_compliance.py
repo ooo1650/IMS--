@@ -258,7 +258,7 @@ class PurchaseTests(ComplianceBase):
 class NotesAndReportsTests(ComplianceBase):
     def test_debit_note(self):
         sale, _ = self.w.sell((self.w.p1, 1))
-        dn = services.create_debit_note(sale=sale, by=self.w.manager_a, taxable_paisa=1000, reason="undercharged")
+        dn = services.create_debit_note(sale=sale, by=self.w.manager_a, taxable_paisa=1000, reason="undercharged", tax_rate="13")
         self.assertEqual((dn.tax_paisa, dn.total_paisa), (130, 1130))
         self.assertTrue(dn.number.startswith("DN-A-"))
         with self.assertRaises(ValidationError):

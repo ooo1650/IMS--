@@ -7,6 +7,7 @@ and dies after MAX_ATTEMPTS wrong guesses. Rate limits are counted from the
 table itself, so they hold across gunicorn workers and restarts.
 """
 import logging
+import math
 import secrets
 import threading
 from datetime import timedelta
@@ -41,16 +42,47 @@ def mask_email(email):
     return f"{name[:1]}{'*' * max(len(name) - 1, 3)}@{domain}"
 
 
+class Wait(str):
+    """Why a new code can't be sent yet. It reads as the message;
+    ``retry_after`` is the number of seconds until one can be."""
+
+    def __new__(cls, text, retry_after):
+        obj = super().__new__(cls, text)
+        obj.retry_after = max(1, math.ceil(retry_after))
+        return obj
+
+
+def wait_text(seconds):
+    """"45 seconds", "90 seconds", "12 minutes": for messages that say how long to wait."""
+    seconds = max(1, math.ceil(seconds))
+    if seconds < 120:  # "1 minute" for 61-119 s would be off by up to half
+        return f"{seconds} second{'s' if seconds != 1 else ''}"
+    minutes = math.ceil(seconds / 60)
+    return f"{minutes} minute{'s' if minutes != 1 else ''}"
+
+
 def can_send(user, purpose):
-    """None, or why a new code can't be sent yet."""
+    """None, or a ``Wait`` saying why a new code can't be sent yet and for how long."""
     now = timezone.now()
     recent = OneTimeCode.objects.filter(user=user, purpose=purpose, created_at__gte=now - timedelta(hours=1))
     last = recent.order_by("-created_at").first()
     if last and now - last.created_at < RESEND_AFTER:
-        return "Wait a minute before asking for another code."
+        left = (RESEND_AFTER - (now - last.created_at)).total_seconds()
+        return Wait(f"A code was just sent. You can ask for another in {wait_text(left)}.", left)
     if recent.count() >= MAX_PER_HOUR:
-        return "Too many codes requested. Try again in an hour."
+        oldest = recent.order_by("created_at").first()
+        left = (oldest.created_at + timedelta(hours=1) - now).total_seconds()
+        return Wait(f"You've asked for {MAX_PER_HOUR} codes in the last hour. "
+                    f"Try again in {wait_text(left)}, and check your spam folder for the earlier ones.", left)
     return None
+
+
+def spent(user, purpose):
+    """True if the user's current code has had MAX_ATTEMPTS wrong tries (it no
+    longer works, even with the right digits): they need a new one."""
+    otp = (OneTimeCode.objects.filter(user=user, purpose=purpose, used_at__isnull=True, expires_at__gt=timezone.now())
+           .order_by("-created_at").first())
+    return otp is not None and otp.attempts >= MAX_ATTEMPTS
 
 
 def issue(user, purpose, email=None):

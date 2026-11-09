@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../auth'
 import { Icon } from '../components/Icon'
 import { Button, ErrorBox, Field } from '../components/ui'
-import { api } from '../lib/api'
+import { ApiError, api, formatWait } from '../lib/api'
 import { useOnline } from '../lib/sync'
 
 type Step = 'signin' | 'otp' | 'forgot' | 'reset' | 'signup'
@@ -46,7 +46,8 @@ export default function Login() {
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [cooldown, setCooldown] = useState(0)
+  const [cooldown, setCooldown] = useState(0) // seconds until another code can be sent
+  const [lockedFor, setLockedFor] = useState(0) // seconds until signing in may be tried again
   const [brand, setBrand] = useState<Brand | null>(null)
 
   useEffect(() => {
@@ -58,6 +59,12 @@ export default function Login() {
     load(1)
     return () => { cancelled = true }
   }, [])
+
+  useEffect(() => {
+    if (lockedFor <= 0) return
+    const t = setTimeout(() => setLockedFor(lockedFor - 1), 1000)
+    return () => clearTimeout(t)
+  }, [lockedFor])
 
   useEffect(() => {
     if (cooldown <= 0) return
@@ -80,7 +87,35 @@ export default function Login() {
     try {
       await fn()
     } catch (err) {
-      setError((err as Error).message)
+      const message = (err as Error).message
+      if (!(err instanceof ApiError)) {
+        setError(message)
+        return
+      }
+      // The server says which limit or problem it was (code) and how long to wait (retryAfter).
+      switch (err.code) {
+        case 'login_expired': // the code step outlived the password check: start over
+          setPassword('')
+          go('signin')
+          break
+        case 'locked': // too many failed sign-ins for this account or network
+        case 'rate_limited': // nginx: too many requests from this network
+          setLockedFor(err.retryAfter ?? 30)
+          break
+        case 'otp_wait': // a code was just sent / hourly code limit
+        case 'reset_limit':
+          setCooldown(err.retryAfter ?? 60)
+          break
+        case 'otp_spent': // that code is dead: clear it and let them ask for a new one
+          setCode('')
+          setCooldown(0)
+          break
+        case 'csrf': // stale CSRF token (e.g. the tab was open for days): fetch a fresh one
+          await api('auth/csrf').catch(() => {})
+          setError('This page was out of date and has been refreshed. Press the button again.')
+          return
+      }
+      setError(message)
     } finally {
       setBusy(false)
     }
@@ -204,8 +239,8 @@ export default function Login() {
             <Field label="Password">
               <PasswordInput autoComplete="current-password" value={password} onChange={setPassword} />
             </Field>
-            <Button kind="primary" type="submit" busy={busy} className="btn-block btn-xl">
-              Sign in
+            <Button kind="primary" type="submit" busy={busy} disabled={lockedFor > 0} className="btn-block btn-xl">
+              {lockedFor > 0 ? `Try again in ${formatWait(lockedFor)}` : 'Sign in'}
             </Button>
             <p className="login-links">
               <button type="button" className="link" disabled={!online} title={online ? '' : 'Password resets need a connection'}
@@ -226,10 +261,12 @@ export default function Login() {
             {notice && <div className="alert alert-good">{notice}</div>}
             <ErrorBox error={error} />
             {codeInput(verifyCode)}
-            <Button kind="primary" type="submit" busy={busy} className="btn-block btn-xl">Verify and sign in</Button>
+            <Button kind="primary" type="submit" busy={busy} disabled={lockedFor > 0} className="btn-block btn-xl">
+              {lockedFor > 0 ? `Try again in ${formatWait(lockedFor)}` : 'Verify and sign in'}
+            </Button>
             <p className="login-links">
               <button type="button" className="link" disabled={cooldown > 0 || busy} onClick={() => void resend()}>
-                {cooldown > 0 ? `Resend code in ${cooldown}s` : 'Resend code'}
+                {cooldown > 0 ? `Resend code in ${formatWait(cooldown)}` : 'Resend code'}
               </button>
               <button type="button" className="link" onClick={() => { setPassword(''); go('signin') }}>Use a different account</button>
             </p>
@@ -248,7 +285,7 @@ export default function Login() {
                   style={{ paddingRight: 136 }} />
                 <button type="button" className="link" disabled={!email.includes('@') || cooldown > 0 || busy || !online}
                   title={online ? '' : 'Needs a connection'} onClick={() => void sendSignupCode()}>
-                  {cooldown > 0 ? `Resend in ${cooldown}s` : 'Send me a code'}
+                  {cooldown > 0 ? `Resend in ${formatWait(cooldown)}` : 'Send me a code'}
                 </button>
               </span>
             </Field>
@@ -305,7 +342,7 @@ export default function Login() {
             <Button kind="primary" type="submit" busy={busy} className="btn-block btn-xl">Change password</Button>
             <p className="login-links">
               <button type="button" className="link" disabled={cooldown > 0 || busy} onClick={() => void requestReset()}>
-                {cooldown > 0 ? `Send a new code in ${cooldown}s` : 'Send a new code'}
+                {cooldown > 0 ? `Send a new code in ${formatWait(cooldown)}` : 'Send a new code'}
               </button>
               <button type="button" className="link" onClick={() => go('signin')}>Back to sign in</button>
             </p>

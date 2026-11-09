@@ -57,8 +57,8 @@ class Product(models.Model):
     category = models.ForeignKey(Category, null=True, blank=True, on_delete=models.PROTECT)
     supplier = models.ForeignKey(Supplier, null=True, blank=True, on_delete=models.PROTECT)
     unit = models.CharField(max_length=16, default="pcs")
-    cost_price_paisa = models.BigIntegerField(default=0, validators=[MinValueValidator(0)])
-    sale_price_paisa = models.BigIntegerField(validators=[MinValueValidator(0)])
+    cost_price_paisa = models.BigIntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(10 ** 13)])
+    sale_price_paisa = models.BigIntegerField(validators=[MinValueValidator(0), MaxValueValidator(10 ** 13)])
     # Percent, e.g. 13.00 for Nepal VAT. A rate, not money, so Decimal is fine.
     tax_rate = models.DecimalField(
         max_digits=5, decimal_places=2, default=Decimal("13.00"),
@@ -103,7 +103,7 @@ class Barcode(models.Model):
     code = models.CharField(max_length=64)
     type = models.CharField(max_length=16, choices=TYPES, default="ean13")
     # Scanning this barcode rings up pack_qty units (e.g. a case of 24).
-    pack_qty = models.PositiveIntegerField(default=1)
+    pack_qty = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1), MaxValueValidator(100_000)])
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["org", "code"], name="uniq_barcode_per_org")]
@@ -120,7 +120,7 @@ class Barcode(models.Model):
 class BranchPrice(models.Model):
     branch = models.ForeignKey("tenancy.Branch", on_delete=models.CASCADE, related_name="prices")
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="branch_prices")
-    sale_price_paisa = models.BigIntegerField(validators=[MinValueValidator(0)])
+    sale_price_paisa = models.BigIntegerField(validators=[MinValueValidator(0), MaxValueValidator(10 ** 13)])
 
     class Meta:
         unique_together = [("branch", "product")]

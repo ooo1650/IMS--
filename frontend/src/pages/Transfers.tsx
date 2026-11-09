@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../auth'
 import { ProductPicker } from '../components/ProductPicker'
-import { Button, ErrorBox, Field, LoadMore, Modal, PageHead, Status, fmtDate, useLoad, usePaged, Guide } from '../components/ui'
+import { Button, ErrorBox, Field, fmtDate, Guide, LoadMore, Modal, PageHead, QtyInput, Status, useLoad, usePaged } from '../components/ui'
 import { api, qs } from '../lib/api'
 import { npr } from '../lib/money'
 
@@ -79,7 +79,7 @@ function NewTransfer({ onClose, onSaved }: { onClose: () => void; onSaved: () =>
           {lines.map((l, i) => (
             <tr key={l.product}>
               <td>{l.name}</td>
-              <td className="num"><input className="input-sm" type="number" min={1} value={l.qty} onChange={(e) => setLines(lines.map((x, j) => (j === i ? { ...x, qty: Math.max(1, Number(e.target.value)) } : x)))} /></td>
+              <td className="num"><QtyInput min={1} aria-label={`Quantity of ${l.name}`} value={l.qty} onChange={(n) => setLines(lines.map((x, j) => (j === i ? { ...x, qty: n } : x)))} /></td>
               <td><Button kind="ghost" onClick={() => setLines(lines.filter((_, j) => j !== i))}>Remove</Button></td>
             </tr>
           ))}
@@ -138,8 +138,8 @@ function TransferDetail({ transfer, onClose }: { transfer: Transfer; onClose: ()
               <td className="num">{l.unit_cost_paisa ? npr(l.unit_cost_paisa) : '—'}</td>
               <td className="num">
                 {receiving ? (
-                  <input className="input-sm" type="number" min={0} max={l.qty_sent} value={recv[l.id].qty}
-                    onChange={(e) => setRecv({ ...recv, [l.id]: { ...recv[l.id], qty: Math.min(l.qty_sent, Math.max(0, Number(e.target.value))) } })} />
+                  <QtyInput min={0} max={l.qty_sent} aria-label={`Quantity received of ${l.name}`} value={recv[l.id].qty}
+                    onChange={(n) => setRecv({ ...recv, [l.id]: { ...recv[l.id], qty: n } })} />
                 ) : (l.qty_received ?? '—')}
               </td>
               <td>

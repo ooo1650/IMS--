@@ -5,11 +5,11 @@ import { Icon } from '../components/Icon'
 import { LabelPrint } from '../components/LabelPrint'
 import { Availability, ProductDetail } from '../components/ProductDetail'
 import { ProductThumb } from '../components/ProductThumb'
-import { Badge, Button, ErrorBox, Field, LoadMore, Modal, PageHead, Tabs, useLoad, usePaged, Guide } from '../components/ui'
+import { Badge, Button, ErrorBox, Field, Guide, LoadMore, Modal, MoneyInput, PageHead, QtyInput, Tabs, useLoad, usePaged } from '../components/ui'
 import { api, qs } from '../lib/api'
 import { generateInStoreEan13, isValidEan13 } from '../lib/barcode'
 import { downscaleImage } from '../lib/images'
-import { npr, toPaisa, toRupeesInput } from '../lib/money'
+import { moneyProblem, normalizeNumber, npr, parseWhole, toPaisa, toRupeesInput, wholeProblem } from '../lib/money'
 import type { Barcode, Product } from '../lib/types'
 
 interface Named { id: number; name: string }
@@ -254,9 +254,11 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
     if (!f.sku.trim()) return setError('Enter a SKU, or press "Suggest" next to it')
     const price = toPaisa(f.price)
     const cost = toPaisa(f.cost || '0')
-    if (price == null || cost == null || !f.price) return setError('Enter the sale price (and cost, if known) as numbers with up to 2 decimals')
-    const opening = f.opening.trim() ? Number(f.opening) : 0
-    if (canStock && (!Number.isInteger(opening) || opening < 0)) return setError('Opening stock must be a whole number')
+    if (!f.price.trim()) return setError('Enter the sale price')
+    if (price == null) return setError(`Sale price: ${moneyProblem(f.price)}`)
+    if (cost == null) return setError(`Cost price: ${moneyProblem(f.cost)}`)
+    const opening = f.opening.trim() ? parseWhole(f.opening) ?? 0 : 0
+    if (canStock && f.opening.trim() && wholeProblem(f.opening)) return setError(`Opening stock: ${wholeProblem(f.opening)}`)
     setBusy(addAnother ? 'again' : 'save')
     setError(null)
     try {
@@ -323,8 +325,8 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
 
       <h3 className="form-section">Price</h3>
       <div className="form-grid">
-        <Field label="Sale price (Rs)"><input inputMode="decimal" placeholder="0.00" value={f.price} onChange={(e) => set('price', e.target.value)} /></Field>
-        <Field label="Cost price (Rs)" hint="What you pay the supplier, before VAT"><input inputMode="decimal" placeholder="0.00" value={f.cost} onChange={(e) => set('cost', e.target.value)} /></Field>
+        <Field label="Sale price (Rs)" error={moneyProblem(f.price)}><MoneyInput placeholder="0.00" value={f.price} onChange={(v) => set('price', v)} /></Field>
+        <Field label="Cost price (Rs)" hint="What you pay the supplier, before VAT" error={moneyProblem(f.cost)}><MoneyInput placeholder="0.00" value={f.cost} onChange={(v) => set('cost', v)} /></Field>
         <Field label="VAT">
           <select value={f.tax_category} onChange={(e) => set('tax_category', e.target.value)}>
             <option value="">Choose…</option>
@@ -348,7 +350,7 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
           <h3 className="form-section">Opening stock</h3>
           <div className="form-grid">
             <Field label={`Quantity at ${branch!.name}`} hint="Logged as a stock movement. Later stock comes in through Purchasing">
-              <input inputMode="numeric" placeholder="0" value={f.opening} onChange={(e) => set('opening', e.target.value.replace(/[^\d]/g, ''))} />
+              <input inputMode="numeric" placeholder="0" value={f.opening} onChange={(e) => set('opening', normalizeNumber(e.target.value).replace(/\D/g, ''))} />
             </Field>
           </div>
         </>
@@ -361,8 +363,8 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
           <select value={b.type} onChange={(e) => setBarcodes(barcodes.map((x, j) => (j === i ? { ...x, type: e.target.value } : x)))}>
             {['ean13', 'ean8', 'upca', 'code128', 'other'].map((t) => <option key={t}>{t}</option>)}
           </select>
-          <input className="input-sm" type="number" min={1} title="Units per scan (pack size)" value={b.pack_qty}
-            onChange={(e) => setBarcodes(barcodes.map((x, j) => (j === i ? { ...x, pack_qty: Math.max(1, Number(e.target.value)) } : x)))} />
+          <QtyInput min={1} max={100000} title="Units per scan (pack size)" aria-label="Pack size" value={b.pack_qty}
+            onChange={(n) => setBarcodes(barcodes.map((x, j) => (j === i ? { ...x, pack_qty: n } : x)))} />
           <Button kind="ghost" onClick={() => setBarcodes(barcodes.filter((_, j) => j !== i))}>Remove</Button>
         </div>
       ))}

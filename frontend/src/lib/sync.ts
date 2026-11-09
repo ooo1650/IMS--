@@ -77,6 +77,7 @@ export async function syncQueue(): Promise<void> {
   let synced = 0
   let failed = 0
   let gaps: number[] = []
+  let failedShiftCloses = 0
   try {
     for (const q of await listQueue()) {
       if (q.status === 'error' && q.attempts >= 3) {
@@ -103,9 +104,11 @@ export async function syncQueue(): Promise<void> {
           setOnline(false)
           break
         }
-        // Session expired (e.g. after an offline login): keep everything pending
-        // and retry once someone signs in again — don't burn the retry budget.
-        if (e instanceof ApiError && (e.status === 401 || e.status === 403)) break
+        // Signed out (e.g. after an offline login): keep everything pending and
+        // retry once someone signs in again — don't burn the retry budget.
+        if (e instanceof ApiError && e.status === 401) break
+        // 403 is about this sale (register deactivated, role removed at that
+        // branch): mark it and carry on, so it can't hold up the sales behind it.
         await updateQueued({ ...q, status: 'error', attempts: q.attempts + 1, error: e instanceof ApiError ? e.message : String(e) })
         failed++
       }
@@ -118,12 +121,17 @@ export async function syncQueue(): Promise<void> {
           await kvDelete(key)
         } catch (e) {
           if (e instanceof NetworkError) break
-          await kvDelete(key) // already closed elsewhere; nothing left to post
+          if (e instanceof ApiError && e.status === 400 && /already closed/i.test(e.message)) {
+            await kvDelete(key) // closed elsewhere; nothing left to post
+            continue
+          }
+          // Anything else (signed out, server error): keep the count and retry later.
+          failedShiftCloses++
         }
       }
   } finally {
     syncing = false
-    if (synced || failed) lastSyncReport = { synced, failed, gaps, at: Date.now() }
+    if (synced || failed || failedShiftCloses) lastSyncReport = { synced, failed: failed + failedShiftCloses, gaps, at: Date.now() }
     emit()
   }
 }

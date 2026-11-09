@@ -452,7 +452,9 @@ class UserActionView(PlatformView):
             if not user.email:
                 return Response({"detail": "This account has no email address"}, status=400)
             if wait := otp.can_send(user, OneTimeCode.RESET):
-                return Response({"detail": wait}, status=429)
+                from accounts.views import wait_response
+
+                return wait_response(wait)
             otp.issue(user, OneTimeCode.RESET)
             log_action(request.user, "platform.user_reset_sent", user, request=request)
             return Response({"detail": f"Reset code sent to {otp.mask_email(user.email)}"})

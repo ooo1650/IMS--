@@ -1,3 +1,4 @@
+import math
 from datetime import timedelta
 
 from django.conf import settings
@@ -66,26 +67,54 @@ class BrandView(APIView):
 
 
 def login_locked_out(username, ip):
-    """Lockout from recent failed passwords and sign-in codes in the audit log:
-    shared by every gunicorn worker and container, and survives restarts."""
+    """Seconds until this account / network may try again (0 = not locked).
+
+    Lockout comes from recent failed passwords and sign-in codes in the audit
+    log: shared by every gunicorn worker and container, and survives restarts.
+    It lifts when enough of the failures age out of the window."""
     from admin_extras.system import system_settings
 
     cfg = system_settings()  # limits are edited in the operator console
-    recent = AuditLog.objects.filter(action__in=["auth.login_failed", "auth.otp_failed"],
-                                     at__gte=timezone.now() - timedelta(minutes=cfg.login_window_minutes))
-    by_name = recent.filter(data__username=username).count() if username else 0
-    by_ip = recent.filter(ip=ip).count() if ip else 0
-    return by_name >= cfg.login_max_per_username or by_ip >= cfg.login_max_per_ip
+    now = timezone.now()
+    window = timedelta(minutes=cfg.login_window_minutes)
+    recent = AuditLog.objects.filter(action__in=["auth.login_failed", "auth.otp_failed"], at__gte=now - window)
+    wait = 0
+    for qs, limit in ((recent.filter(data__username=username) if username else None, cfg.login_max_per_username),
+                      (recent.filter(ip=ip) if ip else None, cfg.login_max_per_ip)):
+        if qs is None:
+            continue
+        times = list(qs.order_by("-at").values_list("at", flat=True)[:limit])
+        if len(times) >= limit:
+            # The limit-th newest failure has to leave the window first.
+            wait = max(wait, (times[limit - 1] + window - now).total_seconds())
+    return max(0, math.ceil(wait))
 
 
-LOCKED = "Too many failed sign-ins. Wait 15 minutes or ask an admin."
+def locked_message(seconds):
+    return (f"Too many failed sign-ins. Try again in {otp.wait_text(seconds)}, "
+            "or ask an administrator to check your account.")
 PENDING_LOGIN = "pending_2fa"  # session: password checked, waiting for the emailed code
 PENDING_EMAIL = "pending_email"  # session: new address waiting for its confirmation code
 
 
-def _locked_response(request, key):
+def too_many(detail, retry_after, code):
+    """429 the app can act on: ``retry_after`` seconds (also as the Retry-After
+    header) drives the countdown on the button, ``code`` says which limit it was."""
+    retry_after = max(1, math.ceil(retry_after))
+    resp = Response({"detail": str(detail), "code": code, "retry_after": retry_after},
+                    status=status.HTTP_429_TOO_MANY_REQUESTS)
+    resp["Retry-After"] = str(retry_after)
+    return resp
+
+
+def wait_response(wait, code="otp_wait"):
+    """429 for an ``otp.Wait`` (a new code can't be sent yet)."""
+    return too_many(wait, wait.retry_after, code)
+
+
+def _locked_response(request, key, seconds):
     log_action(None, "auth.login_locked", request=request, username=key)
-    return Response({"detail": LOCKED}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+    return too_many(locked_message(seconds), seconds, "locked")
 
 
 def _login_key(ident):
@@ -106,8 +135,13 @@ def _finish_login(request, user):
     return Response(me_payload(user, branch, branch.org if branch else resolve_org(user, request.session.get(ORG_SESSION_KEY))))
 
 
-def _bad(detail, code=status.HTTP_400_BAD_REQUEST):
-    return Response({"detail": detail}, status=code)
+def _bad(detail, code=status.HTTP_400_BAD_REQUEST, reason=None):
+    """An error reply; ``reason`` is a stable code the app can act on."""
+    return Response({"detail": detail, **({"code": reason} if reason else {})}, status=code)
+
+
+CODE_HINT = "After 5 wrong tries a code stops working: ask for a new one."
+EXPIRED_SIGN_IN = "Your sign-in expired. Enter your password again."
 
 
 @method_decorator(csrf_protect, name="dispatch")
@@ -120,8 +154,8 @@ class LoginView(APIView):
     def post(self, request):
         ident = str(request.data.get("username") or request.data.get("email") or "")[:254].strip()
         key = _login_key(ident)
-        if login_locked_out(key, client_ip(request)):
-            return _locked_response(request, key)
+        if locked := login_locked_out(key, client_ip(request)):
+            return _locked_response(request, key, locked)
         user = authenticate(request, username=ident, password=request.data.get("password"))
         if user is None or not user.is_active:
             log_action(None, "auth.login_failed", request=request, username=key)
@@ -140,7 +174,7 @@ class LoginView(APIView):
             otp.issue(user, OneTimeCode.LOGIN)
             log_action(user, "auth.otp_sent", request=request, purpose="login")
         elif not live:
-            return _bad(wait, status.HTTP_429_TOO_MANY_REQUESTS)
+            return wait_response(wait)
         return Response({"otp_required": True, "sent_to": otp.mask_email(user.email)})
 
 
@@ -160,15 +194,19 @@ class LoginVerifyView(APIView):
     def post(self, request):
         user = _pending_user(request)
         if user is None:
-            return _bad("Your sign-in expired. Enter your password again.")
+            return _bad(EXPIRED_SIGN_IN, reason="login_expired")
         key = user.username.lower()
-        if login_locked_out(key, client_ip(request)):
-            return _locked_response(request, key)
+        if locked := login_locked_out(key, client_ip(request)):
+            return _locked_response(request, key, locked)
         with transaction.atomic():
             ok = otp.verify(user, OneTimeCode.LOGIN, request.data.get("code", ""))
         if not ok:
             log_action(user, "auth.otp_failed", request=request, username=key, purpose="login")
-            return _bad("That code is wrong or has expired.")
+            if otp.spent(user, OneTimeCode.LOGIN):
+                return _bad("Too many wrong tries for this code. Press \u201cResend code\u201d to get a new one.",
+                            reason="otp_spent")
+            return _bad("That code is wrong or has expired. Check the newest email, or press \u201cResend code\u201d.",
+                        reason="otp_invalid")
         request.session.pop(PENDING_LOGIN, None)
         if not user.email_verified:
             User.objects.filter(pk=user.pk).update(email_verified=True)
@@ -182,9 +220,9 @@ class LoginResendView(APIView):
     def post(self, request):
         user = _pending_user(request)
         if user is None:
-            return _bad("Your sign-in expired. Enter your password again.")
+            return _bad(EXPIRED_SIGN_IN, reason="login_expired")
         if wait := otp.can_send(user, OneTimeCode.LOGIN):
-            return _bad(wait, status.HTTP_429_TOO_MANY_REQUESTS)
+            return wait_response(wait)
         otp.issue(user, OneTimeCode.LOGIN)
         log_action(user, "auth.otp_sent", request=request, purpose="login", resend=True)
         return Response({"otp_required": True, "sent_to": otp.mask_email(user.email)})
@@ -203,8 +241,13 @@ class ForgotPasswordView(APIView):
         email = str(request.data.get("email", "")).strip()[:254]
         ip = client_ip(request)
         hour_ago = timezone.now() - timedelta(hours=1)
-        if ip and AuditLog.objects.filter(action="auth.reset_requested", ip=ip, at__gte=hour_ago).count() >= 20:
-            return _bad("Too many reset requests from this network. Try again later.", status.HTTP_429_TOO_MANY_REQUESTS)
+        if ip:
+            asked = list(AuditLog.objects.filter(action="auth.reset_requested", ip=ip, at__gte=hour_ago)
+                         .order_by("-at").values_list("at", flat=True)[:20])
+            if len(asked) >= 20:
+                left = (asked[-1] + timedelta(hours=1) - timezone.now()).total_seconds()
+                return too_many(f"Too many reset requests from this network. Try again in {otp.wait_text(left)}.",
+                                left, "reset_limit")
         user = User.objects.filter(email__iexact=email, is_active=True).first() if "@" in email else None
         sent = bool(user and otp.can_send(user, OneTimeCode.RESET) is None)
         if sent:
@@ -225,7 +268,8 @@ class ResetPasswordView(APIView):
         with transaction.atomic():
             if user is None or not otp.verify(user, OneTimeCode.RESET, request.data.get("code", "")):
                 log_action(user, "auth.reset_failed", request=request, email=email.lower())
-                return _bad("That code is wrong or has expired.")
+                # Same reply whether or not the address has an account.
+                return _bad(f"That code is wrong or has expired. {CODE_HINT}", reason="otp_invalid")
             user.set_password(password)
             user.session_epoch += 1  # every old session ends
             user.email_verified = True
@@ -247,8 +291,8 @@ class SignupView(APIView):
     def post(self, request):
         email = str(request.data.get("email", "")).strip()[:254]
         key = _login_key(email)
-        if login_locked_out(key, client_ip(request)):
-            return _locked_response(request, key)
+        if locked := login_locked_out(key, client_ip(request)):
+            return _locked_response(request, key, locked)
         password = str(request.data.get("password", ""))
         user = User.objects.filter(email__iexact=email, is_active=True).first() if "@" in email else None
         validate_password(password, user)  # before the code is spent
@@ -256,7 +300,8 @@ class SignupView(APIView):
             if user is None or not otp.verify(user, OneTimeCode.RESET, request.data.get("code", "")):
                 # Same reply whether or not the address has an account.
                 log_action(user, "auth.otp_failed", request=request, username=key, purpose="signup")
-                return _bad("That code is wrong or has expired. Ask whoever invited you to send a new one.")
+                return _bad("That code is wrong or has expired. After 5 wrong tries a code stops working: "
+                            "ask whoever invited you to send a new one.", reason="otp_invalid")
             first = str(request.data.get("first_name", "")).strip()[:150]
             last = str(request.data.get("last_name", "")).strip()[:150]
             if first:
@@ -354,7 +399,7 @@ class EmailChangeView(APIView):
         if User.objects.filter(email__iexact=email).exclude(pk=user.pk).exists():
             return _bad("Another account already uses that email.")
         if wait := otp.can_send(user, OneTimeCode.EMAIL):
-            return _bad(wait, status.HTTP_429_TOO_MANY_REQUESTS)
+            return wait_response(wait)
         otp.issue(user, OneTimeCode.EMAIL, email=email)
         request.session[PENDING_EMAIL] = email
         return Response({"sent_to": otp.mask_email(email)})
@@ -369,7 +414,10 @@ class EmailVerifyView(APIView):
         try:
             with transaction.atomic():
                 if not otp.verify(user, OneTimeCode.EMAIL, request.data.get("code", ""), email=email):
-                    return _bad("That code is wrong or has expired.")
+                    if otp.spent(user, OneTimeCode.EMAIL):
+                        return _bad("Too many wrong tries for this code. Start the email change again for a new one.",
+                                    reason="otp_spent")
+                    return _bad("That code is wrong or has expired. Check the newest email.", reason="otp_invalid")
                 old = user.email
                 user.email, user.email_verified = email, True
                 user.save(update_fields=["email", "email_verified"])
@@ -492,7 +540,7 @@ class UserViewSet(viewsets.ModelViewSet):
         if not user.email:
             return _bad("This user has no email address.")
         if wait := otp.can_send(user, OneTimeCode.RESET):
-            return _bad(wait, status.HTTP_429_TOO_MANY_REQUESTS)
+            return wait_response(wait)
         otp.issue(user, OneTimeCode.RESET)
         log_action(request.user, "user.reset_sent", user, request=request)
         return Response({"detail": f"Reset code sent to {otp.mask_email(user.email)}."})

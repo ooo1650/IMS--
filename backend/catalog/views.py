@@ -13,7 +13,7 @@ from rest_framework.response import Response
 
 from accounts.permissions import HasBranchPerm, can
 from admin_extras.models import log_action
-from ims.api import OrgFieldsMixin, OrgScopedMixin
+from ims.api import MAX_PAISA, OrgFieldsMixin, OrgScopedMixin, to_int
 from inventory.models import InventoryItem
 
 from .images import image_urls, remove_if_unused, store_image
@@ -276,9 +276,7 @@ class ProductViewSet(OrgScopedMixin, viewsets.ModelViewSet):
         if price in (None, ""):
             BranchPrice.objects.filter(branch=branch, product=product).delete()
         else:
-            price = int(price)
-            if price < 0:
-                raise serializers.ValidationError({"sale_price_paisa": "Must be >= 0"})
+            price = to_int(price, "sale_price_paisa", min_value=0, max_value=MAX_PAISA)
             BranchPrice.objects.update_or_create(branch=branch, product=product, defaults={"sale_price_paisa": price})
         log_action(request.user, "product.branch_price", product, branch, request, price=price)
         return Response(self.get_serializer(self.get_queryset().get(pk=product.pk)).data)

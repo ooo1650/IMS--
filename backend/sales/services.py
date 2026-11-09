@@ -9,6 +9,7 @@
 * every invoice is full (Rule 17) or abbreviated (Rule 18) — abbreviated is
   refused above the limit and replaced by full when the buyer gives a PAN.
 """
+import logging
 from dataclasses import dataclass, field
 from datetime import timedelta
 from decimal import Decimal
@@ -31,10 +32,13 @@ from inventory.services import lock_items
 from . import fonepay
 from .models import (
     DIGITAL_METHODS, CashierShift, CreditNote, CreditNoteLine, DebitNote, DocumentSequence, Payment, PrintLog,
-    Receipt, Sale, SaleLine,
+    Customer, Receipt, Sale, SaleLine,
 )
 from .numbering import allocate, claim_offline, fiscal_year_for, local_today, series_mode
 from .pricing import NONE, LineInput, allocate as allocate_shares, compute_totals, rate_fraction, round_half_up
+
+
+log = logging.getLogger("ims.sales")
 
 
 class CheckoutError(ValidationError):
@@ -96,20 +100,36 @@ def digital_discount_bp(method, org):
     return cfg.digital_vat_discount_bp if method in methods else 0
 
 
+def customer_allowed(branch, customer_id):
+    """A sale may only name a customer of its own business: this branch's or a
+    business-wide one."""
+    from django.db.models import Q
+
+    return Customer.objects.filter(pk=customer_id, org_id=branch.org_id).filter(
+        Q(branch=branch) | Q(branch__isnull=True)).exists()
+
+
 def price_cart(branch, cart: Cart, rounding=1, use_client_prices=False, on_date=None, digital_bp=0):
+    if cart.customer_id is not None and not customer_allowed(branch, cart.customer_id):
+        if not use_client_prices:
+            raise CheckoutError("Unknown customer")
+        cart.customer_id = None  # offline sync: the sale stands, the bad link is dropped (and flagged)
+        cart.extra["customer_dropped"] = True
     ids = [l.product_id for l in cart.lines]
     # Only this branch's business's products: an ID from another business is "unknown".
     products = Product.objects.filter(org_id=branch.org_id).select_related("tax_category").in_bulk(ids)
     missing = set(ids) - set(products)
     if missing:
-        raise CheckoutError(f"Unknown products: {sorted(missing)}")
+        raise CheckoutError(f"{len(missing)} item(s) in the cart are no longer in this business's catalog. "
+                            "Remove them from the cart (or reload the page to refresh the catalog) and try again.")
     prices = effective_prices(branch, ids)
     on_date = on_date or local_today(branch)
     inputs, price_drift = [], False
     for l in cart.lines:
         p = products[l.product_id]
         if not use_client_prices and (p.archived_at or not p.is_active):
-            raise CheckoutError(f"{p.sku} is archived and cannot be sold")
+            raise CheckoutError(f"{p.name} ({p.sku}) has been archived and can't be sold. Remove it from the cart, "
+                                "or ask a manager to restore it in Products.")
         rate, kind, levy_type, levy_rate, _ = tax_profile(p, on_date)
         price, incl = prices[p.id], p.tax_inclusive
         if use_client_prices and l.unit_price_paisa is not None:
@@ -146,7 +166,7 @@ def decide_invoice_type(cart: Cart, total_paisa, org):
     return Sale.FULL if cart.buyer_name.strip() and cart.buyer_address.strip() else Sale.ABBREVIATED
 
 
-def check_discount_authority(branch, cashier, totals, cart, offline=False):
+def check_discount_authority(branch, cashier, totals, cart, offline=False, request=None):
     """Discounts above the cashier limit need discount.approve — the cashier's
     own, or a manager typing credentials at the register."""
     gross = sum(l.gross_paisa for l in totals.lines)
@@ -159,13 +179,19 @@ def check_discount_authority(branch, cashier, totals, cart, offline=False):
     from rest_framework.exceptions import PermissionDenied
 
     try:
-        return verify_approver(branch, cart.approver_username, cart.approver_password, "discount.approve")
+        return verify_approver(branch, cart.approver_username, cart.approver_password, "discount.approve",
+                               request=request)
     except PermissionDenied as e:
-        raise CheckoutError(f"Discount over {limit_bp / 100:.1f}% needs manager approval: {e.detail}")
+        err = CheckoutError(f"Discount over {limit_bp / 100:.1f}% needs manager approval: {e.detail}")
+        err.failed_login_key = getattr(e, "failed_login_key", None)
+        raise err from e
 
 
-def open_shift_for(register):
-    return CashierShift.objects.filter(register=register, status=CashierShift.OPEN).first()
+def open_shift_for(register, lock=False):
+    qs = CashierShift.objects.filter(register=register, status=CashierShift.OPEN)
+    if lock:
+        qs = qs.select_for_update(of=("self",))
+    return qs.first()
 
 
 def _write_lines(sale, cart, products, inputs, totals):
@@ -246,15 +272,26 @@ def _issue(sale, invoice_type, now=None, transaction_at=None, offline_seq=None, 
 
 
 
-def _idempotent(key, fn):
+def _existing(key, branch):
+    """The sale already made with this key, if it is this branch's. A key used
+    at another branch (or business) is refused, never answered with that sale."""
     existing = Sale.objects.filter(idempotency_key=key).first()
+    if existing is None:
+        return None
+    if existing.branch_id != branch.id:
+        raise CheckoutError("This idempotency key has already been used; retry with a new one")
+    return existing
+
+
+def _idempotent(key, fn, branch):
+    existing = _existing(key, branch)
     if existing:
         return existing, False
     try:
         return fn(), True
     except IntegrityError:
         # A concurrent retry with the same key won the race.
-        existing = Sale.objects.filter(idempotency_key=key).first()
+        existing = _existing(key, branch)
         if existing:
             return existing, False
         raise
@@ -292,14 +329,15 @@ def checkout_cash(*, branch, register, cashier, cart: Cart, tendered_paisa, idem
         raise CheckoutError("Use the FonePay QR flow for FonePay")
 
     def run():
-        shift = open_shift_for(register)
-        if shift is None:
-            raise CheckoutError("Open a cashier shift on this register first")
         with transaction.atomic():
+            # Locked so the shift can't close under this sale (close_shift takes the same lock).
+            shift = open_shift_for(register, lock=True)
+            if shift is None:
+                raise CheckoutError("Open a cashier shift on this register first")
             rounding = cash_rounding(branch) if method == Payment.CASH else 1
             products, inputs, totals, _ = price_cart(branch, cart, rounding, digital_bp=digital_discount_bp(method, branch.org))
             invoice_type = decide_invoice_type(cart, totals.total_paisa, branch.org)
-            approver = check_discount_authority(branch, cashier, totals, cart)
+            approver = check_discount_authority(branch, cashier, totals, cart, request=request)
             tendered = tendered_paisa if method == Payment.CASH else totals.total_paisa
             if tendered < totals.total_paisa:
                 raise CheckoutError("Tendered cash is less than the total")
@@ -321,7 +359,7 @@ def checkout_cash(*, branch, register, cashier, cart: Cart, tendered_paisa, idem
                        invoice=sale.receipt_number, invoice_type=invoice_type)
             return sale
 
-    return _idempotent(idempotency_key, run)
+    return _idempotent(idempotency_key, run, branch)
 
 
 # --- 10.2 FonePay QR -----------------------------------------------------------
@@ -339,7 +377,7 @@ def initiate_fonepay(*, branch, register, cashier, cart: Cart, idempotency_key, 
             products, inputs, totals, _ = price_cart(branch, cart, rounding=1,
                                                      digital_bp=digital_discount_bp(Payment.FONEPAY, branch.org))
             decide_invoice_type(cart, totals.total_paisa, branch.org)  # fail fast before the customer pays
-            approver = check_discount_authority(branch, cashier, totals, cart)
+            approver = check_discount_authority(branch, cashier, totals, cart, request=request)
             on_hand = {i.product_id: i for i in InventoryItem.objects.filter(
                 branch=branch, product_id__in=[l.product_id for l in cart.lines])}
             short = [{"sku": products[l.product_id].sku, "name": products[l.product_id].name,
@@ -369,7 +407,7 @@ def initiate_fonepay(*, branch, register, cashier, cart: Cart, idempotency_key, 
         sale._qr_payload = qr.qr_payload
         return sale
 
-    return _idempotent(idempotency_key, run)
+    return _idempotent(idempotency_key, run, branch)
 
 
 def _cart_of(sale):
@@ -408,7 +446,15 @@ def commit_fonepay(sale_id, status: fonepay.StatusResult, by=None):
         sale.stock_conflict = _decrement_stock(sale, sale.cashier, strict=False)
         sale.status, sale.paid_at = Sale.PAID, timezone.now()
         sale.save(update_fields=["stock_conflict", "status", "paid_at"])
-        _issue(sale, decide_invoice_type(_cart_of(sale), sale.total_paisa, sale.branch.org), transaction_at=sale.opened_at)
+        try:
+            invoice_type = decide_invoice_type(_cart_of(sale), sale.total_paisa, sale.branch.org)
+        except CheckoutError:
+            # Invoice rules changed while the QR was open, but the customer has paid:
+            # issue a full invoice with what we have and send it for review.
+            invoice_type = Sale.FULL
+            sale.needs_review = True
+            sale.save(update_fields=["needs_review"])
+        _issue(sale, invoice_type, transaction_at=sale.opened_at)
         log_action(by, "sale.paid", sale, sale.branch, total=sale.total_paisa, method="fonepay",
                    stock_conflict=sale.stock_conflict, invoice=sale.receipt_number)
         return sale
@@ -428,11 +474,21 @@ def expire_open_sales(now=None):
     """§10.5 — run every minute from cron (``manage.py expire_open_sales``)."""
     now = now or timezone.now()
     done = []
-    for sale in Sale.objects.filter(status=Sale.OPEN, expires_at__lt=now):
-        sale = refresh_fonepay_status(sale)  # one final poll
-        if sale.status == Sale.OPEN:
-            sale = commit_fonepay(sale.id, fonepay.StatusResult(fonepay.EXPIRED))
-        done.append(sale)
+    for sale in Sale.objects.filter(status=Sale.OPEN, expires_at__lt=now).select_related("branch"):
+        try:
+            try:
+                sale = refresh_fonepay_status(sale)  # one final poll
+            except Exception:
+                # FonePay unreachable: leave it open and ask again next minute rather than
+                # expiring a sale the customer may have paid.
+                log.exception("final FonePay poll failed for sale %s", sale.id)
+                continue
+            if sale.status == Sale.OPEN:
+                sale = commit_fonepay(sale.id, fonepay.StatusResult(fonepay.EXPIRED))
+            done.append(sale)
+        except Exception:
+            # One bad sale must not stop expiry for every other sale and business.
+            log.exception("expiring sale %s failed", sale.id)
     return done
 
 
@@ -461,7 +517,8 @@ def sync_offline_sale(*, branch, register, cashier, cart: Cart, tendered_paisa, 
             else:
                 needs_buyer = False
             approver = check_discount_authority(branch, cashier, totals, cart, offline=True)
-            needs_review = price_drift or approver == "offline" or offline_discount_approved or needs_buyer
+            needs_review = (price_drift or approver == "offline" or offline_discount_approved or needs_buyer
+                            or cart.extra.get("customer_dropped", False))
             if client_total_paisa is not None and client_total_paisa != totals.total_paisa:
                 needs_review = True
             sale = Sale.objects.create(
@@ -487,7 +544,7 @@ def sync_offline_sale(*, branch, register, cashier, cart: Cart, tendered_paisa, 
                        provisional_ref=provisional_ref, invoice=sale.receipt_number)
             return sale
 
-    return _idempotent(idempotency_key, run)
+    return _idempotent(idempotency_key, run, branch)
 
 
 # --- Cancel, conflicts, returns, debit notes ----------------------------------
@@ -565,6 +622,8 @@ def create_return(*, sale, register, cashier, items, reason, refund_method="cash
         raise ValidationError("Only paid (not cancelled) invoices can be returned")
     with transaction.atomic():
         sale = Sale.objects.select_for_update(of=("self",)).select_related("branch").get(pk=sale.pk)
+        if sale.status != Sale.PAID:  # re-checked under the lock: a cancel may have just committed
+            raise ValidationError("Only paid (not cancelled) invoices can be returned")
         lines = {l.id: l for l in sale.lines.prefetch_related("returns")}
         # A digital-payment VAT discount reduced the amount paid; spread it over
         # lines by VAT so refunds never exceed what was paid.
@@ -593,9 +652,12 @@ def create_return(*, sale, register, cashier, items, reason, refund_method="cash
             from rest_framework.exceptions import PermissionDenied
 
             try:
-                approver = verify_approver(sale.branch, approver_username, approver_password, "returns.approve")
+                approver = verify_approver(sale.branch, approver_username, approver_password, "returns.approve",
+                                           request=request)
             except PermissionDenied as e:
-                raise ValidationError(f"Returns over NPR {threshold / 100:,.2f} need manager approval: {e.detail}")
+                err = ValidationError(f"Returns over NPR {threshold / 100:,.2f} need manager approval: {e.detail}")
+                err.failed_login_key = getattr(e, "failed_login_key", None)
+                raise err from e
         elif total > threshold:
             approver = cashier
 
@@ -645,10 +707,14 @@ def create_debit_note(*, sale, by, taxable_paisa, reason, tax_rate=None, request
         raise ValidationError("Debit note amount must be positive")
     if sale.status != Sale.PAID or not sale.receipt_number:
         raise ValidationError("Debit notes can only be raised against issued, paid invoices")
-    if tax_rate is None:
-        rates = {l.tax_rate for l in sale.lines.all()}
-        tax_rate = max(rates) if rates else Decimal("0")
-    tax_rate = Decimal(str(tax_rate))
+    if tax_rate in (None, ""):
+        raise ValidationError("Choose the VAT rate for the debit note")
+    try:
+        tax_rate = Decimal(str(tax_rate))
+    except ArithmeticError:
+        raise ValidationError("VAT rate must be a number")
+    if tax_rate < 0 or tax_rate > 100:
+        raise ValidationError("VAT rate must be between 0 and 100")
     with transaction.atomic():
         today = local_today(sale.branch)
         fy = fiscal_year_for(today)
@@ -716,13 +782,16 @@ def expected_cash(shift):
 
 
 def close_shift(shift, by, counted_cash_paisa, offline=False, request=None):
-    if shift.status != CashierShift.OPEN:
-        raise ValidationError("Shift is already closed")
-    shift.expected_cash_paisa = expected_cash(shift)
-    shift.counted_cash_paisa = counted_cash_paisa
-    shift.variance_paisa = counted_cash_paisa - shift.expected_cash_paisa
-    shift.status, shift.closed_at, shift.closed_offline = CashierShift.CLOSED, timezone.now(), offline
-    shift.save()
+    with transaction.atomic():
+        # Same lock checkout takes: no sale can attach while the count is taken.
+        shift = CashierShift.objects.select_for_update(of=("self",)).get(pk=shift.pk)
+        if shift.status != CashierShift.OPEN:
+            raise ValidationError("Shift is already closed")
+        shift.expected_cash_paisa = expected_cash(shift)
+        shift.counted_cash_paisa = counted_cash_paisa
+        shift.variance_paisa = counted_cash_paisa - shift.expected_cash_paisa
+        shift.status, shift.closed_at, shift.closed_offline = CashierShift.CLOSED, timezone.now(), offline
+        shift.save()
     log_action(by, "shift.closed", shift, shift.branch, request, expected=shift.expected_cash_paisa,
                counted=counted_cash_paisa, variance=shift.variance_paisa)
     return shift

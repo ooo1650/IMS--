@@ -2,9 +2,9 @@
  * sync dashboard, turnover meter, settings and effective-dated tax rates. */
 import { useState } from 'react'
 import { useAuth } from '../auth'
-import { Badge, Button, ErrorBox, Field, Modal, PageHead, Status, Tabs, fmtDate, useLoad, Guide } from '../components/ui'
+import { Badge, Button, ErrorBox, Field, fmtDate, Guide, Modal, MoneyInput, PageHead, QtyInput, Status, Tabs, useLoad } from '../components/ui'
 import { api, qs } from '../lib/api'
-import { npr, plain, toPaisa, toRupeesInput } from '../lib/money'
+import { moneyProblem, npr, plain, toPaisa, toRupeesInput } from '../lib/money'
 
 interface FiscalYears { current: string; current_month: number; years: string[]; months: { no: number; name: string }[]; today_bs: string }
 interface Column { key: string; label: string; kind: 'text' | 'int' | 'money' | 'date' }
@@ -251,7 +251,7 @@ function Settings() {
   if (!data) return <ErrorBox error={error} />
   const set = (patch: Partial<SettingsData>) => setData({ ...data, ...patch })
   const money = (k: keyof SettingsData) => (
-    <input value={toRupeesInput(Number(data[k]))} onChange={(e) => { const p = toPaisa(e.target.value); if (p != null) set({ [k]: p } as Partial<SettingsData>) }} />
+    <RupeeSetting paisa={Number(data[k])} onChange={(p) => set({ [k]: p } as Partial<SettingsData>)} />
   )
   const save = async () => {
     setErr(null)
@@ -320,7 +320,7 @@ function Settings() {
           <Field label="Password" hint={data.cbms_password_set ? 'Stored (encrypted). Type to replace — e.g. after a portal password change.' : 'Not set'}>
             <input type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
           </Field>
-          <Field label="Real-time window (minutes)"><input type="number" value={data.cbms_realtime_window_minutes} onChange={(e) => set({ cbms_realtime_window_minutes: Number(e.target.value) })} /></Field>
+          <Field label="Real-time window (minutes)"><QtyInput className="" min={1} max={1440} value={data.cbms_realtime_window_minutes} onChange={(n) => set({ cbms_realtime_window_minutes: n })} /></Field>
         </div>
       </section>
       <section className="card">
@@ -414,5 +414,23 @@ function TaxForm({ cat, onClose, onSaved }: { cat: TaxCat | null; onClose: () =>
         }}>Save</Button>
       </div>
     </Modal>
+  )
+}
+
+
+/** A rupee setting: typed as text (re-formatting while typing made "12" impossible
+ *  to enter), saved into the form only when valid, with the reason shown when not. */
+function RupeeSetting({ paisa, onChange }: { paisa: number; onChange: (paisa: number) => void }) {
+  const [raw, setRaw] = useState(toRupeesInput(paisa))
+  const problem = moneyProblem(raw) ?? (raw.trim() === '' ? 'Enter an amount' : null)
+  return (
+    <>
+      <MoneyInput value={raw} onChange={(v) => {
+        setRaw(v)
+        const p = toPaisa(v)
+        if (p != null) onChange(p)
+      }} onBlur={() => { if (!problem) setRaw(toRupeesInput(toPaisa(raw) ?? paisa)) }} />
+      {problem && <span className="field-hint bad" role="alert">{problem}</span>}
+    </>
   )
 }

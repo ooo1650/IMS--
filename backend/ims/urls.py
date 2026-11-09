@@ -128,3 +128,8 @@ if settings.IMS_SERVE_MEDIA and not settings.DEBUG:
 else:
     # Dev only (a no-op when DEBUG is off): nginx serves /media/ in production.
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# API requests get JSON errors the app can show (ims/errors.py); other paths keep Django's pages.
+handler400 = "ims.errors.bad_request"
+handler404 = "ims.errors.not_found"
+handler500 = "ims.errors.server_error"

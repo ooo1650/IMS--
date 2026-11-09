@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../auth'
 import { Icon } from '../components/Icon'
 import { Availability, ProductDetail } from '../components/ProductDetail'
-import { Badge, Button, ErrorBox, Field, LoadMore, Modal, PageHead, Tabs, fmtDate, useLoad, usePaged, Guide } from '../components/ui'
+import { Badge, Button, ErrorBox, Field, fmtDate, Guide, LoadMore, Modal, PageHead, QtyInput, Tabs, useLoad, usePaged } from '../components/ui'
 import { api, qs } from '../lib/api'
 import { npr } from '../lib/money'
 import { Tile } from './Dashboard'
@@ -151,10 +151,10 @@ export default function Inventory() {
 
 function AdjustModal({ item, onClose, onDone }: { item: Item; onClose: () => void; onDone: () => void }) {
   const [dir, setDir] = useState<'in' | 'out'>('out')
-  const [qty, setQty] = useState('1')
+  const [qty, setQty] = useState(1)
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const n = parseInt(qty, 10)
+  const n = qty
   return (
     <Modal title={`Adjust ${item.name}`} onClose={onClose}>
       <ErrorBox error={error} />
@@ -166,7 +166,7 @@ function AdjustModal({ item, onClose, onDone }: { item: Item; onClose: () => voi
             <option value="in">Add (found, correction)</option>
           </select>
         </Field>
-        <Field label="Quantity"><input type="number" min={1} value={qty} onChange={(e) => setQty(e.target.value)} /></Field>
+        <Field label="Quantity"><QtyInput className="" min={1} value={qty} onChange={setQty} /></Field>
       </div>
       <Field label="Reason"><input value={reason} onChange={(e) => setReason(e.target.value)} /></Field>
       <div className="modal-foot">
@@ -197,8 +197,8 @@ function SettingsModal({ item, onClose, onDone }: { item: Item; onClose: () => v
     <Modal title={`${item.name} — stock settings`} onClose={onClose}>
       <ErrorBox error={error} />
       <div className="form-grid">
-        <Field label="Reorder point"><input type="number" min={0} value={f.reorder_point} onChange={(e) => setF({ ...f, reorder_point: Number(e.target.value) })} /></Field>
-        <Field label="Reorder quantity"><input type="number" min={0} value={f.reorder_qty} onChange={(e) => setF({ ...f, reorder_qty: Number(e.target.value) })} /></Field>
+        <Field label="Reorder point"><QtyInput className="" min={0} value={f.reorder_point} onChange={(n) => setF({ ...f, reorder_point: n })} /></Field>
+        <Field label="Reorder quantity"><QtyInput className="" min={0} value={f.reorder_qty} onChange={(n) => setF({ ...f, reorder_qty: n })} /></Field>
       </div>
       <label className="check">
         <input type="checkbox" checked={f.allow_negative} onChange={(e) => setF({ ...f, allow_negative: e.target.checked })} />

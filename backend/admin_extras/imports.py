@@ -1,4 +1,4 @@
-"""CSV import of products and opening stock (§16).
+"""CSV or Excel (.xlsx) import of products and opening stock (§16).
 
 Both imports are idempotent and support dry-run: the same file twice never
 doubles stock (opening stock is keyed on branch + SKU) and products upsert on
@@ -37,11 +37,63 @@ def rupees_to_paisa(raw, field):
     return int(paisa)
 
 
+MAX_ROWS = 50_000  # an .xlsx is compressed: cap what a 10 MB upload can expand to
+
+
+class _Sheet:
+    """The first worksheet of an .xlsx, read like csv.DictReader: ``fieldnames``
+    from the first row, then one dict of strings per non-empty row."""
+
+    def __init__(self, file_bytes):
+        from openpyxl import load_workbook
+
+        try:
+            wb = load_workbook(io.BytesIO(file_bytes), read_only=True, data_only=True)
+        except Exception:
+            raise ValueError("This isn't a readable Excel (.xlsx) file")
+        rows = wb.worksheets[0].iter_rows(values_only=True)
+        self.fieldnames = [_cell(h).lower() for h in next(rows, ())]
+        # Read it all now, so a bad file is one clear error rather than a failure mid-import.
+        self._data = []
+        for values in rows:
+            cells = [_cell(v) for v in values]
+            if not any(cells):
+                continue  # Excel keeps formatted-but-empty rows
+            if len(self._data) >= MAX_ROWS:
+                raise ValueError(f"More than {MAX_ROWS:,} rows: split the file")
+            self._data.append({k: v for k, v in zip(self.fieldnames, cells) if k})
+        wb.close()
+
+    def __iter__(self):
+        return iter(self._data)
+
+
+def _cell(v):
+    """Excel stores 40 as 40.0 and 850.50 as 850.5: whole numbers lose the
+    ".0" (quantities, barcodes typed as numbers), the rest keep their digits."""
+    if v is None:
+        return ""
+    if isinstance(v, bool):
+        return "yes" if v else "no"
+    if isinstance(v, float):
+        return str(int(v)) if v.is_integer() else repr(v)
+    return str(v).strip()
+
+
 def _rows(file_bytes):
-    text = file_bytes.decode("utf-8-sig")
+    if file_bytes[:4] == b"PK\x03\x04":  # .xlsx is a zip file
+        return _Sheet(file_bytes)
+    try:
+        text = file_bytes.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        raise ValueError("Save the file as CSV (UTF-8) or Excel (.xlsx)")
     reader = csv.DictReader(io.StringIO(text))
     reader.fieldnames = [(f or "").strip().lower() for f in reader.fieldnames or []]
     return reader
+
+
+def _file_error(e):
+    return {"ok": False, "errors": [{"row": 1, "error": str(e)}], "rows": []}
 
 
 def _bool(raw, default=True):
@@ -52,7 +104,10 @@ def _bool(raw, default=True):
 
 def import_products(org, file_bytes, dry_run=True):
     """Products into one business's catalog (SKUs and barcodes are per business)."""
-    reader = _rows(file_bytes)
+    try:
+        reader = _rows(file_bytes)
+    except ValueError as e:
+        return _file_error(e)
     missing = {"sku", "name", "price"} - set(reader.fieldnames)
     if missing:
         return {"ok": False, "errors": [{"row": 1, "error": f"Missing columns: {', '.join(sorted(missing))}"}],
@@ -113,7 +168,10 @@ def import_products(org, file_bytes, dry_run=True):
 
 
 def import_opening_stock(branch, file_bytes, by, dry_run=True):
-    reader = _rows(file_bytes)
+    try:
+        reader = _rows(file_bytes)
+    except ValueError as e:
+        return _file_error(e)
     missing = {"sku", "qty"} - set(reader.fieldnames)
     if missing:
         return {"ok": False, "errors": [{"row": 1, "error": f"Missing columns: {', '.join(sorted(missing))}"}],

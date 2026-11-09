@@ -297,7 +297,6 @@ def audit_trail(period, branches, org_wide=False):
 
 def turnover(branches):
     """FY-to-date turnover (ex-VAT, net of returns) vs CBMS and VAT thresholds."""
-    from tenancy.models import Branch
 
     period = Period()
     sb = sales_book(period, branches)["totals"]

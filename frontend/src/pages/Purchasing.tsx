@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { useAuth } from '../auth'
 import { Icon, initials } from '../components/Icon'
 import { ProductPicker } from '../components/ProductPicker'
-import { Button, ErrorBox, Field, LoadMore, Modal, PageHead, Status, Tabs, fmtDate, useLoad, usePaged, Guide } from '../components/ui'
+import { Button, ErrorBox, Field, fmtDate, Guide, LoadMore, Modal, PageHead, QtyInput, Status, Tabs, useLoad, usePaged } from '../components/ui'
 import { api, qs } from '../lib/api'
-import { npr, toPaisa, toRupeesInput } from '../lib/money'
+import { moneyProblem, npr, toPaisa, toRupeesInput } from '../lib/money'
 
 interface POLine { id: number; product: number; sku: string; name: string; qty_ordered: number; qty_received: number; unit_cost_paisa: number }
 interface PO {
@@ -81,7 +81,7 @@ function POForm({ po, onClose, onSaved }: { po: PO | null; onClose: () => void; 
         supplier: Number(sup), expected_at: expected || null, note,
         lines: lines.map((l) => {
           const c = toPaisa(l.cost)
-          if (c == null) throw new Error(`Invalid cost for ${l.name}`)
+          if (c == null) throw new Error(`Cost for ${l.name}: ${moneyProblem(l.cost) ?? 'enter the cost per unit'}`)
           return { product: l.product, qty_ordered: l.qty, unit_cost_paisa: c }
         }),
       }
@@ -115,7 +115,7 @@ function POForm({ po, onClose, onSaved }: { po: PO | null; onClose: () => void; 
           {lines.map((l, i) => (
             <tr key={l.product}>
               <td>{l.name}</td>
-              <td className="num"><input className="input-sm" type="number" min={1} value={l.qty} onChange={(e) => setLines(lines.map((x, j) => (j === i ? { ...x, qty: Math.max(1, Number(e.target.value)) } : x)))} /></td>
+              <td className="num"><QtyInput min={1} aria-label={`Quantity of ${l.name}`} value={l.qty} onChange={(n) => setLines(lines.map((x, j) => (j === i ? { ...x, qty: n } : x)))} /></td>
               <td className="num"><input className="input-sm" value={l.cost} onChange={(e) => setLines(lines.map((x, j) => (j === i ? { ...x, cost: e.target.value } : x)))} /></td>
               <td><Button kind="ghost" onClick={() => setLines(lines.filter((_, j) => j !== i))}>Remove</Button></td>
             </tr>
@@ -167,8 +167,8 @@ function PODetail({ po: initial, manage, onEdit, onClose }: { po: PO; manage: bo
               {receiving && (
                 <>
                   <td className="num">
-                    <input className="input-sm" type="number" min={0} max={l.qty_ordered - l.qty_received}
-                      value={row(l).qty} onChange={(e) => setRecv({ ...recv, [l.id]: { ...row(l), qty: e.target.value } })} />
+                    <QtyInput min={0} max={l.qty_ordered - l.qty_received} aria-label={`Quantity received of ${l.name}`}
+                      value={Number(row(l).qty) || 0} onChange={(n) => setRecv({ ...recv, [l.id]: { ...row(l), qty: String(n) } })} />
                   </td>
                   <td className="num">
                     <input className="input-sm" value={row(l).cost} onChange={(e) => setRecv({ ...recv, [l.id]: { ...row(l), cost: e.target.value } })} />
@@ -204,7 +204,8 @@ function PODetail({ po: initial, manage, onEdit, onClose }: { po: PO; manage: bo
         {receiving && (
           <Button kind="primary" onClick={() => {
             const lines = po.lines.map((l) => ({ po_line: l.id, qty: Number(row(l).qty), unit_cost_paisa: toPaisa(row(l).cost) })).filter((l) => l.qty > 0)
-            if (lines.some((l) => l.unit_cost_paisa == null)) return setError('Invalid invoice cost')
+            const badCost = po.lines.find((l) => Number(row(l).qty) > 0 && toPaisa(row(l).cost) == null)
+            if (badCost) return setError(`Invoice cost for ${badCost.name}: ${moneyProblem(row(badCost).cost) ?? 'enter the cost per unit'}`)
             if (!invoice.trim()) return setError('Enter the supplier invoice number (purchase book)')
             void act('receive', { lines, supplier_invoice_ref: invoice, supplier_invoice_date: invoiceDate, is_import: isImport })
           }}>Receive goods</Button>
@@ -275,7 +276,7 @@ function PurchaseReturnForm({ onClose, onSaved }: { onClose: () => void; onSaved
           {lines.map((l, i) => (
             <tr key={l.product}>
               <td>{l.name}</td>
-              <td className="num"><input className="input-sm" type="number" min={1} value={l.qty} onChange={(e) => setLines(lines.map((x, j) => (j === i ? { ...x, qty: Math.max(1, Number(e.target.value)) } : x)))} /></td>
+              <td className="num"><QtyInput min={1} aria-label={`Quantity of ${l.name}`} value={l.qty} onChange={(n) => setLines(lines.map((x, j) => (j === i ? { ...x, qty: n } : x)))} /></td>
               <td><Button kind="ghost" onClick={() => setLines(lines.filter((_, j) => j !== i))}>Remove</Button></td>
             </tr>
           ))}

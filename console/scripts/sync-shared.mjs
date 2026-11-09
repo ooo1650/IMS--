@@ -19,5 +19,5 @@ for (const [from, to] of Object.entries(files)) {
 }
 // The UI kit imports the API helper from its IMS location; point it at the copy.
 const ui = join(root, 'src', 'shared', 'ui.tsx')
-writeFileSync(ui, readFileSync(ui, 'utf8').replaceAll("'../lib/api'", "'./api'"))
+writeFileSync(ui, readFileSync(ui, 'utf8').replaceAll("'../lib/api'", "'./api'").replaceAll("'../lib/money'", "'./money'"))
 console.log('fixed imports in src/shared/ui.tsx')

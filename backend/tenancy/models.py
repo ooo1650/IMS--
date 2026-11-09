@@ -2,6 +2,7 @@ import zoneinfo
 
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.core.validators import MaxValueValidator, MinValueValidator
 
 
 def validate_timezone(value):
@@ -43,9 +44,9 @@ class BusinessRules(models.Model):
     # Cash totals round to this many paisa (100 = nearest rupee); 1 = no rounding.
     cash_rounding_paisa = models.PositiveIntegerField(default=1)
     # Cashiers may discount up to this share of the gross (basis points) without approval.
-    cashier_max_discount_bp = models.PositiveIntegerField(default=500)
+    cashier_max_discount_bp = models.PositiveIntegerField(default=500, validators=[MaxValueValidator(10000)])
     # Returns with a total above this (paisa) need manager approval.
-    return_approval_threshold_paisa = models.BigIntegerField(default=500000)
+    return_approval_threshold_paisa = models.BigIntegerField(default=500000, validators=[MinValueValidator(0), MaxValueValidator(10 ** 13)])
     # Stocktake variances (absolute units) above this require a reason.
     stocktake_variance_threshold = models.PositiveIntegerField(default=5)
     updated_at = models.DateTimeField(auto_now=True)

@@ -31,19 +31,19 @@ cd console && npm install && npm run dev   # operator console on http://localhos
 cd backend && .venv/bin/python manage.py create_platform_admin --username op --email you@x.com   # first operator on a real install
 # demo logins (password demo-pass-123): admin (owner, both businesses), manager, cashier, cashier_pkr, clerk, viewer, manager_brt, manager_shoes; operator (console)
 
-cd backend && .venv/bin/python manage.py test                 # 201 tests, SQLite (4 Postgres-only skipped)
+cd backend && .venv/bin/python manage.py test                 # 243 tests, SQLite (4 Postgres-only skipped)
 .venv/bin/python scripts/test_with_postgres.py                # same suite on embedded Postgres (pgserver) — triggers + concurrency
-cd frontend && npm test && npx tsc -b && npm run build   # 94 tests
+cd frontend && npm test && npx tsc -b && npm run build   # 132 tests; `npm run lint` (oxlint)
 cd console && npx tsc -b && npm run build              # console (src/shared/ = copies from frontend/src: `npm run sync-shared`)
 ```
-Last verified: all green on 2026-10-26 (SQLite and embedded Postgres).
+Last verified: all green on 2026-11-09 (SQLite, embedded Postgres, and a full local Docker staging run incl. backup, restore drill and point-in-time restore). CI: `.github/workflows/ci.yml` (backend on Postgres + ruff, frontend, console, image build). Backend lint: `.venv/bin/ruff check .` (`backend/ruff.toml`).
 Hosted split (Vercel frontends + Render backend + Supabase DB): `docs/DEPLOYMENT.md` last section; `vercel.json` in `frontend/` and `console/`, backend guard `ims/platform_guard.py`.
 Docker: `cp .env.example .env && docker compose up -d --build` (see `docs/DEPLOYMENT.md`; not yet run on a real Docker host).
 
 ## Invariants (don't break these)
 1. **Money is integer paisa** (`BigIntegerField`), never float. Rates are `Decimal`. Pricing math uses exact `Fraction`, rounded half-up only when stored.
 2. **Tax = discount before tax, sum per rate, round once** (`sales/pricing.py`). `frontend/src/lib/pricing.ts` is a line-for-line port. **Change both**, then regenerate the shared vectors with `backend/scripts/gen_pricing_vectors.py`. Check old vectors still match first.
-3. **Lock order**: `InventoryItem` rows are locked sorted by `product_id` (`inventory.services.lock_items`), then the `DocumentSequence` row. Use `select_for_update(of=("self",))` whenever you `select_related` a nullable FK (Postgres rejects FOR UPDATE on outer joins; SQLite hides this).
+3. **Lock order**: the open `CashierShift` row (cash checkout and `close_shift`), then `InventoryItem` rows sorted by `product_id` (`inventory.services.lock_items`), then the `DocumentSequence` row. Use `select_for_update(of=("self",))` whenever you `select_related` a nullable FK (Postgres rejects FOR UPDATE on outer joins; SQLite hides this).
 4. **Gapless numbering** only via `sales.numbering.allocate` (a locked row, never a DB sequence). Default series is **per branch + fiscal year** (`KTM-2083-84-000001`). Prefixes: `CN-`, `DN-`, `PR-`.
 5. **Issued tax documents are append-only**: `compliance.appendonly.AppendOnlyModel` (model guard) + Postgres triggers (`compliance/migrations/0003`). After issue, only cancellation/review columns may change. Never `.update()` an issued sale; seed/backfill code must set values *before* issue (e.g. `checkout_cash(now=...)`).
 6. **Every stock change writes a `StockMovement`**. `quantity_on_hand` is a cache (`manage.py reconcile_stock` verifies it).
@@ -53,10 +53,14 @@ Docker: `cp .env.example .env && docker compose up -d --build` (see `docs/DEPLOY
 10a. **Operator console** (`/api/v1/platform/…`, `admin_extras/platform.py`): `User.is_platform_admin` only, always needs an emailed code, holds no business roles. nginx returns 404 for `/api/v1/platform/` on the IMS host and serves it only on the console server block (`IMS_CONSOLE_ALLOW`).
 10b. **Settings live in the database**: SMTP/sign-in rules in `admin_extras.SystemSettings` (email sent by `admin_extras.mail.DatabaseSmtpBackend`), shop rules in `tenancy.BusinessRules`, tax in `ComplianceSettings`, FonePay in `FonepaySettings`/`FonepayMerchant`. Only secrets and security guard rails stay in `.env`.
 10. **The running app uses the least-privilege DB role `ims_app`** (row access only). Migrations run as the owner, followed by `manage.py ensure_db_roles`. New features must not need DDL or TRUNCATE at runtime.
+11a. **Idempotency keys are per branch**: `sales.services._idempotent` returns an existing sale only to its own branch; a key seen at another branch is refused. Any customer on a sale must be the branch's or business-wide (`customer_allowed`).
+11b. **Manager approval at the register shares the sign-in lockout** (`accounts.permissions.verify_approver` → `ApprovalDenied`; the failed attempt is logged by `ims.api.exception_handler` after the rollback).
 11. **Client IP = `ims.net.client_ip(request)`** (trusted-proxy aware). Never read `X-Forwarded-For` directly.
 12. Service functions raise `django.core.exceptions.ValidationError`; `ims.api.exception_handler` turns it into a 400.
 
 ## Gotchas learned the hard way
+- **Errors the app shows**: every `/api/` error is JSON `{detail, code?, retry_after?}` (Django pages via `ims/errors.py`, nginx 429/413 via `deploy/nginx/snippets/ims-json-errors.conf`). Rate limits return `accounts.views.too_many(...)` so the UI can count down; `ApiError.code`/`.retryAfter` in `frontend/src/lib/api.ts`. Codes are listed in `docs/API.md` (Conventions).
+- **Numbers people type**: backend reads raw request numbers only through `ims.api.to_int(value, field, min_value=…, max_value=…)` (caps `MAX_PAISA`/`MAX_QTY`; refuses decimals, "1,000", "1e3", bools) and model fields carry Min/Max validators; `ims/test_input_numbers.py` fires bad values at every write endpoint (a new numeric input must be added there). DRF wording is rewritten to plain sentences (`ims.api.plain_errors`). Frontend: quantities use `QtyInput`, rupees `MoneyInput` + `moneyProblem()` shown via `<Field error=…>` (never a silently disabled button); parsers in `lib/money.ts` accept "Rs 500", "500/-", "10%" and Nepali digits. Don't add `<input type="number">`.
 - DRF reserves `?format=` → report exports use **`?export=xlsx|pdf|xml|csv`**.
 - Noto Sans Devanagari has **no Latin glyphs**: PDFs use Helvetica plus `documents.mixed()` to wrap Devanagari runs.
 - React StrictMode double-runs effects: anything that POSTs from an effect must be idempotent (FonePay modal keeps one idempotency key per attempt).

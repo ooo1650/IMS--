@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth'
-import { Badge, Button, ErrorBox, Field, LoadMore, Modal, PageHead, Status, Tabs, fmtDate, useLoad, usePaged, Guide } from '../components/ui'
+import { Badge, Button, ErrorBox, Field, fmtDate, Guide, LoadMore, Modal, MoneyInput, PageHead, Status, Tabs, useLoad, usePaged } from '../components/ui'
 import { api, qs } from '../lib/api'
-import { npr, toPaisa } from '../lib/money'
+import { moneyProblem, npr, toPaisa } from '../lib/money'
 import { printResult } from '../lib/printer'
 import type { PosConfig, PrintResult, Sale } from '../lib/types'
 
@@ -85,6 +85,7 @@ function SaleDetail({ id, onClose }: { id: number; onClose: () => void }) {
   const [mode, setMode] = useState<null | 'cancel' | 'debit'>(null)
   const [reason, setReason] = useState('')
   const [amount, setAmount] = useState('')
+  const [rate, setRate] = useState('')
   const [actionError, setActionError] = useState<string | null>(null)
   const register = cfg.data?.registers.find((r) => r.id === sale?.register) ?? undefined
 
@@ -180,7 +181,15 @@ function SaleDetail({ id, onClose }: { id: number; onClose: () => void }) {
           )}
           {mode === 'debit' && (
             <div className="form-grid">
-              <Field label="Additional taxable amount (Rs, excl. VAT)"><input autoFocus value={amount} onChange={(e) => setAmount(e.target.value)} /></Field>
+              <Field label="Additional taxable amount (Rs, excl. VAT)" error={moneyProblem(amount)}><MoneyInput autoFocus value={amount} onChange={setAmount} /></Field>
+              <Field label="VAT rate">
+                <select value={rate} onChange={(e) => setRate(e.target.value)}>
+                  <option value="">Choose…</option>
+                  {[...new Set(['13.00', '0.00', ...sale.lines.map((l) => Number(l.tax_rate).toFixed(2))])].map((r) => (
+                    <option key={r} value={r}>{Number(r)}%</option>
+                  ))}
+                </select>
+              </Field>
               <Field label="Reason"><input value={reason} onChange={(e) => setReason(e.target.value)} /></Field>
             </div>
           )}
@@ -206,7 +215,7 @@ function SaleDetail({ id, onClose }: { id: number; onClose: () => void }) {
             )}
             {sale.status === 'paid' && can('pos.void') && mode === null && (
               <>
-                <Button onClick={() => { setMode('debit'); setReason('') }}>Debit note</Button>
+                <Button onClick={() => { setMode('debit'); setReason(''); setRate('') }}>Debit note</Button>
                 {!sale.credit_notes.length && !sale.debit_notes.length && (
                   <Button kind="danger" onClick={() => { setMode('cancel'); setReason('') }}>Cancel invoice</Button>
                 )}
@@ -218,8 +227,8 @@ function SaleDetail({ id, onClose }: { id: number; onClose: () => void }) {
               </Button>
             )}
             {mode === 'debit' && (
-              <Button kind="primary" disabled={!reason.trim() || !toPaisa(amount)} onClick={() => act(async () => {
-                await api(`sales/${sale.id}/debit-note/`, { body: { taxable_paisa: toPaisa(amount), reason } })
+              <Button kind="primary" disabled={!reason.trim() || !toPaisa(amount) || !rate} onClick={() => act(async () => {
+                await api(`sales/${sale.id}/debit-note/`, { body: { taxable_paisa: toPaisa(amount), reason, tax_rate: rate } })
                 setMode(null)
               })}>
                 Issue debit note

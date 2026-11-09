@@ -1,6 +1,8 @@
 """API tests: happy path, permission-denied and tenant-denied paths (§24)."""
 import uuid
 
+from django.core.cache import cache
+
 from django.test import TestCase
 from rest_framework.test import APIClient
 
@@ -195,6 +197,7 @@ class PosApiTests(TestCase):
         sale_id, prn = r.data["id"], r.data["prn"]
         self.assertEqual(self.c.get(f"/api/v1/pos/sale/{sale_id}/payment-status").data["status"], "open")
         self.c.post(f"/api/v1/pos/fonepay/mock-pay/{prn}", {})
+        cache.clear()  # FonePay is asked at most every 3 s per sale (PaymentStatusView)
         st = self.c.get(f"/api/v1/pos/sale/{sale_id}/payment-status").data
         self.assertEqual(st["status"], "paid")
         self.assertTrue(st["receipt_number"])

@@ -19,12 +19,16 @@ case "${1:-web}" in
     if [ "${IMS_RUN_SCHEDULER:-false}" = "true" ]; then
       python manage.py run_scheduler &
     fi
+    # Threads: a FonePay status poll waits on the bank (up to 10 s); with plain
+    # sync workers three tills waiting on QR payments would block every worker.
     # Only the proxy in front can reach this port, so trusting its forwarded
     # headers is safe; Django reads X-Forwarded-Proto itself. PORT: set by
     # hosts like Render; 8000 in Docker Compose.
     exec gunicorn ims.wsgi:application \
       --bind "0.0.0.0:${PORT:-8000}" \
       --workers "${GUNICORN_WORKERS:-3}" \
+      --worker-class gthread \
+      --threads "${GUNICORN_THREADS:-8}" \
       --timeout 30 \
       --worker-tmp-dir /dev/shm \
       --forwarded-allow-ips '*' \

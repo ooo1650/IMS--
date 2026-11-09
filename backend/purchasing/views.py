@@ -5,7 +5,7 @@ from rest_framework.response import Response
 
 from accounts.permissions import HasBranchPerm, can
 from admin_extras.models import log_action
-from ims.api import BranchScopedMixin
+from ims.api import MAX_PAISA, MAX_QTY, BranchScopedMixin, lines_of, to_int
 
 from . import services
 from .models import GoodsReceipt, PurchaseOrder, PurchaseOrderLine, PurchaseReturn
@@ -134,8 +134,9 @@ class PurchaseOrderViewSet(BranchScopedMixin, mixins.CreateModelMixin, mixins.Up
     @action(detail=True, methods=["post"])
     def receive(self, request, pk=None):
         po = self.get_object()
-        lines = [(l["po_line"], int(l.get("qty") or 0), l.get("unit_cost_paisa"))
-                 for l in request.data.get("lines", [])]
+        lines = [(to_int(l.get("po_line"), "po_line"), to_int(l.get("qty"), "qty", 0, min_value=0, max_value=MAX_QTY),
+                  to_int(l.get("unit_cost_paisa"), "unit_cost_paisa", None, min_value=0, max_value=MAX_PAISA))
+                 for l in lines_of(request)]
         services.receive_goods(po, request.user, lines, request.data.get("supplier_invoice_ref", ""),
                                request.data.get("supplier_invoice_date") or None,
                                bool(request.data.get("is_import")), request)
@@ -170,10 +171,15 @@ class PurchaseReturnViewSet(BranchScopedMixin, mixins.CreateModelMixin, mixins.L
             raise serializers.ValidationError({"supplier": "Unknown supplier"})
         gr = None
         if request.data.get("goods_receipt"):
-            gr = GoodsReceipt.objects.get(pk=request.data["goods_receipt"], po__branch=request.branch)
+            gr = GoodsReceipt.objects.filter(pk=to_int(request.data["goods_receipt"], "goods_receipt"),
+                                             po__branch=request.branch).first()
+            if gr is None:
+                raise serializers.ValidationError({"goods_receipt": "Unknown goods receipt"})
         pr = services.create_purchase_return(
             branch=request.branch, supplier=supplier, by=request.user, goods_receipt=gr,
-            lines=[(l["product"], l["qty"], l.get("unit_cost_paisa")) for l in request.data.get("lines", [])],
+            lines=[(to_int(l.get("product"), "product"), to_int(l.get("qty"), "qty", min_value=1, max_value=MAX_QTY),
+                    to_int(l.get("unit_cost_paisa"), "unit_cost_paisa", None, min_value=0, max_value=MAX_PAISA))
+                   for l in lines_of(request)],
             reason=request.data.get("reason", ""), supplier_note_ref=request.data.get("supplier_note_ref", ""),
             request=request)
         return Response(PurchaseReturnSerializer(pr).data, status=201)

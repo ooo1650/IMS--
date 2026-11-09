@@ -689,3 +689,43 @@ textarea { resize: vertical; }
 .test-login-banner { margin-bottom: 24px; }
 .test-login-banner code { font-family: var(--mono); }
 .login-card .form-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+
+/* Product form */
+.product-form-top { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px; align-items: start; margin-bottom: 8px; }
+.photo-edit-stack { flex-direction: column; align-items: center; gap: 4px; margin: 0; }
+.quick-add { display: flex; gap: 8px; align-items: center; }
+.quick-add > input, .quick-add > select { flex: 1; min-width: 0; }
+.price-figures { display: flex; gap: 24px; flex-wrap: wrap; margin: 0 0 8px; padding: 12px 16px; background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.price-figures div { display: flex; flex-direction: column; gap: 2px; }
+.price-figures dt { font-size: 13px; color: var(--text-muted); }
+.price-figures dd { margin: 0; font-size: 16px; }
+.price-figures dd.bad, .field-hint.bad { color: var(--bad); }
+.form-more { margin: 16px 0 0; border-top: 1px solid var(--border); padding-top: 12px; }
+.form-more summary { cursor: pointer; font-weight: 500; color: var(--text-primary); display: flex; gap: 8px; align-items: baseline; }
+.form-more[open] summary { margin-bottom: 12px; }
+@media (max-width: 640px) { .product-form-top { grid-template-columns: 1fr; } .photo-edit-stack { flex-direction: row; } }
+
+/* Page guides and the getting-started checklist */
+.guide { background: var(--surface-1); border: 1px solid var(--border); border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm); padding: 12px 16px; margin: 0 0 16px; font-size: 14px; color: var(--text-secondary); }
+.guide-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 4px; }
+.guide-head strong { color: var(--text-primary); font-weight: 500; }
+.guide-body ol, .guide-body ul { margin: 4px 0 0; padding-left: 20px; }
+.guide-body li { margin: 2px 0; line-height: 1.5; }
+.guide-body p { margin: 4px 0 0; }
+.guide-reopen { font-size: 13px; margin: 0 0 12px; }
+.setup { margin-bottom: 16px; }
+.setup-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; }
+.setup-list li { text-align: left; display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 8px 0;
+  border-top: 1px solid var(--border); }
+.setup-list li:first-child { border-top: 0; }
+.setup-tick { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--border-strong); display: grid; place-items: center; }
+.setup-list li.done .setup-tick { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.setup-list li.done .setup-title { color: var(--text-muted); }
+.setup-title { color: var(--text-primary); font-weight: 500; }
+.setup-why { display: block; font-size: 13px; color: var(--text-muted); font-weight: 400; }
+
+/* Text that opens something, inside a line of text (sidebar sync count). */
+.link-btn { background: none; border: 0; padding: 0; font: inherit; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 2px; }
+.link-btn:focus-visible { outline: 2px solid var(--accent, #14573f); outline-offset: 2px; border-radius: 4px; }

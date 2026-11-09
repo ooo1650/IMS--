@@ -13,14 +13,14 @@ import { CameraScanner } from '../components/CameraScanner'
 import { DeviceSettings } from '../components/DeviceSettings'
 import { Icon } from '../components/Icon'
 import { ProductThumb } from '../components/ProductThumb'
-import { Badge, Button, ErrorBox, Field, Modal, Status, Guide } from '../components/ui'
+import { Badge, Button, ErrorBox, Field, Guide, Modal, MoneyInput, QtyInput, Status } from '../components/ui'
 import { ApiError, NetworkError, api, qs } from '../lib/api'
 import { patchDisplay, publishDisplay } from '../lib/devices/display'
 import { beep, useScannerInput } from '../lib/devices/scanner'
 import { deviceSettings, useDeviceSettings } from '../lib/devices/settings'
-import { npr, plain, toBasisPoints, toPaisa, toRupeesInput } from '../lib/money'
+import { moneyProblem, npr, percentProblem, plain, toBasisPoints, toPaisa, toRupeesInput } from '../lib/money'
 import {
-  exportQueue, kvGet, kvSet, lastCachedLoginAge, loadCatalog, loadPosConfig, offlineLogin, peekLocalSeq,
+  exportQueue, kvDelete, kvGet, kvSet, lastCachedLoginAge, loadCatalog, loadPosConfig, offlineLogin, peekLocalSeq,
   queueOfflineSale, saveCatalog, savePosConfig, syncLocalSeq,
 } from '../lib/offline'
 import { warmImageCache } from '../lib/images'
@@ -35,6 +35,14 @@ interface CartItem {
   discount_type: DiscountType
   discount_value: number
   discount_reason: string
+}
+
+interface CartDraft {
+  user: string | undefined
+  saved_at: number
+  sale_discount: SaleDiscount
+  buyer: Buyer
+  items: (Omit<CartItem, 'product'> & { product_id: number })[]
 }
 
 interface SaleDiscount {
@@ -60,7 +68,9 @@ interface Done {
 /** The offline catalog has no reorder points, so the tile badge uses a flat threshold. */
 const LOW_STOCK = 10
 const GRID_LIMIT = 60
-const uuid = () => crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`
+// Idempotency keys must be unguessable: randomUUID needs https, getRandomValues works everywhere.
+const uuid = () =>
+  crypto.randomUUID?.() ?? Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('')
 
 /** pos/catalog reply: `products` is left out when the till's `version` is still current. */
 interface CatalogReply { generated_at: string; version: string; unchanged?: boolean; products?: PosProduct[] }
@@ -177,6 +187,41 @@ export default function Pos() {
       return [...c, { product: p, qty, discount_type: 'none', discount_value: 0, discount_reason: '' }]
     })
   }, [])
+  // --- unfinished sale survives a reload ------------------------------------------
+  // A page refresh, a crash or signing in again after the session expired used to
+  // empty a half-scanned basket. The cart is kept on this till (IndexedDB) and
+  // offered back to the same cashier for 12 hours; items no longer in the
+  // catalog are left out and said so.
+  const draftKey = `cartdraft:${branchId}`
+  const restored = useRef(false)
+  const [draftNotice, setDraftNotice] = useState<string | null>(null)
+  useEffect(() => {
+    if (restored.current || !catalog.length) return
+    restored.current = true
+    void kvGet<CartDraft>(draftKey).then((d) => {
+      if (!d || d.user !== me?.username || Date.now() - d.saved_at > 12 * 3600_000 || !d.items.length) return
+      const byId = new Map(catalog.map((p) => [p.id, p]))
+      const items = d.items.flatMap((i) => {
+        const product = byId.get(i.product_id)
+        return product ? [{ ...i, product }] : []
+      })
+      setCart((c) => (c.length ? c : items))
+      setSaleDiscount(d.sale_discount)
+      setBuyer(d.buyer)
+      const dropped = d.items.length - items.length
+      setDraftNotice(`Brought back the unfinished sale (${items.length} item${items.length === 1 ? '' : 's'})` +
+        (dropped ? `; ${dropped} item${dropped === 1 ? ' is' : 's are'} no longer in the catalog and were left out` : ''))
+    })
+  }, [catalog, draftKey, me?.username])
+  useEffect(() => {
+    if (!restored.current) return
+    if (!cart.length) void kvDelete(draftKey)
+    else void kvSet(draftKey, {
+      user: me?.username, saved_at: Date.now(), sale_discount: saleDiscount, buyer,
+      items: cart.map(({ product, ...rest }) => ({ ...rest, product_id: product.id })),
+    } satisfies CartDraft)
+  }, [cart, saleDiscount, buyer, draftKey, me?.username])
+
   const updateLine = (i: number, patch: Partial<CartItem>) => setCart((c) => c.map((x, j) => (j === i ? { ...x, ...patch } : x)))
   const removeLine = (i: number) => setCart((c) => c.filter((_, j) => j !== i))
   const clearSale = () => {
@@ -478,6 +523,14 @@ export default function Pos() {
         {shift && <Button onClick={() => setModal('close-shift')}><Icon name="lock" size={16} /> Close shift</Button>}
       </div>
       <ErrorBox error={error} />
+      {draftNotice && (
+        <div className="alert alert-info" role="status">
+          {draftNotice}.{' '}
+          <button type="button" className="link" onClick={() => setDraftNotice(null)}>OK</button>
+          {' · '}
+          <button type="button" className="link" onClick={() => { clearSale(); setDraftNotice(null) }}>Start a new sale instead</button>
+        </div>
+      )}
       <Guide id="pos" title="Selling at the till">
         <ol>
           <li>Open a shift on this till with the cash in the drawer.</li>
@@ -771,18 +824,23 @@ function DiscountEditor({ value, onSave }: { value: SaleDiscount; onSave: (d: Sa
   const [raw, setRaw] = useState(value.type === 'none' ? '' : value.type === 'percent' ? String(value.value / 100) : toRupeesInput(value.value))
   const [reason, setReason] = useState(value.reason)
   const parsed = type === 'percent' ? toBasisPoints(raw) : toPaisa(raw)
+  const problem = type === 'percent' ? percentProblem(raw) : moneyProblem(raw)
   return (
     <div className="inline-form">
       <select value={type} onChange={(e) => setType(e.target.value as DiscountType)}>
         <option value="percent">%</option>
         <option value="amount">Rs</option>
       </select>
-      <input placeholder={type === 'percent' ? 'e.g. 10' : 'e.g. 50.00'} value={raw} onChange={(e) => setRaw(e.target.value)} />
+      <input placeholder={type === 'percent' ? 'e.g. 10' : 'e.g. 50.00'} inputMode="decimal" value={raw} onChange={(e) => setRaw(e.target.value)}
+        aria-invalid={!!problem} aria-describedby="discount-problem" />
       <input placeholder="Reason (required)" value={reason} onChange={(e) => setReason(e.target.value)} />
       <Button kind="primary" disabled={parsed == null || (!!parsed && !reason.trim())} onClick={() => onSave({ type: parsed ? type : 'none', value: parsed ?? 0, reason: reason.trim() })}>
         Apply
       </Button>
       <Button onClick={() => onSave(NO_DISCOUNT)}>Remove</Button>
+      {(problem || (!!parsed && !reason.trim())) && (
+        <span id="discount-problem" className="field-hint bad" role="alert">{problem ?? 'Add a reason for the discount (it is kept in the audit log)'}</span>
+      )}
     </div>
   )
 }
@@ -844,8 +902,8 @@ function CashModal({ total, needsApproval, online, onClose, onPay }: {
       <div className="big-total">{npr(total)}</div>
       {!online && <div className="alert alert-warn">Offline — this sale will be numbered locally and synced later</div>}
       <ErrorBox error={error} />
-      <Field label="Tendered (Rs)">
-        <input autoFocus inputMode="decimal" value={raw} onChange={(e) => setRaw(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void pay()} />
+      <Field label="Tendered (Rs)" error={moneyProblem(raw) ?? (tendered != null && tendered < total ? `Short by ${npr(total - tendered)}` : null)}>
+        <MoneyInput autoFocus value={raw} onChange={setRaw} onKeyDown={(e) => e.key === 'Enter' && void pay()} />
       </Field>
       <div className="quick">
         {quick.map((q) => (
@@ -1084,8 +1142,8 @@ function OpenShift({ register, online, onOpened }: { register: RegisterCfg; onli
       <p className="muted">Count the drawer and enter the starting cash</p>
       {!online && <div className="alert alert-warn">Opening a shift needs a connection</div>}
       <ErrorBox error={error} />
-      <Field label="Opening cash (Rs)">
-        <input value={raw} onChange={(e) => setRaw(e.target.value)} inputMode="decimal" />
+      <Field label="Opening cash (Rs)" error={moneyProblem(raw)} hint="Enter 0 if the drawer is empty">
+        <MoneyInput value={raw} onChange={setRaw} />
       </Field>
       <Button
         kind="primary"
@@ -1137,8 +1195,8 @@ function CloseShiftModal({ shift, online, onClose, onClosed }: { shift: Shift; o
       ) : (
         <>
           <p className="muted">Count the drawer without looking at the expected figure</p>
-          <Field label="Counted cash (Rs)">
-            <input autoFocus value={raw} onChange={(e) => setRaw(e.target.value)} inputMode="decimal" />
+          <Field label="Counted cash (Rs)" error={moneyProblem(raw)} hint="Enter 0 if the drawer is empty">
+            <MoneyInput autoFocus value={raw} onChange={setRaw} />
           </Field>
           {expected != null && <details className="muted small"><summary>Show expected</summary>{npr(expected)}</details>}
           <div className="modal-foot">
@@ -1289,14 +1347,8 @@ function ReturnModal({ register, threshold, onClose, onDone }: { register: Regis
                   <td className="num">{l.returned_qty}</td>
                   <td className="num">{npr(l.line_total_paisa)}</td>
                   <td className="num">
-                    <input
-                      className="input-sm"
-                      type="number"
-                      min={0}
-                      max={l.qty - l.returned_qty}
-                      value={qty[l.id] ?? 0}
-                      onChange={(e) => setQty({ ...qty, [l.id]: Math.min(l.qty - l.returned_qty, Math.max(0, Number(e.target.value))) })}
-                    />
+                    <QtyInput min={0} max={l.qty - l.returned_qty} aria-label={`Return quantity for ${l.product_name}`}
+                      value={qty[l.id] ?? 0} onChange={(n) => setQty({ ...qty, [l.id]: n })} />
                   </td>
                 </tr>
               ))}

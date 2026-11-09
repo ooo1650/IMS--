@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.core.validators import MinValueValidator
 from django.db.models import Q
 
 from tenancy.models import BranchScopedQuerySet
@@ -10,8 +11,8 @@ class InventoryItem(models.Model):
     product = models.ForeignKey("catalog.Product", on_delete=models.PROTECT, related_name="inventory")
     # Cached; reconciled from StockMovement (see reconcile_stock command).
     quantity_on_hand = models.IntegerField(default=0)
-    reorder_point = models.IntegerField(default=0)
-    reorder_qty = models.IntegerField(default=0)
+    reorder_point = models.IntegerField(default=0, validators=[MinValueValidator(0)])
+    reorder_qty = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     weighted_avg_cost_paisa = models.BigIntegerField(default=0)
     allow_negative = models.BooleanField(default=False)
 

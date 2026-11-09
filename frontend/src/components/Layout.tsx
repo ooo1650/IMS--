@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { useOnline, useQueue } from '../lib/sync'
 import { ErrorBoundary } from './ErrorBoundary'
+import { SyncQueue } from './SyncQueue'
 import { Icon, initials, type IconName } from './Icon'
 
 export interface NavItem {
@@ -41,11 +43,13 @@ export function Layout() {
   const queue = useQueue()
   const pending = queue.length
   const errors = queue.filter((q) => q.status === 'error').length
+  const [showQueue, setShowQueue] = useState(false)
   const items = NAV.filter((n) => n.show(auth))
   const roleLabel = auth.me?.org_role ?? auth.branch?.role ?? ''
 
   return (
     <div className="shell">
+      {showQueue && pending > 0 && <SyncQueue queue={queue} onClose={() => setShowQueue(false)} />}
       <aside className="sidebar">
         <div className="brand">
           <span className="brand-mark" aria-hidden><Icon name="receipt" size={20} /></span>
@@ -97,7 +101,11 @@ export function Layout() {
           <div className="status-line" role="status">
             <span className={`status-dot ${online ? '' : 'off'}`} aria-hidden />
             {online ? 'Online' : 'Offline'}
-            {pending > 0 && <span className={errors ? 'bad' : 'warn'} title="Offline sales waiting to sync">· {pending} queued{errors ? `, ${errors} failed` : ''}</span>}
+            {pending > 0 && (
+              <button type="button" className={`link-btn ${errors ? 'bad' : 'warn'}`} title="Offline sales waiting to sync" onClick={() => setShowQueue(true)}>
+                · {pending} queued{errors ? `, ${errors} failed` : ''}
+              </button>
+            )}
             {auth.offlineSession && <span className="warn">· offline sign-in</span>}
           </div>
           <div className="sidebar-me">

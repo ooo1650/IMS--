@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Prefetch, Q
 from django.http import Http404
@@ -11,7 +12,7 @@ from rest_framework.views import APIView
 
 from accounts.permissions import HasBranchPerm, HasOrgPerm, can, require_branch_perm
 from admin_extras.models import log_action
-from ims.api import BranchScopedMixin
+from ims.api import MAX_PAISA, MAX_QTY, BranchScopedMixin, lines_of, to_int
 from tenancy.models import Branch, Register, rules_for
 
 from compliance import documents
@@ -29,11 +30,15 @@ from .serializers import (
 )
 
 
+FONEPAY_POLL_SECONDS = 3
+
+
 def get_register(request, register_id):
     try:
         return Register.objects.select_related("branch").get(pk=register_id, branch=request.branch, is_active=True)
     except Register.DoesNotExist:
-        raise PermissionDenied("Register does not belong to the active branch")
+        raise PermissionDenied("This register isn't available at the active branch (it may have been switched off). "
+                               "Pick another register, or reload the page.")
 
 
 def sale_detail_qs():
@@ -111,7 +116,7 @@ class ShiftViewSet(BranchScopedMixin, mixins.ListModelMixin, mixins.RetrieveMode
     def open(self, request):
         register = get_register(request, request.data.get("register_id"))
         shift = services.open_shift(request.branch, register, request.user,
-                                    int(request.data.get("opening_cash_paisa", 0)), request)
+                                    to_int(request.data.get("opening_cash_paisa"), "opening_cash_paisa", 0, min_value=0, max_value=MAX_PAISA), request)
         return Response(ShiftSerializer(shift).data, status=201)
 
     @action(detail=True, methods=["post"])
@@ -119,7 +124,7 @@ class ShiftViewSet(BranchScopedMixin, mixins.ListModelMixin, mixins.RetrieveMode
         shift = self.get_object()
         if shift.cashier_id != request.user.id:
             require_branch_perm(request, "reports.view")  # a manager may close someone else's shift
-        shift = services.close_shift(shift, request.user, int(request.data["counted_cash_paisa"]),
+        shift = services.close_shift(shift, request.user, to_int(request.data.get("counted_cash_paisa"), "counted_cash_paisa", min_value=0, max_value=MAX_PAISA),
                                      offline=bool(request.data.get("offline")), request=request)
         return Response(ShiftSerializer(shift).data)
 
@@ -169,7 +174,10 @@ class PaymentStatusView(APIView):
         sale = Sale.objects.for_branch(request.branch).filter(pk=pk).first()
         if sale is None:
             raise Http404
-        sale = services.refresh_fonepay_status(sale, request.user)
+        # Ask FonePay at most once every few seconds per sale, however many
+        # tabs or tills poll; in between, answer from the database.
+        if cache.add(f"fonepay-poll:{sale.pk}", 1, timeout=FONEPAY_POLL_SECONDS):
+            sale = services.refresh_fonepay_status(sale, request.user)
         payment = sale.payments.filter(method=Payment.FONEPAY).first()
         return Response({
             "sale_id": sale.id, "status": sale.status, "payment_status": payment.status if payment else None,
@@ -212,7 +220,7 @@ class FonepayMockPayView(APIView):
         if payment is None:
             raise Http404
         paid = request.data.get("paid_paisa")
-        fonepay.MockFonepayGateway().simulate_payment(prn, int(paid) if paid else None,
+        fonepay.MockFonepayGateway().simulate_payment(prn, to_int(paid, "paid_paisa") if paid else None,
                                                       fail=bool(request.data.get("fail")))
         return Response({"ok": True})
 
@@ -311,7 +319,7 @@ class SaleViewSet(BranchScopedMixin, viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=["post"], url_path="debit-note")
     def debit_note(self, request, pk=None):
         dn = services.create_debit_note(
-            sale=self.get_object(), by=request.user, taxable_paisa=int(request.data.get("taxable_paisa") or 0),
+            sale=self.get_object(), by=request.user, taxable_paisa=to_int(request.data.get("taxable_paisa"), "taxable_paisa", 0, max_value=MAX_PAISA),
             reason=request.data.get("reason", ""), tax_rate=request.data.get("tax_rate"), request=request)
         return Response(DebitNoteSerializer(dn).data, status=201)
 
@@ -330,7 +338,8 @@ class SaleViewSet(BranchScopedMixin, viewsets.ReadOnlyModelViewSet):
     def returns(self, request, pk=None):
         sale = self.get_object()
         register = get_register(request, request.data.get("register_id"))
-        items = [(l["sale_line_id"], int(l["qty"])) for l in request.data.get("lines", []) if int(l.get("qty", 0))]
+        items = [(to_int(l.get("sale_line_id"), "sale_line_id"), qty) for l in lines_of(request)
+                 if (qty := to_int(l.get("qty"), "qty", 0, min_value=0, max_value=MAX_QTY))]
         if not items:
             raise serializers.ValidationError({"detail": "Choose at least one item to return"})
         cn = services.create_return(

@@ -1,1 +1,2 @@
 pgserver==0.1.4  # dev/test only: embedded Postgres
+ruff==0.14.4  # lint (CI): ruff check

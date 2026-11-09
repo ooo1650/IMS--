@@ -65,7 +65,7 @@ class ImportTemplateView(APIView):
 def _upload(request):
     f = request.FILES.get("file")
     if f is None:
-        raise serializers.ValidationError({"file": "Upload a CSV file"})
+        raise serializers.ValidationError({"file": "Upload a CSV or Excel (.xlsx) file"})
     if f.size > 10 * 1024 * 1024:
         raise serializers.ValidationError({"file": "File too large (10MB max)"})
     return f.read(), request.data.get("dry_run", "true").lower() != "false"

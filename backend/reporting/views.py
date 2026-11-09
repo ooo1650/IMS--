@@ -73,7 +73,7 @@ class AnalyticsView(APIView):
                     raise NotFound("Branch not found")
         else:
             if request.branch is None:
-                raise PermissionDenied("No active branch selected, or you have no role at it.")
+                raise PermissionDenied("Choose a branch first (the branch picker in the sidebar). If yours isn't listed, ask an administrator for access.")
             require_branch_perm(request, "reports.view")
             branches = [request.branch]
         return Response(analytics.analytics(branches, days))

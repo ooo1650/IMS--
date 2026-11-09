@@ -74,7 +74,7 @@ class TwoBusinesses(TestCase):
                                             "tendered_paisa": 10 ** 8,
                                             "lines": [{"product_id": self.w.p2.id, "qty": 1}]}, format="json")
         self.assertEqual(r.status_code, 400)
-        self.assertIn("Unknown products", str(r.data))
+        self.assertIn("no longer in this business's catalog", str(r.data))
 
     def test_pos_catalog_and_customers_are_per_business(self):
         Customer.objects.create(org=self.a, name="Ram", phone="1")

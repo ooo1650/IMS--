@@ -725,3 +725,7 @@ textarea { resize: vertical; }
 .setup-list li.done .setup-title { color: var(--text-muted); }
 .setup-title { color: var(--text-primary); font-weight: 500; }
 .setup-why { display: block; font-size: 13px; color: var(--text-muted); font-weight: 400; }
+
+/* Text that opens something, inside a line of text (sidebar sync count). */
+.link-btn { background: none; border: 0; padding: 0; font: inherit; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 2px; }
+.link-btn:focus-visible { outline: 2px solid var(--accent, #14573f); outline-offset: 2px; border-radius: 4px; }
