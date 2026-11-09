@@ -34,6 +34,29 @@ const OFFLINE_MAX_AGE_HOURS = 24
 
 /** ``offline={false}`` (operator console): never cache a password hash on the
  *  device and never sign in from that cache. */
+/**
+ * A hint (not a credential) that this browser was signed in last time, so the
+ * screen shown while the session is checked matches where you'll land: the
+ * app outline if you were signed in, the sign-in page if not. The server's
+ * answer always decides. Browser storage can be blocked, hence the try/catch.
+ */
+const SESSION_HINT = 'ims.signedIn'
+export function wasSignedIn(): boolean {
+  try {
+    return localStorage.getItem(SESSION_HINT) === '1'
+  } catch {
+    return false
+  }
+}
+function rememberSignedIn(on: boolean) {
+  try {
+    if (on) localStorage.setItem(SESSION_HINT, '1')
+    else localStorage.removeItem(SESSION_HINT)
+  } catch {
+    /* private mode: no hint, the plain loading screen is used */
+  }
+}
+
 export function AuthProvider({ children, offline = true }: { children: ReactNode; offline?: boolean }) {
   const [me, setMe] = useState<Me | null>(null)
   const [branchId, setBranchId] = useState<number | null>(null)
@@ -53,6 +76,7 @@ export function AuthProvider({ children, offline = true }: { children: ReactNode
       }
     }
     if (m.active_org_id) void kvSet(`org:${m.id}`, m.active_org_id)
+    rememberSignedIn(true)
     setMe(m)
     setActiveOrg(m.active_org_id ?? null)
     const remembered = await kvGet<number>(`branch:${m.id}`)
@@ -69,6 +93,7 @@ export function AuthProvider({ children, offline = true }: { children: ReactNode
         await applyMe(await api<Me>('auth/me'))
       } catch (e) {
         if (e instanceof NetworkError) setOnline(false)
+        else rememberSignedIn(false) // the server says: not signed in (session ended or never existed)
       } finally {
         setLoading(false)
       }
@@ -142,6 +167,7 @@ export function AuthProvider({ children, offline = true }: { children: ReactNode
     } catch {
       /* offline logout is local only */
     }
+    rememberSignedIn(false)
     setMe(null)
     setBranchId(null)
     setActiveBranch(null)

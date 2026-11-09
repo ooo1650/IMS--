@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
-import { useAuth } from './auth'
+import { useAuth, wasSignedIn } from './auth'
 import { Layout, NAV } from './components/Layout'
 import { PageSkeleton } from './components/ui'
 import { PAGES, prefetchPage, prefetchWhenIdle } from './pages/routes'
@@ -13,6 +13,22 @@ const Login = lazy(() => import('./pages/Login'))
 // session check, instead of after it.
 prefetchPage(`/${window.location.pathname.split('/')[1] ?? ''}`)
 const CustomerDisplay = lazy(() => import('./pages/CustomerDisplay'))
+
+/** The sign-in page's outline: shown to people who aren't signed in while the page loads. */
+function LoginSkeleton() {
+  return (
+    <div className="login-wrap" aria-busy="true" aria-label="Loading">
+      <main className="login-main">
+        <div className="login-side">
+          <div className="login-card">
+            <span className="skel skel-title" />
+            {Array.from({ length: 4 }, (_, i) => <span key={i} className="skel skel-text" style={{ height: i % 2 ? 36 : 12 }} />)}
+          </div>
+        </div>
+      </main>
+    </div>
+  )
+}
 
 /** What the app looks like while the session is checked: sidebar + page outline, not a blank "Loading…". */
 function AppSkeleton() {
@@ -31,8 +47,9 @@ export default function App() {
   const auth = useAuth()
   // Customer-facing window: no login, it only mirrors the POS in this browser.
   if (window.location.pathname === '/customer-display') return <Suspense fallback={null}><CustomerDisplay /></Suspense>
-  if (auth.loading) return <AppSkeleton />
-  if (!auth.me) return <Suspense fallback={<div className="login-wrap" aria-busy="true" />}><Login /></Suspense>
+  // While the session is checked, show the outline of where you're about to land.
+  if (auth.loading) return wasSignedIn() ? <AppSkeleton /> : <LoginSkeleton />
+  if (!auth.me) return <Suspense fallback={<LoginSkeleton />}><Login /></Suspense>
   return <SignedIn />
 }
 
