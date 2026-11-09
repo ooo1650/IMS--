@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../auth'
-import { Button, ErrorBox, Field, LoadMore, Modal, PageHead, Status, fmtDate, useLoad, usePaged, Guide } from '../components/ui'
+import { Button, ErrorBox, Field, fmtDate, Guide, LoadMore, Modal, PageHead, SkeletonRows, Status, useLoad, usePaged } from '../components/ui'
 import { parseWhole, wholeProblem } from '../lib/money'
 import { api, qs } from '../lib/api'
 
@@ -40,6 +40,7 @@ export default function Stocktakes() {
                 <td>{s.by_name}</td>
               </tr>
             ))}
+            {!items.length && loading && <SkeletonRows cols={7} />}
             {!items.length && !loading && <tr><td colSpan={7} className="empty">No stocktakes yet</td></tr>}
           </tbody>
         </table>

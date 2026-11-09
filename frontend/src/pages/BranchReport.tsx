@@ -1,15 +1,15 @@
 import SalesAnalytics from '../components/SalesAnalytics'
-import { ErrorBox, PageHead, useLoad } from '../components/ui'
+import { ErrorBox, PageHead, PageSkeleton, useLoad } from '../components/ui'
 import { useAuth } from '../auth'
 import { api } from '../lib/api'
 import { npr } from '../lib/money'
-import { AttentionList, OverviewStat, ReportTables, type BranchSummary, type ReportLists } from './Dashboard'
+import { AttentionList, OverviewStat, ReportTables, type BranchSummary, type ReportLists } from '../components/stats'
 
 export default function BranchReport() {
   const { branch } = useAuth()
   const { data, error } = useLoad(() => api<ReportLists & { summary: BranchSummary }>('reports/branch'), [branch?.id])
   if (error) return <ErrorBox error={error} />
-  if (!data) return <div className="splash">Loading…</div>
+  if (!data) return <PageSkeleton tiles={4} />
   const s = data.summary
   return (
     <div>

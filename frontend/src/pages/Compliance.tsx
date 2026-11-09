@@ -5,16 +5,13 @@ import { useAuth } from '../auth'
 import { Badge, Button, ErrorBox, Field, fmtDate, Guide, Modal, MoneyInput, PageHead, QtyInput, Status, Tabs, useLoad } from '../components/ui'
 import { api, qs } from '../lib/api'
 import { moneyProblem, npr, plain, toPaisa, toRupeesInput } from '../lib/money'
+import { TurnoverMeter } from '../components/TurnoverMeter'
 
 interface FiscalYears { current: string; current_month: number; years: string[]; months: { no: number; name: string }[]; today_bs: string }
 interface Column { key: string; label: string; kind: 'text' | 'int' | 'money' | 'date' }
 interface Report {
   title: string; subtitle: string; columns: Column[]; rows: Record<string, string | number>[]; totals: Record<string, number>
   notes: string[]; summary?: { output_vat: number; input_vat: number; net: number; nil_return: boolean; due_date_ad: string; due_date_bs: string }
-}
-interface Turnover {
-  fiscal_year: string; turnover_paisa: number; cbms_threshold_paisa: number; cbms_mandatory_threshold_paisa: number
-  vat_threshold_paisa: number; vat_registered: boolean; cbms_enabled: boolean; alerts: { level: 'warn' | 'bad'; message: string }[]
 }
 
 const REPORTS: [string, string][] = [
@@ -210,33 +207,6 @@ function Cbms() {
   )
 }
 
-export function TurnoverMeter() {
-  const { data, error } = useLoad(() => api<Turnover>('compliance/turnover'), [])
-  if (error) return <ErrorBox error={error} />
-  if (!data) return null
-  const bar = (label: string, limit: number) => {
-    const pct = Math.min(100, (data.turnover_paisa * 100) / limit)
-    return (
-      <div className="meter">
-        <div className="meter-head"><span>{label}</span><span>{npr(limit)}</span></div>
-        <div className="meter-track" role="meter" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100} aria-label={label}>
-          <span className={pct >= 100 ? 'meter-bad' : pct >= 80 ? 'meter-warn' : ''} style={{ width: `${Math.max(1, pct)}%` }} />
-        </div>
-        <div className="muted small">{pct.toFixed(1)}% used</div>
-      </div>
-    )
-  }
-  return (
-    <section className="card">
-      <h2>Turnover FY {data.fiscal_year.replace('-', '/')}: {npr(data.turnover_paisa)}</h2>
-      <p className="muted small">Sales excluding VAT, net of credit/debit notes, all branches. CBMS sync is {data.cbms_enabled ? 'on' : 'off'}.</p>
-      {data.alerts.map((a) => <div key={a.message} className={`alert alert-${a.level === 'bad' ? 'error' : 'warn'}`}>{a.message}</div>)}
-      {bar('CBMS line (budget)', data.cbms_threshold_paisa)}
-      {bar('CBMS mandatory (notice 2083/01/04)', data.cbms_mandatory_threshold_paisa)}
-      {!data.vat_registered && bar('VAT registration threshold', data.vat_threshold_paisa)}
-    </section>
-  )
-}
 
 interface SettingsData {
   org_name: string; org_name_np: string; org_pan: string; org_address: string; org_phone: string; org_email: string

@@ -3,10 +3,10 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { Icon } from '../components/Icon'
 import { Availability, ProductDetail } from '../components/ProductDetail'
-import { Badge, Button, ErrorBox, Field, fmtDate, Guide, LoadMore, Modal, PageHead, QtyInput, Tabs, useLoad, usePaged, ViewOnly } from '../components/ui'
+import { Badge, Button, ErrorBox, Field, fmtDate, Guide, LoadMore, Modal, PageHead, QtyInput, SkeletonRows, Tabs, useLoad, usePaged, ViewOnly } from '../components/ui'
 import { api, cursorPath, qs, type Page } from '../lib/api'
 import { npr, toRupeesInput } from '../lib/money'
-import { Tile } from './Dashboard'
+import { Tile } from '../components/stats'
 
 interface Item {
   id: number; product: number; sku: string; name: string; unit: string; category: string | null
@@ -178,6 +178,7 @@ export default function Inventory() {
                     </td>
                   </tr>
                 ))}
+                {!stock.items.length && stock.loading && <SkeletonRows cols={8} />}
                 {!stock.items.length && !stock.loading && <tr><td colSpan={8} className="empty">{q ? `No products match “${q}”.` : EMPTY[filter]}</td></tr>}
               </tbody>
             </table>
@@ -201,6 +202,7 @@ export default function Inventory() {
                   <td className="small">{m.reason}</td>
                 </tr>
               ))}
+              {!moves.items.length && moves.loading && <SkeletonRows cols={8} />}
               {!moves.items.length && !moves.loading && <tr><td colSpan={8} className="empty">No movements yet</td></tr>}
             </tbody>
           </table>

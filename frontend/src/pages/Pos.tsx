@@ -6,14 +6,11 @@
  * (§10.3). In per-branch series mode the till prints a provisional slip and the
  * tax invoice is issued on sync; in per-register mode it numbers locally.
  */
-import QRCode from 'qrcode'
-import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, memo, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../auth'
-import { CameraScanner } from '../components/CameraScanner'
-import { DeviceSettings } from '../components/DeviceSettings'
 import { Icon } from '../components/Icon'
 import { ProductThumb } from '../components/ProductThumb'
-import { Badge, Button, ErrorBox, Field, Guide, Modal, MoneyInput, QtyInput, Status } from '../components/ui'
+import { Badge, Button, ErrorBox, Field, Guide, Modal, MoneyInput, PageSkeleton, QtyInput, Status } from '../components/ui'
 import { ApiError, NetworkError, api, qs } from '../lib/api'
 import { patchDisplay, publishDisplay } from '../lib/devices/display'
 import { beep, useScannerInput } from '../lib/devices/scanner'
@@ -28,6 +25,10 @@ import { driverFor, printDocument, printResult, provisionalSlipHtml } from '../l
 import { computeTotals, type DiscountType, type Totals } from '../lib/pricing'
 import { probe, syncQueue, useOnline } from '../lib/sync'
 import type { DocumentCtx, PayMethod, PosConfig, PosProduct, PrintResult, RegisterCfg, Sale, Shift } from '../lib/types'
+
+// Opened from the till now and then: their code loads on first use, not with the POS.
+const DeviceSettings = lazy(() => import('../components/DeviceSettings').then((m) => ({ default: m.DeviceSettings })))
+const CameraScanner = lazy(() => import('../components/CameraScanner').then((m) => ({ default: m.CameraScanner })))
 
 interface CartItem {
   product: PosProduct
@@ -487,12 +488,12 @@ export default function Pos() {
     return (
       <div>
         <ErrorBox error={error} />
-        {!error && <div className="splash">Loading register…</div>}
+        {!error && <PageSkeleton tiles={0} rows={6} />}
       </div>
     )
   }
   if (!config.registers.length) return <div className="empty">No active registers at this branch. Ask an admin to add one.</div>
-  if (!register) return <div className="splash">Loading register…</div>
+  if (!register) return <PageSkeleton tiles={0} rows={6} />
 
   const totals = priced.cash
   const sessionHours = sessionAge != null ? sessionAge / 3600_000 : null
@@ -739,10 +740,10 @@ export default function Pos() {
         <CloseShiftModal shift={shift} online={online} onClose={() => setModal(null)} onClosed={() => { setModal(null); void loadAll() }} />
       )}
       {modal === 'devices' && register && (
-        <DeviceSettings register={register} storeName={config.seller.name || config.branch.name} onClose={() => setModal(null)} />
+        <Suspense fallback={null}><DeviceSettings register={register} storeName={config.seller.name || config.branch.name} onClose={() => setModal(null)} /></Suspense>
       )}
       {camera && (
-        <CameraScanner onClose={() => setCamera(false)} onDetected={(code) => { setCamera(false); onDeviceScan(code) }} />
+        <Suspense fallback={null}><CameraScanner onClose={() => setCamera(false)} onDetected={(code) => { setCamera(false); onDeviceScan(code) }} /></Suspense>
       )}
       {modal === 'tools' && register && (
         <ToolsModal register={register} config={config} catalogAge={catalogAge} onClose={() => setModal(null)} onRefresh={loadAll} />
@@ -950,6 +951,8 @@ function FonepayModal({ total, needsApproval, mock, start, onClose, onPaid }: {
     try {
       const s = await start(needsApproval ? approver : undefined, key.current)
       setSale(s)
+      // The QR library is only needed for FonePay, so it loads here, not with the till.
+      const QRCode = (await import('qrcode')).default
       const url = await QRCode.toDataURL(s.qr_payload || s.prn, { width: 260, margin: 1 })
       setQr(url)
       patchDisplay({ mode: 'pay', qr: url })

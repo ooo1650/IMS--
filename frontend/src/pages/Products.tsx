@@ -1,16 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../auth'
-import { CameraScanner } from '../components/CameraScanner'
 import { Icon } from '../components/Icon'
-import { LabelPrint } from '../components/LabelPrint'
 import { Availability, ProductDetail } from '../components/ProductDetail'
 import { ProductThumb } from '../components/ProductThumb'
-import { Badge, Button, ErrorBox, Field, Guide, LoadMore, Modal, MoneyInput, PageHead, QtyInput, Tabs, useLoad, usePaged } from '../components/ui'
+import { Badge, Button, ErrorBox, Field, Guide, LoadMore, Modal, MoneyInput, PageHead, QtyInput, SkeletonRows, Tabs, useLoad, usePaged } from '../components/ui'
 import { api, qs } from '../lib/api'
 import { generateInStoreEan13, isValidEan13 } from '../lib/barcode'
 import { downscaleImage } from '../lib/images'
 import { moneyProblem, normalizeNumber, npr, parseWhole, toPaisa, toRupeesInput, wholeProblem } from '../lib/money'
 import type { Barcode, Product } from '../lib/types'
+
+// Label printing and the camera are occasional: their code loads on first use.
+const LabelPrint = lazy(() => import('../components/LabelPrint').then((m) => ({ default: m.LabelPrint })))
+const CameraScanner = lazy(() => import('../components/CameraScanner').then((m) => ({ default: m.CameraScanner })))
 
 interface Named { id: number; name: string }
 
@@ -126,6 +128,7 @@ export default function Products() {
                 </td>
               </tr>
             ))}
+            {!items.length && loading && <SkeletonRows cols={10} />}
             {!items.length && !loading && <tr><td colSpan={10} className="empty">No products</td></tr>}
           </tbody>
         </table>
@@ -134,7 +137,7 @@ export default function Products() {
       {viewing && <ProductDetail productId={viewing.id} onClose={() => setViewing(null)} actions={actionsFor(viewing)} />}
       {editing && <ProductForm key={formKey} product={editing === 'new' ? null : editing} onClose={() => setEditing(null)}
         onSaved={(again) => { reload(); if (again) setFormKey((k) => k + 1); else setEditing(null) }} />}
-      {labels && <LabelPrint products={labels} onClose={() => setLabels(null)} />}
+      {labels && <Suspense fallback={null}><LabelPrint products={labels} onClose={() => setLabels(null)} /></Suspense>}
       {pricing && <BranchPriceForm product={pricing} onClose={() => setPricing(null)} onSaved={() => { setPricing(null); reload() }} />}
     </div>
   )
@@ -387,10 +390,12 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
         </Button>
       </div>
       {camera && (
-        <CameraScanner title="Scan the product's barcode" onClose={() => setCamera(false)} onDetected={(code) => {
-          setCamera(false)
-          if (!barcodes.some((b) => b.code === code)) setBarcodes([...barcodes, { code, type: isValidEan13(code) ? 'ean13' : 'code128', pack_qty: 1 }])
-        }} />
+        <Suspense fallback={null}>
+          <CameraScanner title="Scan the product's barcode" onClose={() => setCamera(false)} onDetected={(code) => {
+            setCamera(false)
+            if (!barcodes.some((b) => b.code === code)) setBarcodes([...barcodes, { code, type: isValidEan13(code) ? 'ean13' : 'code128', pack_qty: 1 }])
+          }} />
+        </Suspense>
       )}
 
       <details className="form-more" open={hasMoreTax}>

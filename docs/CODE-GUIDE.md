@@ -96,7 +96,8 @@ IMS/
 - `lib/barcode.ts` (+test, round-tripped through ZXing's readers): EAN-13/UPC-A check digits, in-store `2…` codes, EAN-13 and Code 128 SVG for labels.
 - `components/DeviceSettings.tsx` (POS → Devices), `CameraScanner.tsx` (native BarcodeDetector, lazy ZXing fallback), `LabelPrint.tsx` (Products → select → Print labels), `ProductDetail.tsx`. `pages/CustomerDisplay.tsx` is served at `/customer-display` without login.
 - `components/ui.tsx`: `useLoad(fn, deps)`, `usePaged(path)` (cursor pages), `Button` (`why=` says why it's disabled), `Modal` (won't close on a stray click once edited), `Field` (`error=`), `QtyInput`, `MoneyInput`, `ViewOnly`, Badge/Status/Tabs.
-- `pages/Dashboard.tsx`: also exports `Tile` (clickable with `onClick`/`action`) and `AttentionList` (rows link with `to`), used by Inventory and the branch report.
+- `pages/routes.ts`: every screen as a lazy chunk (`PAGES`), plus `prefetchPage(path)` / `prefetchWhenIdle(paths)`. The menu prefetches on hover/focus/touch, the app prefetches the screen in the address bar at startup (in parallel with the session check) and the POS in idle time for people who sell.
+- `components/stats.tsx`: `Tile` (clickable with `onClick`/`action`), `OverviewStat`, `AttentionList` (rows link with `to`), `ReportTables`, shared by the dashboard, branch report and Inventory. `components/TurnoverMeter.tsx`: shared by the dashboard and Tax & IRD.
 - `pages/Pos.tsx`: cart (kept in IndexedDB as `cartdraft:<branch>` and restored after a reload), invoice-type logic (mirrors the server), payment modals, offline sale, returns, held carts, shifts, register tools.
 - `pages/Inventory.tsx`: filter in the URL (`?filter=low|out|negative`); *Order these* hands the items to `pages/Purchasing.tsx` through router state, which opens a pre-filled PO.
 - `pages/Compliance.tsx`: Tax & IRD (reports + export, CBMS, turnover, settings, tax categories).
@@ -129,6 +130,7 @@ Subclass `AppendOnlyModel`, implement `is_issued()` / `MUTABLE_AFTER_ISSUE`, add
 - Every write that matters calls `log_action(...)` (business event). Audited models also get automatic before/after rows.
 - Comments explain *why* and cite the spec section (`§10.2`, `payment.md Step 2`).
 - Frontend: one page per file, no UI framework, tokens in `index.css` (light/dark), `npr()` for display, `toPaisa()` for input.
+- Loading: a page never imports another page (that drags the whole other screen into the download); shared pieces go in `components/`. Occasional, heavy parts (FonePay QR, device settings, camera, label printing) are `lazy()` / `import()` where they're opened. While code or data loads, show `PageSkeleton` / `SkeletonRows` (static grey blocks, no shimmer), never a bare "Loading…". React and the router are a separate `vendor` chunk (`vite.config.ts`) so they stay cached across deploys.
 - Inputs: quantities with `QtyInput`, rupees with `MoneyInput` + `moneyProblem()` in `<Field error=…>`; never `<input type="number">`. A disabled button gets `why=`. Every submit handler starts with `setError(null)`.
 - A number on screen that someone has to act on links to the list behind it (`Tile onClick`, `AttentionList to`).
 - Pages a role can open but not change show `<ViewOnly>` instead of silently missing buttons.

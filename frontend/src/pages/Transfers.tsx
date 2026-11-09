@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../auth'
 import { ProductPicker } from '../components/ProductPicker'
-import { Button, ErrorBox, Field, fmtDate, Guide, LoadMore, Modal, PageHead, QtyInput, Status, useLoad, usePaged, ViewOnly } from '../components/ui'
+import { Button, ErrorBox, Field, fmtDate, Guide, LoadMore, Modal, PageHead, QtyInput, SkeletonRows, Status, useLoad, usePaged, ViewOnly } from '../components/ui'
 import { api, qs } from '../lib/api'
 import { npr } from '../lib/money'
 
@@ -44,6 +44,7 @@ export default function Transfers() {
                 <td>{t.by_name}</td>
               </tr>
             ))}
+            {!items.length && loading && <SkeletonRows cols={6} />}
             {!items.length && !loading && <tr><td colSpan={6} className="empty">No transfers</td></tr>}
           </tbody>
         </table>

@@ -5,7 +5,7 @@ import { api, qs } from '../lib/api'
 import { npr } from '../lib/money'
 import type { Product } from '../lib/types'
 import { ProductThumb } from './ProductThumb'
-import { Badge, ErrorBox, LoadMore, Modal, Tabs, fmtDate, useLoad, usePaged } from './ui'
+import { Badge, ErrorBox, fmtDate, LoadMore, Modal, SkeletonRows, Tabs, useLoad, usePaged } from './ui'
 
 interface Supplier { id: number; name: string; pan: string; phone: string; email: string; address: string }
 interface Movement { id: number; type: string; qty: number; unit_cost_paisa: number; ref: string; ref_type: string; at: string; by_name: string | null; reason: string }
@@ -45,7 +45,7 @@ export function ProductDetail({ productId, stock, actions, onClose }: {
   return (
     <Modal title={p ? p.name : 'Product'} onClose={onClose} wide>
       <ErrorBox error={error} />
-      {!p ? <div className="splash">Loading…</div> : (
+      {!p ? <table className="table"><tbody><SkeletonRows cols={2} rows={6} /></tbody></table> : (
         <>
           <div className="detail-head">
             <ProductThumb src={p.image_url} large />
@@ -117,6 +117,7 @@ export function ProductDetail({ productId, stock, actions, onClose }: {
                       <td className="small">{m.reason}</td>
                     </tr>
                   ))}
+                  {!moves.items.length && moves.loading && <SkeletonRows cols={6} />}
                   {!moves.items.length && !moves.loading && <tr><td colSpan={6} className="empty">No stock movements at this branch</td></tr>}
                 </tbody>
               </table>

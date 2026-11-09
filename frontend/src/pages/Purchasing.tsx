@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { Icon, initials } from '../components/Icon'
 import { ProductPicker } from '../components/ProductPicker'
-import { Button, ErrorBox, Field, fmtDate, Guide, LoadMore, Modal, PageHead, QtyInput, Status, Tabs, useLoad, usePaged, ViewOnly } from '../components/ui'
+import { Button, ErrorBox, Field, fmtDate, Guide, LoadMore, Modal, PageHead, QtyInput, SkeletonRows, Status, Tabs, useLoad, usePaged, ViewOnly } from '../components/ui'
 import { api, qs } from '../lib/api'
 import { moneyProblem, npr, toPaisa, toRupeesInput } from '../lib/money'
 
@@ -61,6 +61,7 @@ export default function Purchasing() {
                 <td>{po.expected_at ?? '—'}</td>
               </tr>
             ))}
+            {!items.length && loading && <SkeletonRows cols={6} />}
             {!items.length && !loading && <tr><td colSpan={6} className="empty">No purchase orders</td></tr>}
           </tbody>
         </table>
@@ -266,6 +267,7 @@ function PurchaseReturns({ manage }: { manage: boolean }) {
                 <td className="num">{npr(r.taxable_paisa)}</td><td className="num">{npr(r.vat_paisa)}</td><td>{r.reason}</td>
               </tr>
             ))}
+            {!items.length && loading && <SkeletonRows cols={7} />}
             {!items.length && !loading && <tr><td colSpan={7} className="empty">No purchase returns</td></tr>}
           </tbody>
         </table>
@@ -359,6 +361,7 @@ function Suppliers({ manage }: { manage: boolean }) {
                 <td className="row-actions">{manage && <Button kind="ghost" onClick={() => setEditing(s)}>Edit</Button>}</td>
               </tr>
             ))}
+            {!shown.length && loading && <SkeletonRows cols={6} />}
             {!shown.length && !loading && <tr><td colSpan={6} className="empty">{data?.length ? 'No suppliers match.' : 'No suppliers yet.'}</td></tr>}
           </tbody>
         </table>

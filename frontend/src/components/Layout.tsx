@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { useOnline, useQueue } from '../lib/sync'
 import { ErrorBoundary } from './ErrorBoundary'
+import { prefetchPage } from '../pages/routes'
+import { PageSkeleton } from './ui'
 import { SyncQueue } from './SyncQueue'
 import { Icon, initials, type IconName } from './Icon'
 
@@ -89,7 +91,8 @@ export function Layout() {
               <div className="nav-group">{g}</div>
               <nav>
                 {links.map((n) => (
-                  <NavLink key={n.to} to={n.to} className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+                  <NavLink key={n.to} to={n.to} className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+                    onMouseEnter={() => prefetchPage(n.to)} onFocus={() => prefetchPage(n.to)} onTouchStart={() => prefetchPage(n.to)}>
                     <Icon name={n.icon} size={16} /> {n.label}
                   </NavLink>
                 ))}
@@ -132,7 +135,7 @@ export function Layout() {
               No branch chosen: stock, the till, sales and branch reports appear once you pick one in the <strong>branch picker</strong> (top of the sidebar).
             </div>
           )}
-          {auth.branch || auth.me?.org_role ? <ErrorBoundary key={location.pathname}><Outlet /></ErrorBoundary>
+          {auth.branch || auth.me?.org_role ? <ErrorBoundary key={location.pathname}><Suspense fallback={<PageSkeleton tiles={location.pathname.startsWith('/inventory') || location.pathname.startsWith('/dashboard') ? 4 : 0} />}><Outlet /></Suspense></ErrorBoundary>
             : auth.me?.is_platform_admin && !auth.me.businesses.length
               ? <div className="empty">This is an operator account. Businesses, branches and admin accounts are managed in the operator console</div>
               : <div className="empty">Select a branch to continue (the branch picker at the top of the sidebar).{!(auth.me?.branches.length) && ' You have no branch yet: ask an administrator to give you a role at one.'}</div>}

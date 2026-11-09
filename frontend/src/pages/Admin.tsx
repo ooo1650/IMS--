@@ -1,7 +1,7 @@
 import { Fragment, useState } from 'react'
 import { Icon, initials } from '../components/Icon'
 import { useAuth } from '../auth'
-import { Badge, Button, ErrorBox, Field, LoadMore, Modal, PageHead, Tabs, fmtDate, useLoad, usePaged, Guide } from '../components/ui'
+import { Badge, Button, ErrorBox, Field, fmtDate, Guide, LoadMore, Modal, PageHead, PageSkeleton, SkeletonRows, Tabs, useLoad, usePaged } from '../components/ui'
 import { api, qs } from '../lib/api'
 import type { Branch } from '../lib/types'
 
@@ -113,6 +113,7 @@ function Users() {
                 </tr>
               )
             })}
+            {!shown.length && users.loading && <SkeletonRows cols={5} />}
             {!shown.length && !users.loading && <tr><td colSpan={5} className="empty">No users match</td></tr>}
           </tbody>
         </table>
@@ -154,7 +155,7 @@ interface RoleDef { role: string; label: string; scope: keyof typeof SCOPE_LABEL
 function RolesMatrix() {
   const { data: roles, error } = useLoad(() => api<RoleDef[]>('auth/roles'), [])
   if (error) return <ErrorBox error={error} />
-  if (!roles) return <div className="splash">Loading roles…</div>
+  if (!roles) return <PageSkeleton rows={6} />
   // Labels are UI copy; grants come from the server. Unknown permissions still show up.
   const known = new Set(PERMISSION_GROUPS.flatMap(([, ps]) => ps.map(([k]) => k)))
   const extra = [...new Set(roles.flatMap((r) => r.permissions))].filter((k) => !known.has(k)).map((k): [string, string] => [k, k])

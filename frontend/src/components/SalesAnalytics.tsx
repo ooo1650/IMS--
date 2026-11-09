@@ -6,7 +6,7 @@
 import { useState } from 'react'
 import { api, qs } from '../lib/api'
 import { npr } from '../lib/money'
-import { ErrorBox, useLoad } from './ui'
+import { ErrorBox, PageSkeleton, useLoad } from './ui'
 import {
   Delta, Heatmap, RankedBars, SegmentedBar, StatTile, TableView, TrendChart, count, heatmapRows, longDate, nprCompact,
   pct, type HeatCell, type Segment,
@@ -62,7 +62,7 @@ export default function SalesAnalytics({ branches }: { branches?: { id: number; 
         <span className="muted small">Compared with the {prevLabel} · today included · each branch's local time</span>
       </div>
       <ErrorBox error={error} />
-      {!data ? <div className="splash">Loading analytics…</div> : (
+      {!data ? <PageSkeleton tiles={5} rows={4} /> : (
         <div className={loading ? 'refetching' : undefined} aria-busy={loading}>
           <Body data={data} metric={metric} setMetric={setMetric} prevLabel={prevLabel} />
         </div>

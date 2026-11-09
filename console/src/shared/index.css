@@ -741,3 +741,14 @@ textarea { resize: vertical; }
 /* A box holding something that can't be used (QtyInput "2.5", MoneyInput "1.234"). */
 input[aria-invalid="true"] { border-color: var(--bad); box-shadow: 0 0 0 1px var(--bad); }
 .foot-why { align-self: center; max-width: 32ch; text-align: right; }
+
+/* Loading placeholders (static: no shimmer, per the style rules). */
+.skel { display: block; background: var(--surface-2, var(--border)); border-radius: 4px; }
+.skel-text { height: 12px; margin: 4px 0; max-width: 100%; }
+.skel-title { height: 24px; width: 220px; margin: 4px 0 8px; }
+.skel-figure { height: 24px; width: 60%; margin-top: 8px; }
+.skel-row td { padding-top: 12px; padding-bottom: 12px; }
+.app-skeleton { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+.app-skeleton-side { background: var(--surface-1); border-right: 1px solid var(--border); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.app-skeleton-main { padding: 24px 32px; }
+@media (max-width: 760px) { .app-skeleton { grid-template-columns: 1fr; } .app-skeleton-side { display: none; } }

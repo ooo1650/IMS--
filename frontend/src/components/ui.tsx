@@ -273,3 +273,36 @@ export function Guide({ id, title, children }: { id: string; title: string; chil
 export function ViewOnly({ children }: { children: ReactNode }) {
   return <div className="alert alert-info" role="note"><strong>View only.</strong> {children}</div>
 }
+
+/**
+ * Placeholders shaped like what's coming, so the page doesn't jump when it
+ * arrives. Static grey blocks: the style rules forbid looping animation.
+ * `aria-busy` tells screen readers something is loading.
+ */
+export function SkeletonRows({ cols, rows = 6 }: { cols: number; rows?: number }) {
+  return (
+    <>
+      {Array.from({ length: rows }, (_, r) => (
+        <tr key={r} className="skel-row" aria-hidden>
+          {Array.from({ length: cols }, (_, c) => <td key={c}><span className="skel skel-text" style={{ width: `${55 + ((r * 7 + c * 13) % 40)}%` }} /></td>)}
+        </tr>
+      ))}
+    </>
+  )
+}
+
+export function PageSkeleton({ tiles = 0, rows = 8 }: { tiles?: number; rows?: number }) {
+  return (
+    <div aria-busy="true" aria-label="Loading">
+      <div className="page-head"><span className="skel skel-title" /></div>
+      {tiles > 0 && (
+        <div className="tiles">
+          {Array.from({ length: tiles }, (_, i) => <div key={i} className="tile"><span className="skel skel-text" /><span className="skel skel-figure" /></div>)}
+        </div>
+      )}
+      <div className="card flush">
+        <table className="table"><tbody><SkeletonRows cols={5} rows={rows} /></tbody></table>
+      </div>
+    </div>
+  )
+}

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth'
-import { Badge, Button, ErrorBox, Field, fmtDate, Guide, LoadMore, Modal, MoneyInput, PageHead, Status, Tabs, useLoad, usePaged } from '../components/ui'
+import { Badge, Button, ErrorBox, Field, fmtDate, Guide, LoadMore, Modal, MoneyInput, PageHead, SkeletonRows, Status, Tabs, useLoad, usePaged } from '../components/ui'
 import { api, qs } from '../lib/api'
 import { moneyProblem, npr, toPaisa } from '../lib/money'
 import { printResult } from '../lib/printer'
@@ -72,6 +72,7 @@ export default function Sales() {
                 </td>
               </tr>
             ))}
+            {!items.length && loading && <SkeletonRows cols={9} />}
             {!items.length && !loading && <tr><td colSpan={9} className="empty">No sales</td></tr>}
           </tbody>
         </table>
