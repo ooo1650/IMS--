@@ -7,6 +7,9 @@ happens outside them: CSRF failures on the plain-Django sign-in views, unknown
 URLs, crashes (500) and requests for a host Django doesn't serve (400).
 Other paths keep Django's default pages.
 """
+import sys
+
+from django.db import InterfaceError, OperationalError
 from django.http import JsonResponse
 from django.views import defaults
 
@@ -39,8 +42,18 @@ def not_found(request, exception=None):
     return defaults.page_not_found(request, exception)
 
 
+DB_DOWN = ("The server is running but can't reach its database right now. Try again in a minute; if it keeps "
+           "happening, tell your administrator (the database may be paused, restarting or full).")
+
+
 def server_error(request):
+    # Django calls this inside its except block, so the exception is still at hand.
+    exc = sys.exc_info()[1]
+    db_down = isinstance(exc, (OperationalError, InterfaceError))
     if _is_api(request):
+        if db_down:
+            # 503, not 500: it's an outage, not a bug, and the app shows it as one.
+            return JsonResponse({"detail": DB_DOWN, "code": "db_unavailable"}, status=503, headers={"Retry-After": "30"})
         return JsonResponse({"detail": "Something went wrong on the server. Try again; if it keeps happening, tell "
                                        "your administrator (the error has been logged).", "code": "server_error"},
                             status=500)

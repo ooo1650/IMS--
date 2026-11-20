@@ -222,6 +222,11 @@ class HealthView(APIView):
         try:
             with connection.cursor() as cur:
                 cur.execute("SELECT 1")
-        except DatabaseError:
-            return Response({"status": "db-unavailable"}, status=503)
+        except DatabaseError as e:
+            # The public reply stays vague; the reason (wrong password, unreachable
+            # host, missing role…) goes to the server log, e.g. Render → Logs.
+            log.error("health: database unavailable: %s: %s", type(e).__name__, str(e).strip()[:300])
+            from .errors import DB_DOWN
+
+            return Response({"status": "db-unavailable", "detail": DB_DOWN, "code": "db_unavailable"}, status=503)
         return Response({"status": "ok"})

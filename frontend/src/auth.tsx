@@ -126,7 +126,14 @@ export function AuthProvider({ children, offline = true }: { children: ReactNode
         if (!(e instanceof NetworkError) || !offline) throw e
         // Offline: the device cache only exists after a full online sign-in (code included) in the last 24 h.
         setOnline(false)
-        const m = await offlineLogin(identifier, password, OFFLINE_MAX_AGE_HOURS)
+        let m: Me
+        try {
+          m = await offlineLogin(identifier, password, OFFLINE_MAX_AGE_HOURS)
+        } catch (offlineError) {
+          // Say why the server couldn't be used first; "never signed in on this device" alone reads like an account problem.
+          throw new Error(`${e.message} Without the server, only people who signed in on this device in the last ` +
+            `${OFFLINE_MAX_AGE_HOURS} hours can sign in (${(offlineError as Error).message.replace(/\.$/, '').toLowerCase()}).`)
+        }
         setOfflineSession(true)
         await applyMe(m)
       }

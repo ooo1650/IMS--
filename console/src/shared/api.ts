@@ -125,10 +125,20 @@ export async function api<T = unknown>(
   try {
     res = await fetch(`/api/v1/${path.replace(/^\//, '')}`, { method, headers, body, credentials: 'same-origin' })
   } catch {
-    throw new NetworkError('Network unavailable')
+    throw new NetworkError("Can't reach the server. Check this device's internet connection.")
   }
   // Proxy up but backend unreachable: treat like being offline so cash sales keep working.
-  if (res.status === 502 || res.status === 503 || res.status === 504) throw new NetworkError(`Server unavailable (${res.status})`)
+  if (res.status === 502 || res.status === 503 || res.status === 504) {
+    // Treated like being offline (cash sales keep working), but keep the reason:
+    // the server says when its database is down; a host waking up says nothing.
+    let reason = ''
+    try {
+      reason = String((JSON.parse(await res.text()) as { detail?: unknown }).detail ?? '')
+    } catch {
+      /* not JSON: a proxy or hosting page */
+    }
+    throw new NetworkError(reason || "The server isn't answering. It may be starting up after a quiet period: try again in a minute.")
+  }
   const text = await res.text()
   // A web page where JSON was expected: the /api forwarding in front of the
   // backend is wrong (e.g. a hosting rewrite serving the app's index.html).

@@ -1,6 +1,7 @@
 """Error replies the app acts on: every rate limit says how long to wait
 (``retry_after`` + Retry-After) and why (``code``); sign-in code errors say
 what to do next; Django's own errors are JSON on /api/."""
+import json
 import re
 from datetime import timedelta
 from unittest import mock
@@ -122,6 +123,20 @@ class JsonErrorPages(TestCase):
         r = self.client.get("/api/v1/no-such-thing/")
         self.assertEqual(r.status_code, 404)
         self.assertEqual(r.json()["code"], "not_found")
+
+    def test_database_down_is_a_503_with_a_reason(self):
+        from django.db import OperationalError
+
+        rf = RequestFactory()
+        try:
+            raise OperationalError("connection refused")
+        except OperationalError:
+            r = errors.server_error(rf.get("/api/v1/auth/me"))
+        self.assertEqual(r.status_code, 503)
+        self.assertEqual(r["Retry-After"], "30")
+        body = json.loads(r.content)
+        self.assertIn("can't reach its database", body["detail"])
+        self.assertEqual(body["code"], "db_unavailable")
 
     def test_server_error_is_json_for_api_only(self):
         rf = RequestFactory()

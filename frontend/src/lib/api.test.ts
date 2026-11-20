@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ApiError, api, formatWait } from './api'
+import { ApiError, NetworkError, api, formatWait } from './api'
 
 vi.stubGlobal('document', { cookie: '' })
 
@@ -52,6 +52,22 @@ describe('api errors', () => {
   it('leaves non-field errors unprefixed', async () => {
     respond(400, JSON.stringify({ non_field_errors: ['Supplier and product must belong to this business.'] }))
     expect((await failure()).message).toBe('Supplier and product must belong to this business.')
+  })
+})
+
+describe('server outages', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it("passes on the server's reason when its database is down", async () => {
+    respond(503, JSON.stringify({ detail: "The server is running but can't reach its database right now.", code: 'db_unavailable' }))
+    const e = await api('auth/me').catch((x) => x)
+    expect(e).toBeInstanceOf(NetworkError)
+    expect(e.message).toMatch(/can't reach its database/)
+  })
+
+  it('explains a host that is waking up', async () => {
+    respond(502, '<html>Bad gateway</html>')
+    expect((await api('auth/me').catch((x) => x)).message).toMatch(/starting up/)
   })
 })
 
