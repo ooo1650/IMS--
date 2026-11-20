@@ -60,14 +60,14 @@ describe('server outages', () => {
 
   it("passes on the server's reason when its database is down", async () => {
     respond(503, JSON.stringify({ detail: "The server is running but can't reach its database right now.", code: 'db_unavailable' }))
-    const e = await api('auth/me').catch((x) => x)
+    const e = (await api('auth/me').catch((x: unknown) => x)) as Error
     expect(e).toBeInstanceOf(NetworkError)
     expect(e.message).toMatch(/can't reach its database/)
   })
 
   it('explains a host that is waking up', async () => {
     respond(502, '<html>Bad gateway</html>')
-    expect((await api('auth/me').catch((x) => x)).message).toMatch(/starting up/)
+    expect(((await api('auth/me').catch((x: unknown) => x)) as Error).message).toMatch(/starting up/)
   })
 })
 
