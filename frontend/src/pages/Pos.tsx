@@ -13,6 +13,7 @@ import { ProductThumb } from '../components/ProductThumb'
 import { Badge, Button, ErrorBox, Field, Guide, Modal, MoneyInput, PageSkeleton, QtyInput, Status } from '../components/ui'
 import { ApiError, NetworkError, api, qs } from '../lib/api'
 import { patchDisplay, publishDisplay } from '../lib/devices/display'
+import { isValidEan13, isValidUpcA } from '../lib/barcode'
 import { beep, useScannerInput } from '../lib/devices/scanner'
 import { deviceSettings, useDeviceSettings } from '../lib/devices/settings'
 import { moneyProblem, npr, percentProblem, plain, toBasisPoints, toPaisa, toRupeesInput } from '../lib/money'
@@ -389,6 +390,11 @@ export default function Pos() {
     for (const p of catalog) {
       for (const b of p.barcodes) byCode.set(b.code, { product: p, pack: b.pack_qty })
       bySku.set(p.sku.toLowerCase(), p)
+    }
+    // UPC-A is EAN-13 with a leading zero, and scanners report either form.
+    for (const [code, hit] of [...byCode]) {
+      const other = isValidUpcA(code) ? `0${code}` : code[0] === '0' && isValidEan13(code) ? code.slice(1) : null
+      if (other && !byCode.has(other)) byCode.set(other, hit)
     }
     return { byCode, bySku, text: catalog.map((p) => `${p.name}\n${p.sku}`.toLowerCase()) }
   }, [catalog])

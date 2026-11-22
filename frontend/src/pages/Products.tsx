@@ -5,7 +5,8 @@ import { Availability, ProductDetail } from '../components/ProductDetail'
 import { ProductThumb } from '../components/ProductThumb'
 import { Badge, Button, ErrorBox, Field, Guide, LoadMore, Modal, MoneyInput, PageHead, QtyInput, SkeletonRows, Tabs, useLoad, usePaged } from '../components/ui'
 import { api, qs } from '../lib/api'
-import { generateInStoreEan13, isValidEan13 } from '../lib/barcode'
+import { barcodeSvg, generateInStoreEan13, symbolModules, typeFor } from '../lib/barcode'
+import { useScannerInput } from '../lib/devices/scanner'
 import { downscaleImage } from '../lib/images'
 import { moneyProblem, normalizeNumber, npr, parseWhole, toPaisa, toRupeesInput, wholeProblem } from '../lib/money'
 import type { Barcode, Product } from '../lib/types'
@@ -136,7 +137,12 @@ export default function Products() {
       </div>
       {viewing && <ProductDetail productId={viewing.id} onClose={() => setViewing(null)} actions={actionsFor(viewing)} />}
       {editing && <ProductForm key={formKey} product={editing === 'new' ? null : editing} onClose={() => setEditing(null)}
-        onSaved={(again) => { reload(); if (again) setFormKey((k) => k + 1); else setEditing(null) }} />}
+        onSaved={(next, saved) => {
+          reload()
+          if (next === 'again') return setFormKey((k) => k + 1)
+          setEditing(null)
+          if (next === 'print') setLabels([saved])
+        }} />}
       {labels && <Suspense fallback={null}><LabelPrint products={labels} onClose={() => setLabels(null)} /></Suspense>}
       {pricing && <BranchPriceForm product={pricing} onClose={() => setPricing(null)} onSaved={() => { setPricing(null); reload() }} />}
     </div>
@@ -200,7 +206,21 @@ function QuickSelect({ label, value, onChange, options, create, canCreate, place
   )
 }
 
-function ProductForm({ product, onClose, onSaved }: { product: Product | null; onClose: () => void; onSaved: (addAnother: boolean) => void }) {
+type AfterSave = 'close' | 'again' | 'print'
+
+/** The bars themselves, so it's plain that a barcode exists and what will print. */
+function BarcodePreview({ code }: { code: string }) {
+  let svg: string
+  try {
+    // Two whole pixels per module keeps the bars even on screen.
+    svg = barcodeSvg(code, { width: `${symbolModules(code) * 2}px` })
+  } catch {
+    return <p className="field-hint bad">This code can't be drawn as bars. Use English letters and digits (check the keyboard is set to English).</p>
+  }
+  return <div className="barcode-preview" role="img" aria-label={`Barcode ${code}`} dangerouslySetInnerHTML={{ __html: svg }} />
+}
+
+function ProductForm({ product, onClose, onSaved }: { product: Product | null; onClose: () => void; onSaved: (next: AfterSave, saved: Product) => void }) {
   const { branch, can, canOrg } = useAuth()
   const cats = useLoad(() => api<Named[]>('categories/'), [])
   const taxCats = useLoad(() => api<{ id: number; code: string; name: string; current_vat_rate: string | null }[]>('compliance/tax-categories/'), [])
@@ -215,7 +235,10 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
   const [barcodes, setBarcodes] = useState<Barcode[]>(product?.barcodes ?? [])
   const [camera, setCamera] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState<false | 'save' | 'again'>(false)
+  const [busy, setBusy] = useState<false | AfterSave>(false)
+  const [scanned, setScanned] = useState('')
+  const [scanNote, setScanNote] = useState<string | null>(null)
+  const scanRef = useRef<HTMLInputElement>(null)
   // Photo changes are sent after the product itself is saved.
   const [photo, setPhoto] = useState<Blob | null>(null)
   const [removePhoto, setRemovePhoto] = useState(false)
@@ -225,6 +248,15 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
   const preview = useMemo(() => (photo ? URL.createObjectURL(photo) : null), [photo])
   useEffect(() => () => void (preview && URL.revokeObjectURL(preview)), [preview])
   const shownPhoto = preview ?? (removePhoto ? null : product?.image_url ?? null)
+  const addCode = (raw: string, note?: string) => {
+    const code = raw.trim()
+    setScanned('')
+    if (!code) return
+    if (barcodes.some((b) => b.code === code)) return setScanNote(`${code} is already on this product.`)
+    setBarcodes((all) => [...all.filter((b) => b.code.trim()), { code, type: typeFor(code), pack_qty: 1 }])
+    setScanNote(note ?? `Added ${code}. Save the product to keep it.`)
+  }
+  useScannerInput(addCode, !camera, true)
   const set = (k: keyof typeof f, v: string | boolean) => setF((cur) => ({ ...cur, [k]: v }))
   const isNew = !product
   const canStock = isNew && !!branch && can('inventory.adjust')
@@ -262,7 +294,7 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
     }
   }
 
-  async function save(addAnother: boolean) {
+  async function save(next: AfterSave) {
     if (!f.name.trim()) return setError('Give the product a name')
     if (!f.sku.trim()) return setError('Enter a SKU, or press "Suggest" next to it')
     const price = toPaisa(f.price)
@@ -272,15 +304,19 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
     if (cost == null) return setError(`Cost price: ${moneyProblem(f.cost)}`)
     const opening = f.opening.trim() ? parseWhole(f.opening) ?? 0 : 0
     if (canStock && f.opening.trim() && wholeProblem(f.opening)) return setError(`Opening stock: ${wholeProblem(f.opening)}`)
-    setBusy(addAnother ? 'again' : 'save')
+    setBusy(next)
     setError(null)
+    // A code still in the scan box counts (a scanner that sends no Enter, or typed and not added).
+    const codes = barcodes.map((b) => ({ ...b, code: b.code.trim() })).filter((b) => b.code)
+    const waiting = scanned.trim()
+    if (waiting && !codes.some((b) => b.code === waiting)) codes.push({ code: waiting, type: typeFor(waiting), pack_qty: 1 })
     try {
       const body = {
         sku: f.sku.trim(), name: f.name.trim(), category: f.category || null, supplier: f.supplier || null, unit: f.unit.trim() || 'pcs',
         cost_price_paisa: cost, sale_price_paisa: price, tax_inclusive: f.tax_inclusive,
         tax_category: f.tax_category || null, hs_code: f.hs_code, excise_rate: f.excise_rate || '0',
         input_credit_blocked_pct: Number(f.input_credit_blocked_pct) || 0,
-        barcodes: barcodes.filter((b) => b.code.trim()),
+        barcodes: codes.map((b) => ({ ...b, type: typeFor(b.code) })),
       }
       const saved = await api<Product>(savedId ? `products/${savedId}/` : 'products/', { method: savedId ? 'PATCH' : 'POST', body })
       setSavedId(saved.id)
@@ -296,7 +332,7 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
         await api('inventory/adjust/', { body: { product: saved.id, qty: opening, reason: 'Opening stock' } })
         setStockDone(true)
       }
-      onSaved(addAnother)
+      onSaved(next, saved)
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -370,30 +406,47 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
       )}
 
       <h3 className="form-section">Barcodes</h3>
+      <div className="quick-add barcode-scan">
+        <input ref={scanRef} data-scan aria-label="Scan or type a barcode" autoComplete="off"
+          placeholder="Scan with the scanner, or type the code and press Enter"
+          value={scanned} onChange={(e) => setScanned(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key !== 'Enter') return
+            e.preventDefault()
+            addCode(e.currentTarget.value)
+          }} />
+        {scanned.trim() && <Button onClick={() => addCode(scanned)}>Add</Button>}
+      </div>
+      <p className="muted small" role="status">{scanNote ?? 'A plugged-in scanner works anywhere in this form.'}</p>
       {barcodes.map((b, i) => (
-        <div key={i} className="inline-form">
-          <input placeholder="Code" value={b.code} onChange={(e) => setBarcodes(barcodes.map((x, j) => (j === i ? { ...x, code: e.target.value } : x)))} />
-          <select value={b.type} onChange={(e) => setBarcodes(barcodes.map((x, j) => (j === i ? { ...x, type: e.target.value } : x)))}>
-            {['ean13', 'ean8', 'upca', 'code128', 'other'].map((t) => <option key={t}>{t}</option>)}
-          </select>
-          <QtyInput min={1} max={100000} title="Units per scan (pack size)" aria-label="Pack size" value={b.pack_qty}
-            onChange={(n) => setBarcodes(barcodes.map((x, j) => (j === i ? { ...x, pack_qty: n } : x)))} />
-          <Button kind="ghost" onClick={() => setBarcodes(barcodes.filter((_, j) => j !== i))}>Remove</Button>
+        <div key={i} className="barcode-row">
+          <div className="inline-form">
+            <input aria-label="Barcode" className="fig" value={b.code}
+              onChange={(e) => { const code = e.target.value; setBarcodes((all) => all.map((x, j) => (j === i ? { ...x, code } : x))) }} />
+            <label className="barcode-pack small muted">Units per scan
+              <QtyInput min={1} max={100000} aria-label="Units per scan (pack size)" value={b.pack_qty}
+                onChange={(n) => setBarcodes((all) => all.map((x, j) => (j === i ? { ...x, pack_qty: n } : x)))} />
+            </label>
+            <Button kind="ghost" onClick={() => setBarcodes((all) => all.filter((_, j) => j !== i))}>Remove</Button>
+          </div>
+          {b.code.trim() && <BarcodePreview code={b.code.trim()} />}
         </div>
       ))}
       <div className="flags">
-        <Button kind="ghost" onClick={() => setCamera(true)}><Icon name="qr" size={16} /> Scan</Button>
-        <Button kind="ghost" onClick={() => setBarcodes([...barcodes, { code: '', type: 'ean13', pack_qty: 1 }])}><Icon name="plus" size={16} /> Type a barcode</Button>
         <Button kind="ghost" title="For products without a manufacturer barcode: an EAN-13 in the in-store range (starts with 2)"
-          onClick={() => setBarcodes([...barcodes, { code: generateInStoreEan13(), type: 'ean13', pack_qty: 1 }])}>
-          No barcode? Make one
+          onClick={() => {
+            addCode(generateInStoreEan13(), 'New barcode made. Use “Save & print label” to get a sticker for the product.')
+            scanRef.current?.focus()
+          }}>
+          <Icon name="plus" size={16} /> No barcode? Make one
         </Button>
+        <Button kind="ghost" title="Only if you have no scanner" onClick={() => setCamera(true)}><Icon name="qr" size={16} /> Use the camera instead</Button>
       </div>
       {camera && (
         <Suspense fallback={null}>
-          <CameraScanner title="Scan the product's barcode" onClose={() => setCamera(false)} onDetected={(code) => {
+          <CameraScanner title="Read the barcode with the camera" onClose={() => setCamera(false)} onDetected={(code) => {
             setCamera(false)
-            if (!barcodes.some((b) => b.code === code)) setBarcodes([...barcodes, { code, type: isValidEan13(code) ? 'ean13' : 'code128', pack_qty: 1 }])
+            addCode(code)
           }} />
         </Suspense>
       )}
@@ -415,8 +468,9 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
 
       <div className="modal-foot">
         <Button onClick={onClose}>Cancel</Button>
-        {isNew && <Button busy={busy === 'again'} disabled={!!busy} onClick={() => void save(true)}>Save &amp; add another</Button>}
-        <Button kind="primary" busy={busy === 'save'} disabled={!!busy} onClick={() => void save(false)}>{isNew ? 'Save product' : 'Save'}</Button>
+        {isNew && <Button busy={busy === 'again'} disabled={!!busy} onClick={() => void save('again')}>Save &amp; add another</Button>}
+        {(barcodes.length > 0 || !!scanned.trim()) && <Button busy={busy === 'print'} disabled={!!busy} onClick={() => void save('print')}>Save &amp; print label</Button>}
+        <Button kind="primary" busy={busy === 'close'} disabled={!!busy} onClick={() => void save('close')}>{isNew ? 'Save product' : 'Save'}</Button>
       </div>
     </Modal>
   )

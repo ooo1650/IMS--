@@ -21,6 +21,16 @@ export function isValidUpcA(code: string): boolean {
   return /^\d{12}$/.test(code) && isValidEan13(`0${code}`)
 }
 
+export function isValidEan8(code: string): boolean {
+  // Same weights as EAN-13 once padded to 13 digits.
+  return /^\d{8}$/.test(code) && isValidEan13(`00000${code}`)
+}
+
+/** The type stored with a barcode. Worked out from the digits: never ask the user. */
+export function typeFor(code: string): 'ean13' | 'ean8' | 'upca' | 'code128' {
+  return isValidEan13(code) ? 'ean13' : isValidUpcA(code) ? 'upca' : isValidEan8(code) ? 'ean8' : 'code128'
+}
+
 /** A random in-store EAN-13 ("2" + 11 digits + check). Uniqueness is enforced by the server. */
 export function generateInStoreEan13(random: () => number = Math.random): string {
   let body = '2'
@@ -88,11 +98,34 @@ export function modulesFor(code: string): { modules: string; kind: 'ean13' | 'co
   return { modules: code128Modules(code), kind: 'code128', text: code }
 }
 
-/** Crisp SVG (one rect per bar run) with 10-module quiet zones; scales to its container. */
-export function barcodeSvg(code: string, opts: { height?: number; showText?: boolean } = {}): string {
+/** Blank modules each side: EAN-13 needs 11 on the left, Code 128 needs 10. */
+const QUIET = 11
+/** One dot of a 203 dpi label printer, mm. */
+const DOT = 0.125
+
+/** Modules across the whole symbol, blank margins included. */
+export function symbolModules(code: string): number {
+  return modulesFor(code).modules.length + QUIET * 2
+}
+
+/**
+ * Width of the narrowest bar on a label, mm. Width decides whether a scanner
+ * can read it, so it is never derived from the space left for the height. Roll
+ * printers get whole dots, else neighbouring bars round to different widths.
+ */
+export function labelBarWidth(modules: number, labelWidth: number, roll: boolean): number {
+  const x = Math.min(0.375, (labelWidth - (roll ? 1 : 2)) / modules)
+  return roll && x >= DOT ? Math.floor(x / DOT) * DOT : x
+}
+
+/**
+ * Crisp SVG (one rect per bar run) with its blank margins. With `width` (any
+ * CSS length) the bars keep exactly that width and only their height stretches.
+ */
+export function barcodeSvg(code: string, opts: { height?: number; showText?: boolean; width?: string } = {}): string {
   const { modules, text } = modulesFor(code)
   const height = opts.height ?? 50
-  const quiet = 10
+  const quiet = QUIET
   const width = modules.length + quiet * 2
   const textH = opts.showText === false ? 0 : 11
   let bars = ''
@@ -109,5 +142,6 @@ export function barcodeSvg(code: string, opts: { height?: number; showText?: boo
   const label = textH
     ? `<text x="${width / 2}" y="${height + 10}" text-anchor="middle" font-family="monospace" font-size="10">${text.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</text>`
     : ''
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height + textH}" shape-rendering="crispEdges">${bars}${label}</svg>`
+  const sized = opts.width ? ` style="width:${opts.width}" preserveAspectRatio="none"` : ''
+  return `<svg xmlns="http://www.w3.org/2000/svg"${sized} viewBox="0 0 ${width} ${height + textH}" shape-rendering="crispEdges">${bars}${label}</svg>`
 }

@@ -74,7 +74,7 @@ interface PrinterDriver {
 /** Prints server-rendered HTML through the browser dialog (kiosk mode prints silently). */
 export async function printHtml(html: string, title: string) {
   const w = window.open('', 'ims-print', 'width=520,height=720')
-  if (!w) throw new Error('Pop-up blocked: allow pop-ups for this site to print invoices')
+  if (!w) throw new Error('Pop-up blocked: allow pop-ups for this site, then print again')
   w.document.write(html)
   w.document.title = title
   w.document.close()

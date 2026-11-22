@@ -1,6 +1,6 @@
 import { BitArray, Code128Reader, DecodeHintType, EAN13Reader } from '@zxing/library'
 import { describe, expect, it } from 'vitest'
-import { barcodeSvg, code128Modules, ean13CheckDigit, ean13Modules, generateInStoreEan13, isValidEan13, isValidUpcA, modulesFor } from './barcode'
+import { barcodeSvg, code128Modules, ean13CheckDigit, ean13Modules, generateInStoreEan13, isValidEan13, isValidUpcA, labelBarWidth, modulesFor, symbolModules, typeFor } from './barcode'
 
 /** Decode a module string with ZXing's reader, as a real scanner would see one row. */
 function decode(modules: string, reader: Code128Reader | EAN13Reader) {
@@ -47,6 +47,24 @@ describe('Code 128-B', () => {
     expect(modulesFor('ABC123').kind).toBe('code128')
     expect(modulesFor('4006381333932').kind).toBe('code128') // bad check digit → not EAN
     expect(() => code128Modules('दूध')).toThrow()
+  })
+})
+
+it('works the type out from the code', () => {
+  expect(typeFor('2147598931120')).toBe('ean13')
+  expect(typeFor('036000291452')).toBe('upca')
+  expect(typeFor('96385074')).toBe('ean8')
+  expect(typeFor('96385075')).toBe('code128')
+  expect(typeFor('1234567890')).toBe('code128')
+})
+
+describe('label bar width', () => {
+  const n = symbolModules('2147598931120')
+  it.each([[38.1, false], [70, false], [50, true], [38, true]])('EAN-13 stays readable on a %s mm label (roll: %s)', (w, roll) => {
+    const x = labelBarWidth(n, w, roll)
+    expect(x).toBeGreaterThanOrEqual(0.25)
+    expect(x * n).toBeLessThanOrEqual(w)
+    if (roll) expect((x / 0.125) % 1).toBe(0) // whole dots at 203 dpi
   })
 })
 

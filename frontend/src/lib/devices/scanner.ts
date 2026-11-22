@@ -53,14 +53,27 @@ export function diagnoseScan(code: string, times: number[], end: 'Enter' | 'Tab'
 function isEditable(t: EventTarget | null) {
   const el = t as HTMLElement | null
   if (!el?.tagName) return false
-  return el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName)
+  // Checkboxes and the like take no text: a scan made after ticking one still counts.
+  if (el.tagName === 'INPUT') return !['checkbox', 'radio', 'button', 'submit', 'range', 'file'].includes((el as HTMLInputElement).type)
+  return el.isContentEditable || ['TEXTAREA', 'SELECT'].includes(el.tagName)
+}
+
+/** Set a React-controlled input's value as if it had been typed. */
+function setValue(el: HTMLInputElement, value: string) {
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(el, value)
+  el.dispatchEvent(new Event('input', { bubbles: true }))
 }
 
 /**
  * Calls onScan for scans made while no text field has focus (a focused field
  * receives the scan as typing, as before). Disabled while a modal is open.
+ *
+ * `inFields` (product form): a retail barcode (8–14 digits) scanned while some
+ * other text box has focus is taken out of that box and passed on, so it can't
+ * become a product name, a price or a pack size. Boxes marked `data-scan`
+ * handle their own Enter.
  */
-export function useScannerInput(onScan: (code: string) => void, enabled: boolean) {
+export function useScannerInput(onScan: (code: string) => void, enabled: boolean, inFields = false) {
   const cb = useRef(onScan)
   useEffect(() => {
     cb.current = onScan
@@ -68,17 +81,29 @@ export function useScannerInput(onScan: (code: string) => void, enabled: boolean
   useEffect(() => {
     if (!enabled) return
     const det = new WedgeDetector()
+    let before = '' // the field's text when the current burst began
+    let lastAt = -Infinity
     const onKey = (e: KeyboardEvent) => {
-      if (isEditable(e.target) || e.ctrlKey || e.metaKey || e.altKey) return
+      if (e.ctrlKey || e.metaKey || e.altKey) return
+      const el = e.target as HTMLInputElement
+      const field = isEditable(el)
+      if (field && !(inFields && el.tagName === 'INPUT' && !el.hasAttribute('data-scan'))) return
+      if (field && e.timeStamp - lastAt > MAX_GAP) before = el.value
+      lastAt = e.timeStamp
       const code = det.feed(e.key, e.timeStamp)
-      if (code) {
-        e.preventDefault()
-        cb.current(code)
+      if (!code) return
+      if (field) {
+        if (!/^\d{8,14}$/.test(code)) return
+        setValue(el, before)
       }
+      // Without this, the scanner's Enter presses whichever button has focus.
+      e.preventDefault()
+      cb.current(code)
     }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [enabled])
+    // Capture: run before a field's own handlers change its text.
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [enabled, inFields])
 }
 
 let audio: AudioContext | null = null

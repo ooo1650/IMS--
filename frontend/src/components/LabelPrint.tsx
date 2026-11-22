@@ -1,6 +1,6 @@
 /** Barcode + price labels: A4 sticker sheets or a thermal label printer, via the print dialog. */
 import { useState } from 'react'
-import { barcodeSvg } from '../lib/barcode'
+import { barcodeSvg, labelBarWidth, symbolModules } from '../lib/barcode'
 import { npr } from '../lib/money'
 import { printHtml } from '../lib/printer'
 import type { Product } from '../lib/types'
@@ -23,18 +23,28 @@ const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 
 type LabelProduct = Pick<Product, 'id' | 'sku' | 'name' | 'barcodes' | 'sale_price_paisa' | 'branch_price_paisa' | 'tax_inclusive'>
 
-function labelHtml(p: LabelProduct, opts: { price: boolean; name: boolean; small: boolean }) {
-  const code = p.barcodes[0]?.code || p.sku
-  let svg = ''
+/** Below this (mm) many shop scanners can't tell the bars apart. */
+const THIN_BAR = 0.19
+
+const codeOf = (p: LabelProduct) => p.barcodes[0]?.code || p.sku
+
+/** Narrowest bar for this code on this label, or null when it can't be bars. */
+function barWidth(code: string, L: Layout): number | null {
   try {
-    svg = barcodeSvg(code)
+    return labelBarWidth(symbolModules(code), L.w, !L.sheet)
   } catch {
-    /* not encodable (non-ASCII SKU): text only */
+    return null // not encodable (non-ASCII SKU): text only
   }
+}
+
+function labelHtml(p: LabelProduct, L: Layout, opts: { price: boolean; name: boolean; small: boolean }) {
+  const code = codeOf(p)
+  const x = barWidth(code, L)
+  const svg = x == null ? '' : barcodeSvg(code, { showText: false, width: `${+(x * symbolModules(code)).toFixed(3)}mm` })
   const price = p.branch_price_paisa ?? p.sale_price_paisa
   return `<div class="label${opts.small ? ' small' : ''}">
     ${opts.name ? `<div class="name">${esc(p.name)}</div>` : ''}
-    ${svg ? `<div class="bc">${svg}</div>` : `<div class="sku">${esc(code)}</div>`}
+    ${svg ? `<div class="bc">${svg}</div><div class="digits">${esc(code)}</div>` : `<div class="sku">${esc(code)}</div>`}
     ${opts.price ? `<div class="price">${esc(npr(price))}${p.tax_inclusive ? '' : ' <small>+VAT</small>'}</div>` : ''}
   </div>`
 }
@@ -42,12 +52,13 @@ function labelHtml(p: LabelProduct, opts: { price: boolean; name: boolean; small
 function labelsDocument(items: { product: LabelProduct; copies: number }[], layoutKey: string, opts: { price: boolean; name: boolean; skip: number }) {
   const L = LAYOUTS[layoutKey]
   const small = L.w < 45
-  const labels = items.flatMap(({ product, copies }) => Array.from({ length: copies }, () => labelHtml(product, { ...opts, small })))
+  const labels = items.flatMap(({ product, copies }) => Array.from({ length: copies }, () => labelHtml(product, L, { ...opts, small })))
   const css = `*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#000}
-    .label{width:${L.w}mm;height:${L.h}mm;padding:1.2mm 1.5mm;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.4mm;text-align:center}
-    .name{font-size:${small ? 6.5 : 8.5}pt;line-height:1.1;font-weight:600;max-height:2.3em;overflow:hidden;width:100%}
-    .bc{width:100%;flex:1;min-height:0;display:flex;justify-content:center}.bc svg{height:100%;max-width:100%}
-    .price{font-size:${small ? 8 : 11}pt;font-weight:700}.price small{font-size:6pt;font-weight:400}
+    .label{width:${L.w}mm;height:${L.h}mm;padding:1mm .5mm;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.4mm;text-align:center}
+    .name{font-size:${small ? 6.5 : 8.5}pt;line-height:1.1;font-weight:600;overflow:hidden;width:100%;flex:none;${L.h < 30 ? 'white-space:nowrap;text-overflow:ellipsis' : 'max-height:2.3em'}}
+    .bc{width:100%;flex:1;min-height:0;display:flex;justify-content:center}.bc svg{height:100%;flex:none}
+    .digits{flex:none;font:${small ? 6 : 7.5}pt/1 monospace}
+    .price{flex:none;line-height:1;font-size:${small ? 8 : 11}pt;font-weight:700}.price small{font-size:6pt;font-weight:400}
     .sku{font:${small ? 7 : 9}pt monospace}
     .page{position:relative;page-break-after:always}`
   if (!L.sheet) {
@@ -74,6 +85,7 @@ export function LabelPrint({ products, onClose }: { products: LabelProduct[]; on
   const total = products.reduce((a, p) => a + (copies[p.id] ?? 0), 0)
   const sheet = LAYOUTS[layout].sheet
   const preview = products[0]
+  const thin = products.filter((p) => (copies[p.id] ?? 0) > 0 && (barWidth(codeOf(p), LAYOUTS[layout]) ?? 1) < THIN_BAR)
 
   return (
     <Modal title={`Print labels · ${products.length} product${products.length === 1 ? '' : 's'}`} onClose={onClose} wide>
@@ -94,7 +106,7 @@ export function LabelPrint({ products, onClose }: { products: LabelProduct[]; on
           <label className="check"><input type="checkbox" checked={price} onChange={(e) => setPrice(e.target.checked)} /> Price (branch price when set)</label>
           {preview && (
             <div className="label-preview" style={{ aspectRatio: `${LAYOUTS[layout].w} / ${LAYOUTS[layout].h}` }}
-              dangerouslySetInnerHTML={{ __html: labelHtml(preview, { price, name, small: false }) }} />
+              dangerouslySetInnerHTML={{ __html: labelHtml(preview, LAYOUTS[layout], { price, name, small: false }) }} />
           )}
         </div>
         <div className="table-scroll tall">
@@ -115,14 +127,20 @@ export function LabelPrint({ products, onClose }: { products: LabelProduct[]; on
           </table>
         </div>
       </div>
+      {thin.length > 0 && (
+        <div className="alert alert-warn small">
+          The code is long for this label, so the bars will be very thin and may not scan: {thin.map((p) => p.name).join(', ')}.
+          Choose a wider label, or give the product a 13-digit code (edit → “Make one”).
+        </div>
+      )}
       <p className="muted small">In the print dialog choose the label printer (or A4 printer), set margins to <strong>None</strong> and scale to <strong>100%</strong>.</p>
       <div className="modal-foot">
         <Button onClick={onClose}>Cancel</Button>
-        <Button kind="primary" disabled={!total} why="Set how many labels to print for at least one product" onClick={() => {
+        <Button kind="primary" disabled={!total} why="Set how many labels to print for at least one product" onClick={async () => {
           setError(null)
           try {
             const items = products.map((p) => ({ product: p, copies: copies[p.id] ?? 0 })).filter((i) => i.copies > 0)
-            void printHtml(labelsDocument(items, layout, { price, name, skip: sheet ? skip : 0 }), 'Labels')
+            await printHtml(labelsDocument(items, layout, { price, name, skip: sheet ? skip : 0 }), 'Labels')
           } catch (e) {
             setError((e as Error).message)
           }
