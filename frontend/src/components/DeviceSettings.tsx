@@ -6,6 +6,7 @@ import { pairSerial, pairUsb, serialSupported, usbSupported } from '../lib/devic
 import { driverFor } from '../lib/printer'
 import type { RegisterCfg } from '../lib/types'
 import { CameraScanner } from './CameraScanner'
+import { ScannerTest } from './ScannerTest'
 import { Icon, type IconName } from './Icon'
 import { Badge, Button, ErrorBox, Field, Modal } from './ui'
 
@@ -20,7 +21,12 @@ function Section({ icon, title, children }: { icon: IconName; title: string; chi
   )
 }
 
-export function DeviceSettings({ register, storeName, onClose }: { register: RegisterCfg; storeName: string; onClose: () => void }) {
+export function DeviceSettings({ register, storeName, productFor, onClose }: {
+  register: RegisterCfg
+  storeName: string
+  productFor: (code: string) => string | undefined
+  onClose: () => void
+}) {
   const [s, save] = useDeviceSettings()
   const [error, setError] = useState<string | null>(null)
   const [note, setNote] = useState<string | null>(null)
@@ -142,11 +148,13 @@ export function DeviceSettings({ register, storeName, onClose }: { register: Reg
             <input type="checkbox" checked={s.scanner.beep} onChange={(e) => set((d) => ({ ...d, scanner: { ...d.scanner, beep: e.target.checked } }))} />
             Beep on scan (high = found, low = unknown code)
           </label>
-          <Button onClick={() => setCamera(true)}><Icon name="search" size={16} /> Test camera scanning</Button>
+          <ScannerTest productFor={productFor} />
+          <p className="muted small">No scanner? A webcam, phone or tablet camera can read barcodes instead.</p>
+          <Button kind="ghost" onClick={() => setCamera(true)}>Test the camera instead</Button>
         </Section>
       </div>
       <div className="modal-foot"><Button kind="primary" onClick={onClose}>Done</Button></div>
-      {camera && <CameraScanner onClose={() => setCamera(false)} onDetected={(code) => { setCamera(false); setNote(`Camera read: ${code}`) }} />}
+      {camera && <CameraScanner onClose={() => setCamera(false)} onDetected={(code) => { setCamera(false); setNote(`Barcode read: ${code}`) }} />}
     </Modal>
   )
 }

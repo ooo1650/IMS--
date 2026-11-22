@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { poleLines } from './display'
-import { WedgeDetector } from './scanner'
+import { WedgeDetector, diagnoseScan } from './scanner'
 
 function type(det: WedgeDetector, text: string, gap: number, start = 1000) {
   let t = start
@@ -26,6 +26,32 @@ describe('WedgeDetector', () => {
     const det = new WedgeDetector()
     det.feed('x', 0)
     expect(type(det, 'ABC-123', 5, 5000)).toBe('ABC-123')
+  })
+})
+
+describe('diagnoseScan', () => {
+  const fast = [0, 8, 16, 24, 32]
+  it('passes a fast code ending in Enter', () => {
+    expect(diagnoseScan('8901', fast, 'Enter').ok).toBe(true)
+  })
+  it('names a missing or wrong suffix', () => {
+    expect(diagnoseScan('8901', fast, null).message).toMatch(/sends nothing/)
+    expect(diagnoseScan('8901', fast, 'Tab').message).toMatch(/sends Tab/)
+  })
+  it('names a keystroke delay', () => {
+    expect(diagnoseScan('8901', [0, 120, 240, 360, 480], 'Enter').message).toMatch(/slowly/)
+  })
+  it('names a non-English keyboard layout', () => {
+    expect(diagnoseScan('८९०१', fast, 'Enter').message).toMatch(/keyboard layout/)
+  })
+  it('names a partial code', () => {
+    expect(diagnoseScan('89', fast, 'Enter').message).toMatch(/Only 2/)
+  })
+  it('agrees with the detector the POS uses', () => {
+    for (const gap of [8, 50, 51, 150]) {
+      const times = fast.map((_, i) => 1000 + i * gap)
+      expect(diagnoseScan('8901', times, 'Enter').ok).toBe(type(new WedgeDetector(), '8901', gap) === '8901')
+    }
   })
 })
 

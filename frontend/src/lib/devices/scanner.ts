@@ -5,13 +5,16 @@
  */
 import { useEffect, useRef } from 'react'
 
+const MAX_GAP = 50 // ms between keys: scanners <30, people 100+
+const MIN_LENGTH = 4
+
 export class WedgeDetector {
   private buf = ''
   private lastAt = 0
   /** maxGap: ms between scanner keystrokes; humans are ~100ms+, scanners <30ms. */
   private maxGap: number
   private minLength: number
-  constructor(maxGap = 50, minLength = 4) {
+  constructor(maxGap = MAX_GAP, minLength = MIN_LENGTH) {
     this.maxGap = maxGap
     this.minLength = minLength
   }
@@ -28,6 +31,23 @@ export class WedgeDetector {
     if (key.length === 1) this.buf += key
     return null
   }
+}
+
+/**
+ * POS → Devices → Test scanner: will this scan work at the till, and if not why?
+ * `times` are the keydown timestamps, `end` is the key that finished the code
+ * (null = the typing just stopped).
+ */
+export function diagnoseScan(code: string, times: number[], end: 'Enter' | 'Tab' | null): { ok: boolean; message: string } {
+  if (code.length < MIN_LENGTH)
+    return { ok: false, message: `Only ${code.length} character(s) arrived. Scan again; the POS needs at least ${MIN_LENGTH} to recognise a scan.` }
+  if ([...code].some((c) => c < ' ' || c > '~'))
+    return { ok: false, message: 'The characters arrived changed by the keyboard layout. Switch the computer to English (US) and scan again.' }
+  if (end !== 'Enter')
+    return { ok: false, message: `The scanner sends ${end ?? 'nothing'} after the code, and the POS needs Enter. Scan the “Enter” (or “CR”) suffix barcode in the scanner's manual.` }
+  if (times.some((t, i) => i > 0 && t - times[i - 1] > MAX_GAP))
+    return { ok: false, message: 'The code arrived slowly, like typing. It works with the search box selected (F2), but not from elsewhere on the screen. Turn off any keystroke delay on the scanner.' }
+  return { ok: true, message: 'The scanner works.' }
 }
 
 function isEditable(t: EventTarget | null) {

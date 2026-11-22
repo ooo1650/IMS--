@@ -1,5 +1,6 @@
 /** Scan a barcode with the device camera (phones, tablets, laptop webcams). */
 import { useEffect, useRef, useState } from 'react'
+import { useScannerInput } from '../lib/devices/scanner'
 import { ErrorBox, Modal } from './ui'
 
 interface Detected { rawValue: string }
@@ -21,6 +22,14 @@ export function CameraScanner({ title = 'Scan barcode', onDetected, onClose }: {
   useEffect(() => {
     found.current = onDetected
   })
+
+  // A plugged-in scanner types the code. Accept it here too, or a scan made
+  // with this window open is lost.
+  useScannerInput((code) => {
+    if (done.current) return
+    done.current = true
+    found.current(code)
+  }, true)
 
   useEffect(() => {
     let stopped = false
@@ -89,6 +98,7 @@ export function CameraScanner({ title = 'Scan barcode', onDetected, onClose }: {
         <span className="camera-frame" aria-hidden />
       </div>
       <p className="muted small center-text">Hold the barcode inside the frame.{engine && ` · ${engine}`}</p>
+      <p className="muted small center-text">This is the computer's camera. Have a USB or Bluetooth scanner? Don't show it to the camera: just scan the product.</p>
     </Modal>
   )
 }

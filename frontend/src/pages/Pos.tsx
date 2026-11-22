@@ -434,6 +434,8 @@ export default function Pos() {
     }
     if (devices.scanner.beep && (ok || !matches.length)) beep(ok)
     if (ok) setQuery('')
+    // Unknown code: select it, so the next scan replaces it instead of being glued on.
+    else if (!matches.length) searchRef.current?.select()
   }
 
   const pickTile = useCallback((p: PosProduct) => {
@@ -448,7 +450,7 @@ export default function Pos() {
     if (devices.scanner.beep) beep(ok)
     setError(ok ? null : `No product with barcode or SKU “${code}”. Add it in Products → Barcodes.`)
   }
-  useScannerInput(onDeviceScan, devices.scanner.anywhere && !!shift && modal === null && !done)
+  useScannerInput(onDeviceScan, devices.scanner.anywhere && !!shift && modal === null && !camera && !done)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -556,7 +558,7 @@ export default function Pos() {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                 />
-                <button type="button" className="icon-btn scan-camera" title="Scan with camera" aria-label="Scan with camera" onClick={() => setCamera(true)}>
+                <button type="button" className="icon-btn scan-camera" title="Use the camera (a plugged-in scanner doesn't need this: just scan)" aria-label="Scan with camera" onClick={() => setCamera(true)}>
                   <Icon name="qr" size={20} />
                 </button>
               </form>
@@ -740,7 +742,7 @@ export default function Pos() {
         <CloseShiftModal shift={shift} online={online} onClose={() => setModal(null)} onClosed={() => { setModal(null); void loadAll() }} />
       )}
       {modal === 'devices' && register && (
-        <Suspense fallback={null}><DeviceSettings register={register} storeName={config.seller.name || config.branch.name} onClose={() => setModal(null)} /></Suspense>
+        <Suspense fallback={null}><DeviceSettings register={register} storeName={config.seller.name || config.branch.name} productFor={(code) => (index.byCode.get(code)?.product ?? index.bySku.get(code.toLowerCase()))?.name} onClose={() => setModal(null)} /></Suspense>
       )}
       {camera && (
         <Suspense fallback={null}><CameraScanner onClose={() => setCamera(false)} onDetected={(code) => { setCamera(false); onDeviceScan(code) }} /></Suspense>
