@@ -154,6 +154,13 @@ to the Render service and send the same security headers as nginx. Replace
 | `IMS_SERVE_MEDIA` | `true` (Django serves product photos) |
 | `IMS_RUN_SCHEDULER` | `true` (scheduled jobs run inside the web service) |
 
+**Updating the database.** Render applies migrations at start **only if `IMS_MIGRATE_DATABASE_URL` is set** (that also needs `IMS_APP_DB_PASSWORD`, and resets `ims_app` to that password). Without it a deploy brings new code but no new tables: the API answers `500 db_outdated` and the log shows a WARNING at start. Update from your own computer, with the repository at the deployed commit:
+
+```bash
+cd backend && .venv/bin/python scripts/update_hosted_db.py 'postgresql://postgres.<ref>@<pooler-host>:5432/postgres'
+```
+It asks for the database password (hidden), shows the plan, waits for `yes`, migrates, gives `ims_app` access without changing its password, and removes the Data API roles' access.
+
 Limits of this setup:
 * Render's free plan sleeps after 15 idle minutes (first request ~1 min; jobs don't run while asleep) and its disk is wiped on every deploy, so **product photos are lost** unless a Render persistent disk is mounted at `/srv/media` (paid).
 * No `pg_dump` backup service: use Supabase's backups.

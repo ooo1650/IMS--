@@ -11,6 +11,7 @@ interface Pairing { code: string; link: string; until: number; qr?: string }
 export function TabletPairing({ register }: { register: RegisterCfg }) {
   const [s, save] = useDeviceSettings()
   const [status, setStatus] = useState<Status | null>(null)
+  const [failed, setFailed] = useState<string | null>(null) // why the status couldn't be read
   const [pairing, setPairing] = useState<Pairing | null>(null)
   const [done, setDone] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -31,14 +32,18 @@ export function TabletPairing({ register }: { register: RegisterCfg }) {
         const next = await refresh()
         if (stopped) return
         setStatus(next)
+        setFailed(null)
         if (pairing && !next.code_pending) {
           setPairing(null)
           setDone(next.paired && Date.now() < pairing.until
             ? 'Tablet connected. Press Full screen on it and keep it on charge.'
             : 'That code expired. Press the button for a new one.')
         }
-      } catch {
-        if (!stopped) setStatus(null) // offline: say so rather than show an old status
+      } catch (e) {
+        if (!stopped) {
+          setStatus(null) // rather than show an old status
+          setFailed((e as Error).message)
+        }
       }
       if (!stopped) timer = setTimeout(tick, 3000)
     }
@@ -105,7 +110,9 @@ export function TabletPairing({ register }: { register: RegisterCfg }) {
           <strong className="fig">{pairing.code}</strong>
         </div>
       )}
-      {!status && <p className="muted small">Checking the tablet… (needs an internet connection)</p>}
+      {!status && (failed
+        ? <div className="alert alert-warn small" role="alert">Can't connect a tablet right now: {failed} Trying again…</div>
+        : <p className="muted small">Checking the tablet…</p>)}
       <div className="device-pair">
         {status?.paired && (
           <Badge tone={status.online ? 'good' : 'warn'}>{status.online ? 'Tablet showing' : 'Tablet not responding'}</Badge>

@@ -31,13 +31,14 @@ cd console && npm install && npm run dev   # operator console on http://localhos
 cd backend && .venv/bin/python manage.py create_platform_admin --username op --email you@x.com   # first operator on a real install
 # demo logins (password demo-pass-123): admin (owner, both businesses), manager, cashier, cashier_pkr, clerk, viewer, manager_brt, manager_shoes; operator (console)
 
-cd backend && .venv/bin/python manage.py test                 # 262 tests, SQLite (4 Postgres-only skipped)
+cd backend && .venv/bin/python manage.py test                 # 263 tests, SQLite (4 Postgres-only skipped)
 .venv/bin/python scripts/test_with_postgres.py                # same suite on embedded Postgres (pgserver) — triggers + concurrency
 cd frontend && npm test && npx tsc -b && npm run build   # 154 tests; `npm run lint` (oxlint)
 cd console && npx tsc -b && npm run build              # console (src/shared/ = copies from frontend/src: `npm run sync-shared`)
 ```
 Last verified: all green on 2026-11-09 (SQLite, embedded Postgres, and a full local Docker staging run incl. backup, restore drill and point-in-time restore). CI: `.github/workflows/ci.yml` (backend on Postgres + ruff, frontend, console, image build). Backend lint: `.venv/bin/ruff check .` (`backend/ruff.toml`).
 Hosted split (Vercel frontends + Render backend + Supabase DB): `docs/DEPLOYMENT.md` last section; `vercel.json` in `frontend/` and `console/`, backend guard `ims/platform_guard.py`.
+**The live Render service does not migrate on deploy** (found 2026-11-22: no working `IMS_MIGRATE_DATABASE_URL`). A change with a migration needs the owner to run `backend/scripts/update_hosted_db.py` against Supabase; say so in the hand-over.
 Docker: `cp .env.example .env && docker compose up -d --build` (see `docs/DEPLOYMENT.md`; not yet run on a real Docker host).
 
 ## Invariants (don't break these)

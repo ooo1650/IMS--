@@ -15,6 +15,10 @@ case "${1:-web}" in
     if [ -n "${IMS_MIGRATE_DATABASE_URL:-}" ]; then
       DATABASE_URL="$IMS_MIGRATE_DATABASE_URL" python manage.py migrate --no-input
       DATABASE_URL="$IMS_MIGRATE_DATABASE_URL" python manage.py ensure_db_roles
+    elif ! python manage.py migrate --check > /dev/null 2>&1; then
+      # Not fatal (the database may just be waking up), but never silent.
+      echo "WARNING: the database is behind this code (or unreachable) and IMS_MIGRATE_DATABASE_URL is not set," >&2
+      echo "WARNING: so nothing updates it. Run backend/scripts/update_hosted_db.py (docs/DEPLOYMENT.md)." >&2
     fi
     if [ "${IMS_RUN_SCHEDULER:-false}" = "true" ]; then
       python manage.py run_scheduler &

@@ -138,6 +138,22 @@ class JsonErrorPages(TestCase):
         self.assertIn("can't reach its database", body["detail"])
         self.assertEqual(body["code"], "db_unavailable")
 
+    def test_database_behind_the_code_says_so(self):
+        from django.db import OperationalError, ProgrammingError
+
+        class Cause(Exception):
+            sqlstate = "42P01"
+
+        pg = ProgrammingError('relation "x" does not exist')
+        pg.__cause__ = Cause()
+        for exc in (pg, OperationalError("no such table: x")):
+            try:
+                raise exc
+            except (OperationalError, ProgrammingError):
+                r = errors.server_error(RequestFactory().get("/api/v1/display/state"))
+            self.assertEqual(r.status_code, 500)
+            self.assertEqual(json.loads(r.content)["code"], "db_outdated")
+
     def test_server_error_is_json_for_api_only(self):
         rf = RequestFactory()
         r = errors.server_error(rf.get("/api/v1/products/"))
