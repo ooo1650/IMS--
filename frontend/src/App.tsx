@@ -13,6 +13,7 @@ const Login = lazy(() => import('./pages/Login'))
 // session check, instead of after it.
 prefetchPage(`/${window.location.pathname.split('/')[1] ?? ''}`)
 const CustomerDisplay = lazy(() => import('./pages/CustomerDisplay'))
+const TabletDisplay = lazy(() => import('./pages/TabletDisplay'))
 
 /** The sign-in page's outline: shown to people who aren't signed in while the page loads. */
 function LoginSkeleton() {
@@ -47,6 +48,8 @@ export default function App() {
   const auth = useAuth()
   // Customer-facing window: no login, it only mirrors the POS in this browser.
   if (window.location.pathname === '/customer-display') return <Suspense fallback={null}><CustomerDisplay /></Suspense>
+  // A separate tablet as customer display: no login either, it pairs with a till by code. Typed by hand, so forgiving.
+  if (/^\/display\/*$/i.test(window.location.pathname)) return <Suspense fallback={null}><TabletDisplay /></Suspense>
   // While the session is checked, show the outline of where you're about to land.
   if (auth.loading) return wasSignedIn() ? <AppSkeleton /> : <LoginSkeleton />
   if (!auth.me) return <Suspense fallback={<LoginSkeleton />}><Login /></Suspense>

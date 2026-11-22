@@ -1,12 +1,14 @@
 /**
- * Customer-facing display. The POS publishes what the customer should see; two
+ * Customer-facing display. The POS publishes what the customer should see; three
  * outputs consume it:
  *  - a second browser window (/customer-display) on a customer-facing monitor,
  *    fed over BroadcastChannel (same browser, works offline, no server round trip);
+ *  - a tablet or other separate device at /display, through the server (tablet.ts);
  *  - a 2×20 serial pole display, if this till paired one (WebSerial).
  */
 import { padLine, poleDisplayBytes } from './escpos'
 import { deviceSettings } from './settings'
+import { tablet } from './tablet'
 import { serialSink } from './transport'
 
 interface DisplayLine { name: string; qty: number; amount: string }
@@ -40,6 +42,7 @@ function ch() {
 export function publishDisplay(state: DisplayState) {
   last = state
   ch()?.postMessage(state)
+  tablet.show(state)
   schedulePole(state)
 }
 

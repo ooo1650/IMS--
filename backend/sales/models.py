@@ -442,3 +442,20 @@ class FonepayMerchant(models.Model):
 
     def is_complete(self):
         return not self.missing()
+
+
+class RegisterDisplay(models.Model):
+    """The tablet paired as a till's customer display (sales/display.py): the
+    pairing secrets, stored only as hashes, and the screen the till last sent.
+    Not a financial record: the screen is overwritten on every change."""
+
+    register = models.OneToOneField("tenancy.Register", on_delete=models.CASCADE, related_name="customer_display")
+    code_hash = models.CharField(max_length=64, null=True, blank=True, unique=True)
+    code_expires_at = models.DateTimeField(null=True, blank=True)
+    token_hash = models.CharField(max_length=64, null=True, blank=True, unique=True)
+    paired_at = models.DateTimeField(null=True, blank=True)
+    last_seen_at = models.DateTimeField(null=True, blank=True)
+    state = models.JSONField(default=dict, blank=True)
+    seq = models.PositiveBigIntegerField(default=0)
+    changed_at = models.DateTimeField(null=True, blank=True)  # the screen last changed
+    sent_at = models.DateTimeField(null=True, blank=True)  # the till last confirmed it

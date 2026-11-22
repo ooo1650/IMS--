@@ -642,6 +642,7 @@ textarea { resize: vertical; }
 .label-preview .name { font-size: 12px; font-weight: 500; }
 .label-preview .bc { width: 100%; height: 48px; display: flex; justify-content: center; }
 .label-preview .bc svg { height: 100%; max-width: 100%; }
+.label-preview .digits { font: 11px/1 'IBM Plex Mono', monospace; }
 .label-preview .price { font-weight: 500; }
 .label-preview .price small { font-size: 10px; font-weight: 400; }
 .table .col-check { width: 36px; padding-right: 0; }
@@ -650,7 +651,7 @@ textarea { resize: vertical; }
 }
 
 /* --- customer display (second screen) --- */
-.cd { min-height: 100vh; background: var(--bg); display: flex; flex-direction: column; font-size: 20px; }
+.cd { min-height: 100vh; min-height: 100dvh; background: var(--bg); display: flex; flex-direction: column; font-size: 20px; }
 .cd-idle { align-items: center; justify-content: center; text-align: center; gap: 12px; }
 .cd-idle h1 { font-size: 44px; }
 .cd-idle p { color: var(--text-secondary); margin: 0; font-size: 22px; }
@@ -669,6 +670,37 @@ textarea { resize: vertical; }
 .cd-total img { width: 100%; max-width: 320px; margin: 0 auto; border-radius: var(--radius-sm); border: 1px solid var(--border); }
 .cd-grand { display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid var(--border); padding-top: 12px; }
 .cd-grand strong { font-size: 44px; color: var(--accent); font-variant-numeric: tabular-nums; }
+.cd-hint { font-size: 14px !important; color: var(--text-muted) !important; }
+.cd-pair { width: min(440px, 100vw); padding: 24px; text-align: left; }
+.cd-pair h1 { font-size: 28px; }
+.cd-pair p { font-size: 16px; margin: 8px 0 16px; }
+.cd-code { font: 28px var(--mono); text-transform: uppercase; text-align: center; }
+.cd-sleep { width: 100%; border: 0; font: inherit; color: var(--text-secondary); cursor: pointer; }
+.cd-sleep strong { font-size: 44px; font-weight: 500; color: var(--text-primary); }
+/* Tablets: the total and the payment QR must never need a scroll. */
+@media (max-width: 1280px), (max-height: 800px) {
+  .cd { font-size: 18px; }
+  .cd:not(.cd-idle) { height: 100vh; height: 100dvh; overflow: hidden; }
+  .cd-head { padding: 12px 20px; }
+  .cd-body { grid-template-columns: minmax(0, 1fr) minmax(260px, 36%); grid-template-rows: minmax(0, 1fr); gap: 16px; padding: 16px; }
+  .cd-lines { max-height: 100%; align-self: stretch; }
+  .cd-lines li { grid-template-columns: minmax(0, 1fr) 48px 7.5em; padding: 8px 16px; }
+  .cd-total { padding: 16px; max-height: 100%; overflow-y: auto; }
+  .cd-total img { width: auto; max-width: 100%; max-height: 44vh; }
+  .cd-grand { flex-wrap: wrap; }
+  .cd-grand strong { font-size: 36px; margin-left: auto; white-space: nowrap; }
+}
+@media (max-width: 1280px) and (orientation: portrait) {
+  .cd-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+  .cd-total { align-self: end; width: 100%; }
+  .cd-total img { max-height: 30vh; }
+}
+/* POS → Devices: tablet pairing */
+.device-section h4 { margin: 16px 0 4px; font-size: 14px; font-weight: 500; }
+.tablet-address { overflow-wrap: anywhere; user-select: all; color: var(--text-primary); }
+.tablet-code { text-align: center; margin: 8px 0; }
+.tablet-code img { width: 200px; height: 200px; }
+.tablet-code strong { display: block; font-size: 24px; font-weight: 500; user-select: all; }
 .login-links { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 16px 0 0; font-size: 13.5px; }
 .login-links .link:disabled { color: var(--text-muted); cursor: default; }
 
@@ -692,6 +724,11 @@ textarea { resize: vertical; }
 .photo-edit-stack { flex-direction: column; align-items: center; gap: 4px; margin: 0; }
 .quick-add { display: flex; gap: 8px; align-items: center; }
 .quick-add > input, .quick-add > select { flex: 1; min-width: 0; }
+.barcode-scan { margin-bottom: 4px; }
+.barcode-row { margin: 12px 0; }
+.barcode-pack { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.barcode-preview { display: inline-block; max-width: 100%; padding: 8px; background: #fff; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.barcode-preview svg { display: block; max-width: 100%; }
 .price-figures { display: flex; gap: 24px; flex-wrap: wrap; margin: 0 0 8px; padding: 12px 16px; background: var(--surface-2);
   border: 1px solid var(--border); border-radius: var(--radius-sm); }
 .price-figures div { display: flex; flex-direction: column; gap: 2px; }

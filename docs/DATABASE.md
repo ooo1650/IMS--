@@ -109,7 +109,7 @@ erDiagram
 | `inventory_stocktake` | branch_id, status, started_at, finished_at, by_id, scope (JSON) | |
 | `inventory_stocktakeline` | stocktake_id, product_id, system_qty (snapshot), counted_qty, variance, reason | UNIQUE(stocktake, product). |
 
-### sales (15)
+### sales (16)
 | Table | Columns | Constraints / notes |
 |---|---|---|
 | `sales_customer` | branch_id (NULL = org-wide), name, phone, email, address, tax_id, created_at | Reference only; no balances. |
@@ -123,6 +123,7 @@ erDiagram
 | ★ `sales_creditnote` | branch, register, original_sale, cashier, shift, approved_by, total/taxable/tax/excise/levy, taxable_sales_vat, tax_exempted_sales, refund_method, fiscal_year, series, seq, number (`CN-…`), at, issued_bs, reason | UNIQUE(branch, fiscal_year, series, seq). |
 | ★ `sales_creditnoteline` | credit_note_id, original_sale_line_id, qty, unit_price, line_total, tax, excise, levy | |
 | ★ `sales_debitnote` | branch, original_sale, by, taxable, tax_rate, tax, total, fiscal_year, seq, number (`DN-…`), at, issued_bs, reason | UNIQUE(branch, fiscal_year, seq). |
+| `sales_registerdisplay` | register (1:1), code_hash + code_expires_at, token_hash (SHA-256), paired_at, last_seen_at, state (JSON), seq, changed_at, sent_at | A till's tablet customer display. Transient, not a record: state is overwritten on every change. |
 | `sales_heldcart` | branch, register, cashier, label, cart (JSON), created_at | Hold/recall; deletable. |
 | `sales_fonepaymismatch` | found_at, branch, prn, kind, detail, resolved | From the daily reconciliation. |
 | `sales_fonepaysettings` | org_id (PK), mode (disabled/mock/http), base_url, updated_at, updated_by_id | FonePay switch and API address for the organization (replaces the old FONEPAY_BACKEND / FONEPAY_BASE_URL env vars). |
@@ -195,6 +196,7 @@ Not part of PostgreSQL, but it holds data that matters if a till is lost.
 | `catalog` | per-branch sale catalog snapshot (no costs) |
 | `queue` | offline cash sales waiting to sync (pending / error) |
 | `kv` `cartdraft:<branch>` | the unfinished POS sale, restored after a reload for the same cashier within 12 hours; deleted when the cart empties |
+| `localStorage` `ims.display` | on a customer-display tablet only: its token, good for reading one till's customer screen |
 | `kv` `shiftclose:<id>` | a shift closed offline, posted after its sales sync |
 
 A queued sale that never syncs is a lost sale; **Register tools → Export offline queue** or the sidebar's queued-sales panel (**Download a copy**) saves one.
@@ -248,7 +250,7 @@ WHERE i.branch_id=1 AND (i.quantity_on_hand <= 0 OR (i.reorder_point > 0 AND i.q
 | accounts | 0001 initial |
 | catalog | 0001 initial · 0002 product excise_rate, hs_code, tax category… |
 | inventory | 0001 initial · 0002 stock movement types |
-| sales | 0001 initial · 0002 debit notes, document sequence, print log… |
+| sales | 0001 initial · 0002 debit notes, document sequence, print log… · 0008 register display |
 | purchasing | 0001 initial · 0002 goods receipt claimable VAT… |
 | compliance | 0001 initial · 0002 seed tax categories · 0003 append-only triggers + auditor views |
 | admin_extras | 0001 initial · 0002 audit log at_bs, changes · 0003 index (action, at) |

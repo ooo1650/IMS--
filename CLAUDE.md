@@ -31,9 +31,9 @@ cd console && npm install && npm run dev   # operator console on http://localhos
 cd backend && .venv/bin/python manage.py create_platform_admin --username op --email you@x.com   # first operator on a real install
 # demo logins (password demo-pass-123): admin (owner, both businesses), manager, cashier, cashier_pkr, clerk, viewer, manager_brt, manager_shoes; operator (console)
 
-cd backend && .venv/bin/python manage.py test                 # 243 tests, SQLite (4 Postgres-only skipped)
+cd backend && .venv/bin/python manage.py test                 # 262 tests, SQLite (4 Postgres-only skipped)
 .venv/bin/python scripts/test_with_postgres.py                # same suite on embedded Postgres (pgserver) — triggers + concurrency
-cd frontend && npm test && npx tsc -b && npm run build   # 132 tests; `npm run lint` (oxlint)
+cd frontend && npm test && npx tsc -b && npm run build   # 154 tests; `npm run lint` (oxlint)
 cd console && npx tsc -b && npm run build              # console (src/shared/ = copies from frontend/src: `npm run sync-shared`)
 ```
 Last verified: all green on 2026-11-09 (SQLite, embedded Postgres, and a full local Docker staging run incl. backup, restore drill and point-in-time restore). CI: `.github/workflows/ci.yml` (backend on Postgres + ruff, frontend, console, image build). Backend lint: `.venv/bin/ruff check .` (`backend/ruff.toml`).
@@ -73,4 +73,4 @@ Docker: `cp .env.example .env && docker compose up -d --build` (see `docs/DEPLOY
 - Product photos: `backend/catalog/images.py` (content-addressed WebP in `MEDIA_ROOT`, `media` volume); POS side `frontend/src/lib/images.ts` + `public/sw.js` (cache `ims-media-v1`). POS catalog is cache-first with a `version` check (`pos/catalog/?version=`).
 - Stock logic: `backend/inventory/services.py`. Purchasing + purchase VAT: `backend/purchasing/services.py`.
 - POS UI and offline logic: `frontend/src/pages/Pos.tsx`, `src/lib/{offline,sync,printer,pricing}.ts`.
-- Hardware (browser-only WebUSB/WebSerial, per-till settings in IndexedDB): `src/lib/devices/`, `src/lib/barcode.ts`, `components/{DeviceSettings,CameraScanner,LabelPrint}.tsx`, `pages/CustomerDisplay.tsx` (`/customer-display`, no login).
+- Hardware (browser-only WebUSB/WebSerial, per-till settings in IndexedDB): `src/lib/devices/`, `src/lib/barcode.ts`, `components/{DeviceSettings,CameraScanner,LabelPrint}.tsx`, `pages/CustomerDisplay.tsx` (`/customer-display`, no login, same browser only). A tablet as customer display: `/display` + `backend/sales/display.py` (pairing token, no session; only ever exposes that till's customer screen).

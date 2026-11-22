@@ -100,6 +100,10 @@ class BadNumbers(TestCase):
         P("purchase_return.qty", self.mgr, "post", "purchase-returns/", lambda v: {"supplier": self.supplier.id, "reason": "r", "lines": [{"product": p1, "qty": v}]})
         P("tax_rate.vat", self.adm, "post", "compliance/tax-categories/1/rates/", lambda v: {"effective_from": "2026-01-01", "vat_rate": v, "levy_rate": 0}, ok_kinds=("zero", "dec", "dec_str", "exp"))
         P("settings.abbrev_limit", self.adm, "patch", "compliance/settings", lambda v: {"abbreviated_invoice_limit_paisa": v}, ok_kinds=("zero",))
+        screen = lambda qty: {"mode": "cart", "store": "S", "total": "1.00",  # noqa: E731
+                              "lines": [{"name": "x", "qty": qty, "amount": "1.00"}]}
+        P("display.qty", self.mgr, "post", "pos/display/state", lambda v: {"register_id": self.w.reg_a.id, "state": screen(v)})
+        P("display.register_id", self.mgr, "post", "pos/display/state", lambda v: {"register_id": v, "state": screen(1)})
         P("customer.create", self.mgr, "post", "customers/", lambda v: {"name": "C", "phone": v})
 
         problems = [f"{name} <- {kind}: {code} {flag} {data}" for name, kind, code, flag, data in ROWS if flag]

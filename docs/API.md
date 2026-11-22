@@ -101,6 +101,12 @@ One backend serves several businesses. `X-Org-Id` (or the session) picks the act
 | `GET/PUT/PATCH fonepay-merchants/{branch_id}/` | org:branches.manage | Create or update. In: `{enabled, merchant_code, username, password?, secret?, clear_password?, clear_secret?}` (blank secret = keep). Out adds `password_set, secret_set, missing, status (disabled\|mock\|http), updated_at, updated_by_name`; secrets are write-only. Live mode refuses `enabled` while fields are missing. |
 | `POST pos/checkout/sync` | branch:pos.sell | Offline sale: Cart (lines include `unit_price_paisa, tax_rate, tax_inclusive`) + `{register_id, idempotency_key, tendered_paisa, fiscal_year, created_at, receipt_seq (register series) \| provisional_ref (branch series), client_total_paisa, offline_discount_approved}` → Sale + `receipt_gaps` |
 | `GET/POST pos/held/`, `DELETE pos/held/{id}/` | branch:pos.sell | `{register, label, cart}` |
+| `GET pos/display?register_id=` | branch:pos.sell | Tablet customer display of a till: `{paired, online, code_pending}` |
+| `POST pos/display/pair` | branch:pos.sell | `{register_id}` → `201 {code, expires_in}`: a one-time code, 10 minutes. An existing tablet works until the code is used. |
+| `POST pos/display/state` | branch:pos.sell | `{register_id, state: {mode: idle\|cart\|pay\|done, store, lines[≤100]{name, qty, amount}, subtotal?, discount?, tax?, total, change?, qr? (inline PNG only)}}` → `{paired}`. The till repeats an open bill every 20 s. |
+| `POST pos/display/disconnect` | branch:pos.sell | `{register_id}` revokes the tablet |
+| `POST display/claim` | public (the code), no session or CSRF | `{code}` → `{token, store, till}`; `400 display_code_invalid` |
+| `GET display/state?version=` | public (`X-Display-Token` header) | `{version, quiet_seconds}`, plus `{state, till}` when the version changed. A bill not repeated for 90 s reads as idle. `401 display_unpaired` once revoked. Polled every 1.5–5 s. |
 | `GET pos/registers/{id}/receipt-gaps` | branch:reports.view | `?fiscal_year=` |
 | `GET/POST/PATCH customers/…` | branch:pos.sell | `?q=`. `phone`: 7–15 digits (spaces, `+`, `-` allowed); `tax_id` (PAN): blank or 9 digits. A checkout's `customer_id` must be this branch's or a business-wide customer. |
 

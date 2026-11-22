@@ -74,7 +74,13 @@ Set up on each till in **POS → Devices**. Settings are saved in that computer'
 - **Barcode scanner**: USB or Bluetooth scanners in keyboard mode need no setup. Set the scanner to send **Enter** after each code. Scans work anywhere on the POS screen; a high beep means found, a low beep means the code is unknown. To check a scanner, use **POS → Devices → Test USB or Bluetooth scanner** and scan anything: it says whether the scan arrived and what to change if it won't work. A plugged-in scanner never uses the camera, so don't hold it up to the webcam. The icon in the search box is only for scanning with a camera (webcam, phone or tablet) when there is no scanner.
 - **Barcodes on products**: open the product (Add product or Edit) and **scan**: the code is added wherever the cursor is in the form; check the bars shown, then save. No barcode on the item? **No barcode? Make one** creates an in-store code (EAN-13 starting with 2); then **Save & print label**, stick it on, and scan that. A made-up code is not on the item until its label is. The type (EAN-13, EAN-8, UPC-A, Code 128) is detected automatically.
 - **Barcode labels**: Products → tick products → **Print labels**. Choose A4 sticker sheets (65 or 24 per page; *Skip used labels* for part-used sheets) or a label-printer roll. In the print dialog set margins to *None* and scale to *100%*. The app warns when a code is too long for the label you chose.
-- **Customer display**: Devices → **Open customer display**, drag the window to the customer-facing monitor and press F11. It shows the items, total, the FonePay QR while paying, and the change. A serial 2×20 **pole display** can be paired in the same place.
+- **Customer display on a tablet (no cable, nothing to install)**:
+  1. On the till: POS → **Devices** → **Connect a tablet**. A QR code, a short code and the tablet's address appear.
+  2. On the tablet: scan the QR with the camera, or open your site's address followed by **/display** in Chrome and type the code. The code works once, for 10 minutes.
+  3. Press **Full screen**, keep the tablet on charge, and bookmark the page. It stays connected after a restart.
+  - Till and tablet both need internet (not the same Wi-Fi). New items appear in 1–5 seconds. If either loses the connection, the tablet removes the bill rather than show a wrong total.
+  - After 3 hours with no sales it shows **Tap to start**. **Replace tablet** or **Disconnect** in Devices signs the old tablet off at once. If a different computer runs the till, tick **Show this computer's bill on the tablet** there.
+- **Customer display on a monitor plugged into the till**: Devices → **Open customer display**, drag the window to the customer-facing monitor and press F11. It shows the items, total, the FonePay QR while paying, and the change. A serial 2×20 **pole display** can be paired in the same place.
 - Camera scanning works offline only after it has been used once online on that till.
 
 ## Dates

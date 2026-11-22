@@ -108,6 +108,11 @@ The console is its own project (`console/`, own `docker-compose.yml`), so it can
 - FonePay is configured in the app (Admin → Branches & registers → FonePay): mode, API address and per-branch merchant credentials live in the database. Keep `IMS_ALLOW_FONEPAY_MOCK=false` on real servers; `IMS_FONEPAY_HOSTS` limits where the API address may point.
 - Tills need **https** for USB/serial printers and the camera (Chrome/Edge). A local print service on a till must listen on `http://localhost`; LAN `http://` printer addresses are blocked as mixed content.
 
+## Tablet customer display
+Tablets open `https://<the app's address>/display`; plain `http://` redirects there, and no port has to be opened.
+- The address must be one the tablet can reach: with `IMS_DOMAIN=localhost` it can't (port 80 redirects to `https://localhost`). On a LAN-only install set `IMS_DOMAIN` to the server's LAN IP or name and accept the self-signed certificate on the tablet once.
+- Each tablet makes roughly 700–2,400 requests an hour while showing. On Vercel's Hobby plan count on about one always-on tablet before the monthly request allowance matters; on Render's free plan a showing tablet keeps the instance awake, using its monthly hours.
+
 ## Without Docker
 `backend/.env.example`, `deploy/crontab`, `deploy/nginx/` (render `templates/ims.conf.template` with your values and provide the certificate yourself), and run `manage.py ensure_db_roles` as the DB owner after each `migrate`, with the app connecting as the role it creates.
 

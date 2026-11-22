@@ -13,6 +13,7 @@ import { ProductThumb } from '../components/ProductThumb'
 import { Badge, Button, ErrorBox, Field, Guide, Modal, MoneyInput, PageSkeleton, QtyInput, Status } from '../components/ui'
 import { ApiError, NetworkError, api, qs } from '../lib/api'
 import { patchDisplay, publishDisplay } from '../lib/devices/display'
+import { tablet } from '../lib/devices/tablet'
 import { isValidEan13, isValidUpcA } from '../lib/barcode'
 import { beep, useScannerInput } from '../lib/devices/scanner'
 import { deviceSettings, useDeviceSettings } from '../lib/devices/settings'
@@ -491,6 +492,14 @@ export default function Pos() {
     if (modal === 'fonepay') patchDisplay({ ...state, mode: 'pay' })
     else publishDisplay({ ...state, mode: cart.length ? 'cart' : 'idle', qr: undefined })
   }, [cart, priced, done, modal, config])
+
+  // A paired tablet mirrors this till; leaving the POS or changing till clears it.
+  const tabletTill = register && devices.display.tablets?.[register.id] ? register.id : null
+  useEffect(() => {
+    if (tabletTill == null) return
+    tablet.follow({ branch: branchId, register: tabletTill })
+    return () => tablet.follow(null)
+  }, [branchId, tabletTill])
 
   if (!config) {
     return (

@@ -28,6 +28,8 @@ export default defineConfig({
     },
   },
   build: {
+    // Shop tablets run old browsers (an old Galaxy Tab's Chrome or Samsung Internet): keep the syntax readable to them.
+    target: ['chrome95', 'edge95', 'firefox100', 'safari15'],
     rollupOptions: {
       output: {
         // React and the router change far less often than the app: in their own

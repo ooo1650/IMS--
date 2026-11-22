@@ -7,6 +7,7 @@ import { driverFor } from '../lib/printer'
 import type { RegisterCfg } from '../lib/types'
 import { CameraScanner } from './CameraScanner'
 import { ScannerTest } from './ScannerTest'
+import { TabletPairing } from './TabletPairing'
 import { Icon, type IconName } from './Icon'
 import { Badge, Button, ErrorBox, Field, Modal } from './ui'
 
@@ -107,7 +108,9 @@ export function DeviceSettings({ register, storeName, productFor, onClose }: {
         </Section>
 
         <Section icon="grid" title="Customer display">
-          <p className="muted small">Second monitor: open the display window and drag it to the customer-facing screen (F11 for full screen).</p>
+          <TabletPairing register={register} />
+          <h4>Monitor plugged into this computer</h4>
+          <p className="muted small">Open the display window and drag it to the customer-facing screen (F11 for full screen).</p>
           <Button onClick={() => void run(async () => openDisplayWindow())}><Icon name="grid" size={16} /> Open customer display</Button>
           <label className="check" style={{ marginTop: 14 }}>
             <input type="checkbox" checked={s.display.pole} disabled={!serialSupported()}

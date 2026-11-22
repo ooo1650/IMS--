@@ -107,10 +107,10 @@ function csrfToken(): string {
 
 export async function api<T = unknown>(
   path: string,
-  opts: { method?: string; body?: unknown; form?: FormData; branch?: number } = {},
+  opts: { method?: string; body?: unknown; form?: FormData; branch?: number; headers?: Record<string, string> } = {},
 ): Promise<T> {
   const method = opts.method ?? (opts.body || opts.form ? 'POST' : 'GET')
-  const headers: Record<string, string> = {}
+  const headers: Record<string, string> = { ...opts.headers }
   const branch = opts.branch ?? activeBranchId
   if (branch) headers['X-Branch-Id'] = String(branch)
   if (activeOrgId) headers['X-Org-Id'] = String(activeOrgId)

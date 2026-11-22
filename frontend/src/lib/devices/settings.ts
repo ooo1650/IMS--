@@ -24,7 +24,11 @@ export interface DeviceSettings {
     device?: SavedDevice
   }
   drawer: { enabled: boolean }
-  display: { pole: boolean; baudRate: number; device?: SavedDevice; welcome: string }
+  display: {
+    pole: boolean; baudRate: number; device?: SavedDevice; welcome: string
+    /** Tills whose bill this computer sends to their paired tablet. */
+    tablets?: Record<number, boolean>
+  }
   scanner: { anywhere: boolean; beep: boolean }
 }
 

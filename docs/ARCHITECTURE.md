@@ -103,6 +103,10 @@ Outbox row created in the document's transaction → cron `cbms_sync` every minu
 - `lib/pricing.ts`: same tax engine as the server (parity tests). `lib/printer.ts`: browser HTML print or ESC/POS text.
 - `pages/*`: one file per screen. `Pos.tsx` is the largest (cart, buyer, payments, offline, returns, shifts).
 
+### Customer display
+- Monitor on the till: `/customer-display` window, fed over BroadcastChannel (same browser, works offline).
+- Tablet: `/display` polls `display/state` with a pairing token; the POS pushes changes to `pos/display/state` (`lib/devices/tablet.ts`: one request at a time, newest wins). Polling, not long-polling or SSE: those would pin a gunicorn thread and a pooled DB connection per tablet. The interval stretches from 1.5 to 5 s when quiet, and stops when the page is hidden or after 3 quiet hours, because hosting plans count requests.
+
 ## 6. Deployment
 `docker-compose.yml` runs:
 - `db`: Postgres 16, gzipped WAL archive (`walarchive` volume), `deploy/postgres/pg_hba.conf`;

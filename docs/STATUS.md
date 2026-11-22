@@ -39,6 +39,8 @@
 
 **Errors, numbers and dead ends (2026-11-09)**: every API error is JSON with a plain sentence (rate limits and lockouts say how long to wait; the sign-in screen counts down). Typed numbers are range-checked everywhere (`ims/test_input_numbers.py` fires bad values at every write endpoint); the frontend reads "Rs 500", "500/-", "10%" and Nepali digits, and says why an entry or a grey button can't be used. Counts that need action open their list (Inventory tiles, "Needs attention" rows, CBMS tiles); low stock → *Order these* → pre-filled purchase order. The POS keeps an unfinished sale across a reload; dialogs don't lose typed input on a stray click; read-only roles see "View only" instead of missing buttons. Dead code removed (unused exports, an unread sync report, unused CSS).
 
+**Tablet customer display (2026-11-22)**: any tablet's browser at `/display`, paired by QR or code from POS → Devices, no cable or login; relayed through the server, so it needs internet. Tested with separate headless browsers in seven tablet sizes; not yet on the physical tablet.
+
 **Backups (2026-11-09)**: WAL archiving was broken in Docker (root-owned archive volume, `pg_wal` growing without limit); fixed. Weekly base backups + gzipped WAL give working point-in-time recovery (`deploy/pitr-prepare.sh`), old WAL is pruned, and dumps/base backups can be encrypted and copied off-site. Excel (.xlsx) import added next to CSV.
 
 **Multi-business + operator console (2026-11-07)**

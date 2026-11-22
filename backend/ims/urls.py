@@ -12,6 +12,7 @@ from compliance import views as compliance
 from inventory import views as inventory
 from purchasing import views as purchasing
 from reporting import views as reporting
+from sales import display as customer_display
 from sales import views as sales
 from tenancy import views as tenancy
 
@@ -64,6 +65,13 @@ api = [
     path("auth/active-org", accounts.ActiveOrgView.as_view()),
     path("auth/roles", accounts.RolesView.as_view()),
     path("pos/config", sales.PosConfigView.as_view()),
+    path("pos/display", customer_display.TillDisplayView.as_view()),
+    path("pos/display/pair", customer_display.TillDisplayPairView.as_view()),
+    path("pos/display/state", customer_display.TillDisplayStateView.as_view()),
+    path("pos/display/disconnect", customer_display.TillDisplayDisconnectView.as_view()),
+    # The tablet itself (no login). Outside pos/ so it doesn't share the tills' nginx rate limit.
+    path("display/claim", customer_display.TabletClaimView.as_view()),
+    path("display/state", customer_display.TabletStateView.as_view()),
     path("pos/checkout", sales.CheckoutCashView.as_view()),
     path("pos/checkout/initiate", sales.FonepayInitiateView.as_view()),
     path("pos/checkout/sync", sales.OfflineSyncView.as_view()),
