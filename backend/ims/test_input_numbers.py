@@ -105,6 +105,13 @@ class BadNumbers(TestCase):
         P("display.qty", self.mgr, "post", "pos/display/state", lambda v: {"register_id": self.w.reg_a.id, "state": screen(v)})
         P("display.register_id", self.mgr, "post", "pos/display/state", lambda v: {"register_id": v, "state": screen(1)})
         P("customer.create", self.mgr, "post", "customers/", lambda v: {"name": "C", "phone": v})
+        from staff.models import StaffMember
+
+        worker = StaffMember.objects.create(org=self.w.org, branch=self.w.a, name="W")
+        P("staff.salary", self.adm, "post", "staff/", lambda v: {"name": "N", "branch": self.w.a.id, "monthly_salary_paisa": v}, ok_kinds=("zero",))
+        P("staff.branch", self.adm, "post", "staff/", lambda v: {"name": "N", "branch": v})
+        P("staff_payment.amount", self.adm, "post", "staff-payments/", lambda v: {"staff": worker.id, "kind": "salary", "method": "cash", "paid_on": "2026-11-23", "amount_paisa": v})
+        P("staff_payment.staff", self.adm, "post", "staff-payments/", lambda v: {"staff": v, "kind": "salary", "method": "cash", "paid_on": "2026-11-23", "amount_paisa": 100})
 
         problems = [f"{name} <- {kind}: {code} {flag} {data}" for name, kind, code, flag, data in ROWS if flag]
         self.assertEqual(problems, [], "\n".join(problems))

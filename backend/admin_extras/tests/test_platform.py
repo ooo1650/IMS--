@@ -144,6 +144,36 @@ class PlatformApiTests(TestCase):
         self.assertTrue(User.objects.get(username="op2").is_platform_admin)
         self.assertFalse(UserBranchRole.objects.filter(user__username="op2").exists())
 
+    def test_command_defaults_username_and_resets_a_forgotten_password(self):
+        from django.core.management.base import CommandError
+
+        out = StringIO()
+        call_command("create_platform_admin", "--email", "Owner.Op@Example.com", "--password", "first-long-pass-1", stdout=out)
+        op = User.objects.get(email="owner.op@example.com")
+        self.assertEqual((op.username, op.is_platform_admin), ("owner.op", True))
+        self.assertTrue(AuditLog.objects.filter(action="platform.admin_created").exists())
+        with self.assertRaisesMessage(CommandError, "add --reset"):
+            call_command("create_platform_admin", "--email", "owner.op@example.com", "--password", "x-long-pass-123")
+        op.is_active = False
+        op.save()
+        epoch = op.session_epoch
+        call_command("create_platform_admin", "--email", "owner.op@example.com", "--reset", "--password", "second-long-pass-2", stdout=out)
+        op.refresh_from_db()
+        self.assertTrue(op.check_password("second-long-pass-2") and op.is_active and op.session_epoch == epoch + 1)
+        with self.assertRaisesMessage(CommandError, "shop account"):
+            call_command("create_platform_admin", "--email", self.shop_email(), "--reset", "--password", "third-long-pass-3")
+        with self.assertRaisesMessage(CommandError, "No account"):
+            call_command("create_platform_admin", "--email", "nobody@example.com", "--reset", "--password", "third-long-pass-3")
+        with self.assertRaisesMessage(CommandError, "too short"):
+            call_command("create_platform_admin", "--email", "new.op@example.com", "--password", "short")
+        self.assertFalse(User.objects.filter(email="new.op@example.com").exists())
+
+    def shop_email(self):
+        u = User.objects.filter(is_platform_admin=False).first()
+        u.email = "shop.person@example.com"
+        u.save()
+        return u.email
+
     def test_test_email_unreachable_server_fails_fast_with_hint(self):
         self.c.patch(P + "/system", {"smtp_host": "127.0.0.1", "smtp_port": 1}, format="json")
         r = self.c.post(P + "/system/test-email", {"to": "x@example.com"}, format="json")

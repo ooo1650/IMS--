@@ -14,6 +14,7 @@ from purchasing import views as purchasing
 from reporting import views as reporting
 from sales import display as customer_display
 from sales import views as sales
+from staff import views as staff
 from tenancy import views as tenancy
 
 from .api import HealthView
@@ -41,6 +42,8 @@ router.register("pos/held", sales.HeldCartViewSet, basename="held")
 router.register("pos/catalog", catalog.PosCatalogView, basename="pos-catalog")
 router.register("purchase-orders", purchasing.PurchaseOrderViewSet, basename="purchase-order")
 router.register("audit-log", admin_extras.AuditLogViewSet, basename="audit-log")
+router.register("staff", staff.StaffViewSet, basename="staff")
+router.register("staff-payments", staff.PaymentViewSet, basename="staff-payment")
 router.register("fonepay-merchants", sales.FonepayMerchantViewSet, basename="fonepay-merchant")
 
 api = [
@@ -93,6 +96,9 @@ api = [
     path("import/template/<str:kind>", admin_extras.ImportTemplateView.as_view()),
     path("import/products", admin_extras.ProductImportView.as_view()),
     path("import/opening-stock", admin_extras.OpeningStockImportView.as_view()),
+    path("import/staff", staff.StaffImportView.as_view()),
+    path("staff-summary", staff.SummaryView.as_view()),
+    path("staff-export", staff.ExportView.as_view()),
     # Operator console (platform admins only; nginx serves these on the console's server block only).
     path("platform/overview", platform.OverviewView.as_view()),
     path("platform/businesses", platform.BusinessListView.as_view()),

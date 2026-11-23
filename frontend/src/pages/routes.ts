@@ -16,6 +16,7 @@ const LOADERS: Record<string, () => Promise<{ default: ComponentType }>> = {
   '/stocktakes': () => import('./Stocktakes'),
   '/purchasing': () => import('./Purchasing'),
   '/import': () => import('./Import'),
+  '/staff': () => import('./Staff'),
   '/admin': () => import('./Admin'),
   '/payments': () => import('./Payments'),
   '/compliance': () => import('./Compliance'),

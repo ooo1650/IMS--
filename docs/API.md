@@ -104,9 +104,9 @@ One backend serves several businesses. `X-Org-Id` (or the session) picks the act
 | `GET pos/display?register_id=` | branch:pos.sell | Tablet customer display of a till: `{paired, online, code_pending}` |
 | `POST pos/display/pair` | branch:pos.sell | `{register_id}` → `201 {code, expires_in}`: a one-time code, 10 minutes. An existing tablet works until the code is used. |
 | `POST pos/display/state` | branch:pos.sell | `{register_id, state: {mode: idle\|cart\|pay\|done, store, lines[≤100]{name, qty, amount}, subtotal?, discount?, tax?, total, change?, qr? (inline PNG only)}}` → `{paired}`. The till repeats an open bill every 20 s. |
-| `POST pos/display/disconnect` | branch:pos.sell | `{register_id}` revokes the tablet |
+| `POST pos/display/disconnect` | branch:pos.sell | `{register_id}` → `{ok}`: revokes the tablet and any unused code, empties the stored screen |
 | `POST display/claim` | public (the code), no session or CSRF | `{code}` → `{token, store, till}`; `400 display_code_invalid` |
-| `GET display/state?version=` | public (`X-Display-Token` header) | `{version, quiet_seconds}`, plus `{state, till}` when the version changed. A bill not repeated for 90 s reads as idle. `401 display_unpaired` once revoked. Polled every 1.5–5 s. |
+| `GET display/state?version=` | public (`X-Display-Token` header) | `{version, quiet_seconds}`, plus `{state, till}` when the version changed. A bill not repeated for 90 s reads as idle (it stays stored). Flow: `docs/ARCHITECTURE.md` §4.8. `401 display_unpaired` once revoked. Polled every 1.5–5 s. |
 | `GET pos/registers/{id}/receipt-gaps` | branch:reports.view | `?fiscal_year=` |
 | `GET/POST/PATCH customers/…` | branch:pos.sell | `?q=`. `phone`: 7–15 digits (spaces, `+`, `-` allowed); `tax_id` (PAN): blank or 9 digits. A checkout's `customer_id` must be this branch's or a business-wide customer. |
 
@@ -194,9 +194,21 @@ Report scope: org users (org `reports.view` or `dashboard.view`) get **all branc
 | Method & path | Perm | Notes |
 |---|---|---|
 | `GET audit-log/` | org:audit.view (all) or branch:audit.view | `?action=` prefix, `?user=`, `?branch=`. Rows include `changes` (before/after). |
-| `GET import/template/{products\|opening-stock}` | auth | CSV template |
+| `GET import/template/{products\|opening-stock\|staff}` | auth | CSV template |
 | `POST import/products` | org:catalog.manage | multipart `file`, `dry_run=true\|false` |
 | `POST import/opening-stock` | branch:import.run | multipart `file`, `dry_run` |
+| `POST import/staff` | org:staff.manage | multipart `file`, `dry_run`. Columns `name, branch` (code)`, position, phone, joined` (AD date)`, salary` (rupees a month). Name + branch updates an existing person. |
+
+## Staff & pay (`staff/`, business-wide roles only)
+All need **org:staff.manage**, which only SuperAdmin/OrgAdmin hold: branch managers and cashiers get 403. Months are BS, `YYYY-MM` (`2083-08` = Mangsir 2083).
+
+| Method & path | Notes |
+|---|---|
+| `GET/POST staff/`, `GET/PATCH staff/{id}/` | `{branch, name, position, phone, joined_on, monthly_salary_paisa, is_active, note}`. No delete: set `is_active=false` when someone leaves. `branch` must be this business's. |
+| `GET staff-payments/?staff=` or `?month=` (one is required), `&branch=`, `&kind=` | Up to 2000 entries, newest first; each adds `paid_on_bs`, `month_label`, `staff_name`, `branch_code`. |
+| `POST staff-payments/`, `PATCH/DELETE staff-payments/{id}/` | `{staff, kind: salary\|advance\|bonus\|deduction\|repayment, amount_paisa ≥ 1, paid_on, month?, method: cash\|bank\|wallet\|salary, note}`. `month` defaults to the BS month of `paid_on`. `method` is required except for a deduction (blanked); `salary` ("cut from salary") only for a repayment. `branch` is copied from the person when saved. Corrections and deletes are in the audit log. |
+| `GET staff-summary?month=&branch=` | One row per person working that month (or with entries in it): salary, `salary_paid_paisa`, `bonus_paisa`, `advance_paisa`, `deductions_paisa` (deductions + advance cut from salary), `due_paisa` = max(0, salary − deductions − salary paid), `advance_owed_paisa` (all time). Plus `totals` (`paid_out_paisa` = salary + bonus + advances), `not_paid`, `months` (13 most recent), `current_month`, `branches`. |
+| `GET staff-export?month=&branch=&export=xlsx\|csv\|pdf` | That month's entries; the total counts only money paid out. |
 
 ## Example: cash sale with curl
 ```bash

@@ -103,6 +103,7 @@ AUDITED = [
     "sales.FonepayMerchant", "sales.FonepaySettings",
     "purchasing.PurchaseOrder", "purchasing.GoodsReceipt", "purchasing.PurchaseReturn",
     "compliance.ComplianceSettings", "compliance.TaxCategory", "compliance.TaxCategoryRate",
+    "staff.StaffMember", "staff.StaffPayment",
 ]
 
 

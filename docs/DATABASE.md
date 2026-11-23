@@ -123,12 +123,25 @@ erDiagram
 | ★ `sales_creditnote` | branch, register, original_sale, cashier, shift, approved_by, total/taxable/tax/excise/levy, taxable_sales_vat, tax_exempted_sales, refund_method, fiscal_year, series, seq, number (`CN-…`), at, issued_bs, reason | UNIQUE(branch, fiscal_year, series, seq). |
 | ★ `sales_creditnoteline` | credit_note_id, original_sale_line_id, qty, unit_price, line_total, tax, excise, levy | |
 | ★ `sales_debitnote` | branch, original_sale, by, taxable, tax_rate, tax, total, fiscal_year, seq, number (`DN-…`), at, issued_bs, reason | UNIQUE(branch, fiscal_year, seq). |
-| `sales_registerdisplay` | register (1:1), code_hash + code_expires_at, token_hash (SHA-256), paired_at, last_seen_at, state (JSON), seq, changed_at, sent_at | A till's tablet customer display. Transient, not a record: state is overwritten on every change. |
+| `sales_registerdisplay` | register (1:1), code_hash + code_expires_at, token_hash, paired_at, last_seen_at, state (JSON), seq, changed_at, sent_at | A till's tablet customer display (migration `sales/0008`). Not a financial record; see *Customer display row* below the table. |
 | `sales_heldcart` | branch, register, cashier, label, cart (JSON), created_at | Hold/recall; deletable. |
 | `sales_fonepaymismatch` | found_at, branch, prn, kind, detail, resolved | From the daily reconciliation. |
 | `sales_fonepaysettings` | org_id (PK), mode (disabled/mock/http), base_url, updated_at, updated_by_id | FonePay switch and API address for the organization (replaces the old FONEPAY_BACKEND / FONEPAY_BASE_URL env vars). |
 | `sales_fonepaymerchant` | branch_id (PK, one per branch), enabled, merchant_code, username, password_enc, secret_enc, updated_at, updated_by_id | FonePay merchant per branch. Password and secret are Fernet-encrypted (`compliance/crypto.py`, `CBMS_ENCRYPTION_KEY`); never returned by the API; masked in the audit trail. |
 | `sales_mockfonepaytransaction` | prn, amount_paisa, paid_paisa, status, trx_id, created_at | Dev mock gateway only. |
+
+**Customer display row** (`sales_registerdisplay`): created the first time a till asks for a pairing code, then updated in place. It has no history and no link to a sale.
+
+| Column | Meaning |
+|---|---|
+| `register_id` | the till, unique. Branch and business come from it. |
+| `code_hash`, `code_expires_at` | SHA-256 of the one-time code and its expiry (10 min); cleared when used |
+| `token_hash` | SHA-256 of the paired tablet's token; NULL = no tablet |
+| `paired_at`, `last_seen_at` | when it paired; when it last asked (written at most every 15 s) |
+| `state` | the latest customer screen: mode, shop name, up to 100 lines, amounts as text, optional payment QR as PNG |
+| `seq` | screen version; lets an unchanged poll get a tiny reply |
+| `changed_at` | when the screen last changed; sets the polling speed |
+| `sent_at` | when the till last confirmed the screen. Older than 90 s = a bill is served as the welcome screen, but **`state` is not erased**. |
 
 ### purchasing (6)
 | Table | Columns | Constraints / notes |
@@ -154,7 +167,14 @@ erDiagram
 |---|---|---|
 | ★ `admin_extras_auditlog` | at, at_bs, user, branch, action, object_type, object_id, **data**, **changes** (`{field: [before, after]}`), ip | Business events (`log_action`) plus automatic diffs. Indexes (branch, at), (action, at) for the login lockout. `ip` is the proxy-verified client address. Never updated or deleted. |
 
-**Audited models** (every save/delete diffed into the audit log, `admin_extras/audit.py`): User, UserBranchRole, Organization, Branch, Register, Category, Supplier, Product, Barcode, BranchPrice, InventoryItem, StockTransfer, Stocktake, Sale, CreditNote, DebitNote, Customer, CashierShift, PurchaseOrder, GoodsReceipt, PurchaseReturn, ComplianceSettings, TaxCategory, TaxCategoryRate.
+**Audited models** (every save/delete diffed into the audit log, `admin_extras/audit.py`): User, UserBranchRole, Organization, Branch, Register, Category, Supplier, Product, Barcode, BranchPrice, InventoryItem, StockTransfer, Stocktake, Sale, CreditNote, DebitNote, Customer, CashierShift, PurchaseOrder, GoodsReceipt, PurchaseReturn, ComplianceSettings, TaxCategory, TaxCategoryRate, StaffMember, StaffPayment.
+
+### staff (2) — migration `staff/0001`, added 2026-11-23
+| Table | Columns | Constraints / notes |
+|---|---|---|
+| `staff_staffmember` | org, branch, name, position, phone, joined_on, monthly_salary_paisa (0 … MAX_PAISA), is_active, note, created_at | One business, one branch. Never deleted: `is_active=false` when someone leaves. Not linked to sign-in users (helpers, guards and cleaners have no login). |
+| `staff_staffpayment` | staff, branch (where it was paid, copied from the person), kind (salary/advance/bonus/deduction/repayment), amount_paisa (≥ 1), paid_on (AD), month (BS `YYYY-MM` it counts toward), method (cash/bank/wallet/salary = cut from salary; blank for a deduction), note, created_by, created_at | Index (staff, month). Editable and deletable (not a tax record); every change is in the audit log. |
+
 
 ## Database-level protection (PostgreSQL; `compliance/migrations/0003`)
 | Trigger function | Applied to | Effect |
@@ -183,7 +203,9 @@ erDiagram
 | Availability (in / low / out of stock) | inventoryitem.quantity_on_hand vs reorder_point | Exposed on products as `on_hand` + `reorder_point` for the active branch. |
 | Suppliers | catalog_supplier | Add/edit from Purchasing → Suppliers. |
 | Barcodes, in-store codes, labels | catalog_barcode | Label layouts and printing are frontend-only. |
-| Receipt printer, drawer, scanner, customer display | **Not in the server DB**: browser IndexedDB `kv['devices']` per till | Pairing is tied to the physical PC, so it stays on that PC. |
+| Receipt printer, drawer, scanner, monitor and pole display | **Not in the server DB**: browser IndexedDB `kv['devices']` per till | Pairing is tied to the physical PC, so it stays on that PC. |
+| Tablet customer display | registerdisplay (pairing + latest screen); browser `kv['devices']` says whether this PC sends to it | Flow: `docs/ARCHITECTURE.md` §4.8. |
+| Staff and their pay | staffmember, staffpayment | Owners/admins only. Monthly figures are computed (`staff/services.py month_summary`), not stored. |
 | Audit trail | auditlog | Automatic diffs + business events. |
 | IRD reports, CBMS | sale/creditnote buckets, cbmspost, auditor views | |
 
@@ -192,7 +214,7 @@ Not part of PostgreSQL, but it holds data that matters if a till is lost.
 
 | Store | Contents |
 |---|---|
-| `kv` | cached login (salted hash), POS config per branch, local receipt counters per register, remembered branch/register, **`devices`** (printer connection and paired USB/serial device, paper width, drawer, pole display, scanner options) |
+| `kv` | cached login (salted hash), POS config per branch, local receipt counters per register, remembered branch/register, **`devices`** (printer connection and paired USB/serial device, paper width, drawer, pole display, which tills send to a tablet, scanner options) |
 | `catalog` | per-branch sale catalog snapshot (no costs) |
 | `queue` | offline cash sales waiting to sync (pending / error) |
 | `kv` `cartdraft:<branch>` | the unfinished POS sale, restored after a reload for the same cashier within 12 hours; deleted when the cart empties |

@@ -41,6 +41,7 @@ ALL_PERMISSIONS = {
     "branches.manage",
     "audit.view",
     "import.run",
+    "staff.manage",        # staff list and their pay (business-wide roles only)
 }
 
 ROLE_PERMISSIONS = {

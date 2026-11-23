@@ -1,6 +1,8 @@
 /** Operator sign-in: password, then the emailed code (always required for
- *  operators). No sign-up and no offline mode: operator accounts are created
- *  with `manage.py create_platform_admin` or by another operator. */
+ *  operators). Forgot password: a code to the account's email (same endpoints
+ *  as the shop app), and the emailed sign-in code is still asked for afterwards.
+ *  No sign-up and no offline mode: operator accounts are created with
+ *  `manage.py create_platform_admin` or by another operator. */
 import { useEffect, useState } from 'react'
 import { useAuth } from './auth'
 import { Icon } from './shared/Icon'
@@ -9,7 +11,10 @@ import { ApiError, api, formatWait } from './shared/api'
 
 export default function Login() {
   const { login, verifyOtp, resendOtp, testLogin } = useAuth()
-  const [step, setStep] = useState<'signin' | 'otp'>('signin')
+  const [step, setStep] = useState<'signin' | 'otp' | 'forgot' | 'reset'>('signin')
+  const [email, setEmail] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [shown, setShown] = useState(false)
@@ -43,6 +48,27 @@ export default function Login() {
       setBusy(false)
     }
   }
+  const go = (next: typeof step, message: string | null = null) => {
+    setStep(next)
+    setError(null)
+    setNotice(message)
+    setCode('')
+  }
+  const requestReset = () => run(async () => {
+    await api('auth/csrf')
+    const r = await api<{ detail: string }>('auth/password/forgot', { body: { email: email.trim() } })
+    setCooldown(60)
+    go('reset', r.detail)
+  })
+  const reset = () => run(async () => {
+    if (newPassword !== confirm) throw new Error("The two passwords don't match")
+    const r = await api<{ detail: string }>('auth/password/reset', { body: { email: email.trim(), code, password: newPassword } })
+    setPassword('')
+    setNewPassword('')
+    setConfirm('')
+    setIdentifier(email.trim())
+    go('signin', r.detail)
+  })
   const verify = (c: string) => run(() => verifyOtp(c))
   const takeCode = (raw: string) => {
     const v = raw.replace(/\D/g, '').slice(0, 6)
@@ -71,6 +97,7 @@ export default function Login() {
           }}>
             <h2>Operator sign-in</h2>
             <p className="muted">Not for shop staff: the IMS app has its own sign-in</p>
+            {notice && <div className="alert alert-good">{notice}</div>}
             <ErrorBox error={error} />
             <Field label="Username or email">
               <input autoFocus autoComplete="username" autoCapitalize="none" spellCheck={false} value={identifier}
@@ -84,7 +111,53 @@ export default function Login() {
               </span>
             </Field>
             <Button kind="primary" type="submit" busy={busy} className="btn-block btn-xl">Continue</Button>
-            <p className="muted small console-login-note">Forgot your password? Another operator can send you a reset code, or run <code>manage.py changepassword</code> on the server</p>
+            <p className="login-links">
+              <button type="button" className="link" onClick={() => { setEmail(identifier.includes('@') ? identifier.trim() : ''); go('forgot') }}>
+                Forgot password?
+              </button>
+            </p>
+          </form>
+        ) : step === 'forgot' ? (
+          <form onSubmit={(e) => { e.preventDefault(); void requestReset() }}>
+            <h2>Reset your password</h2>
+            <p className="muted">We'll email a 6-digit code to the address on your operator account</p>
+            <ErrorBox error={error} />
+            <Field label="Email">
+              <input autoFocus type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </Field>
+            <Button kind="primary" type="submit" busy={busy} className="btn-block btn-xl">Send reset code</Button>
+            <p className="login-links">
+              <button type="button" className="link" onClick={() => go('reset')}>I already have a code</button>
+              <button type="button" className="link" onClick={() => go('signin')}>Back</button>
+            </p>
+            <p className="muted small console-login-note">No email arriving? On the server run <code>manage.py create_platform_admin --email you@example.com --reset</code> (hosted: <code>scripts/hosted_operator.py</code>)</p>
+          </form>
+        ) : step === 'reset' ? (
+          <form onSubmit={(e) => { e.preventDefault(); void reset() }}>
+            <h2>Choose a new password</h2>
+            <p className="muted">Enter the code emailed to {email || 'you'} and a new password</p>
+            {notice && <div className="alert alert-good">{notice}</div>}
+            <ErrorBox error={error} />
+            <Field label="Email">
+              <input type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </Field>
+            <Field label="6-digit code">
+              <input className="code-input" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} required />
+            </Field>
+            <Field label="New password" hint="At least 10 characters; not a common password">
+              <input type="password" autoComplete="new-password" minLength={10} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
+            </Field>
+            <Field label="Confirm new password">
+              <input type="password" autoComplete="new-password" minLength={10} value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
+            </Field>
+            <Button kind="primary" type="submit" busy={busy} className="btn-block btn-xl">Change password</Button>
+            <p className="login-links">
+              <button type="button" className="link" disabled={cooldown > 0 || busy} onClick={() => void requestReset()}>
+                {cooldown > 0 ? `Send a new code in ${formatWait(cooldown)}` : 'Send a new code'}
+              </button>
+              <button type="button" className="link" onClick={() => go('signin')}>Back</button>
+            </p>
           </form>
         ) : (
           <form onSubmit={(e) => { e.preventDefault(); void verify(code) }}>
@@ -114,7 +187,7 @@ export default function Login() {
                 setCooldown(60)
                 setNotice('A new code is on its way')
               })}>{cooldown > 0 ? `Resend code in ${formatWait(cooldown)}` : 'Resend code'}</button>
-              <button type="button" className="link" onClick={() => { setStep('signin'); setCode(''); setError(null) }}>Back</button>
+              <button type="button" className="link" onClick={() => go('signin')}>Back</button>
             </p>
           </form>
         )}

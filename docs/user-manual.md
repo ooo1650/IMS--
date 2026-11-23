@@ -53,8 +53,20 @@ Count the drawer and enter the counted cash. The variance is recorded.
 3. Goods going back to the supplier: **Purchasing → Purchase returns**. This reverses the input VAT.
 4. Make sure suppliers have their **PAN** recorded.
 
-## Importing products and opening stock
+## Importing products, opening stock and staff
 **Import** → download the template, fill it in a spreadsheet and save it as **CSV or Excel (.xlsx)** (for Excel the first sheet is read). Upload it, press **Preview** (nothing is saved), fix any rows it lists, then **Commit import**. Importing the same file twice never doubles stock.
+
+## Staff & pay (owners and admins)
+Keeps the staff list and every payment in place of a salary spreadsheet. Branch managers and cashiers can't see it.
+- **Add staff**: name, branch, job, phone and monthly salary. When someone leaves, open them → **Edit details** → untick *Still working here*; their history stays. A list in Excel can be loaded once from **Import → Staff list**.
+- **Record payment** (or **Pay** on a person's row): choose the type, the amount, the date and how it was paid.
+  - *Salary*: the amount starts at what is still owed for the month. **For month** says which month it is for (Kartik's salary paid in Mangsir counts for Kartik).
+  - *Advance / loan* adds to what the person owes; *Advance repaid* takes it off, either paid back in cash or **cut from salary**.
+  - *Bonus / allowance* (Dashain and similar) is extra and doesn't change what is still owed.
+  - *Deduction* (absence, fine, shortage) lowers that month's pay; write the reason in the note.
+- The page shows one BS month at a time. Pick another month in the list or one branch with the buttons. **Still to pay** = salary − deductions − advance cut from salary − salary paid; click the card to see only who still needs paying, or **Advances owed** for who owes money.
+- Click a person to see everything recorded for them. A wrong entry can be corrected or removed there; the change is kept in the audit log.
+- **Export Excel** downloads that month's entries.
 
 ## Tax & IRD (managers, accountants)
 - **Reports** (choose the fiscal year and BS month): Sales book (Schedule-9), Purchase book (Schedule-8), Sales and purchase return registers, **VAT return working** (with due date and nil-return flag), Cancelled bills, Stock vs purchase-book reconciliation, CBMS sync, Audit trail. Every report exports to **Excel, XML, PDF and CSV**.
@@ -78,8 +90,12 @@ Set up on each till in **POS → Devices**. Settings are saved in that computer'
   1. On the till: POS → **Devices** → **Connect a tablet**. A QR code, a short code and the tablet's address appear.
   2. On the tablet: scan the QR with the camera, or open your site's address followed by **/display** in Chrome and type the code. The code works once, for 10 minutes.
   3. Press **Full screen**, keep the tablet on charge, and bookmark the page. It stays connected after a restart.
-  - Till and tablet both need internet (not the same Wi-Fi). New items appear in 1–5 seconds. If either loses the connection, the tablet removes the bill rather than show a wrong total.
-  - After 3 hours with no sales it shows **Tap to start**. **Replace tablet** or **Disconnect** in Devices signs the old tablet off at once. If a different computer runs the till, tick **Show this computer's bill on the tablet** there.
+  - The till sends the bill to the IMS server and the tablet fetches it from there, so both need internet (they can be on different Wi-Fi). A change usually shows within 1–6 seconds.
+  - **If the till loses internet**, the tablet keeps the last bill for up to about a minute and a half, so its total can be out of date. Tell the customer the total on the till.
+  - **If the tablet loses internet**, it usually clears the bill within about half a minute and says *Reconnecting*. On a stuck connection an old bill can stay longer: reload the page.
+  - After 3 hours with no sales it shows **Tap to start**.
+  - **Replace tablet**: the old tablet works until the new one uses the code. After that, or after **Disconnect**, the old one stops at its next check, normally within a few seconds.
+  - If a different computer runs the till, tick **Show this computer's bill on the tablet** there, and untick it on the old one.
 - **Customer display on a monitor plugged into the till**: Devices → **Open customer display**, drag the window to the customer-facing monitor and press F11. It shows the items, total, the FonePay QR while paying, and the change. A serial 2×20 **pole display** can be paired in the same place.
 - Camera scanning works offline only after it has been used once online on that till.
 

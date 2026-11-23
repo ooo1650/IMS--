@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "reporting",
     "admin_extras",
     "compliance",
+    "staff",
 ]
 
 MIDDLEWARE = [

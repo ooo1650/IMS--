@@ -20,7 +20,7 @@ Source specs: `ims-design-doc (3).md` (architecture) and `payment.md` (IRD/VAT/C
 ## Stack
 - **backend/**: Django 5.2 + DRF, session auth + CSRF (not JWT), PostgreSQL in prod (SQLite fallback for dev). Python venv at `backend/.venv`.
 - **frontend/**: React 19 + TypeScript + Vite PWA (react-router 7, idb, qrcode). Dev server proxies `/api` → `127.0.0.1:8000`.
-- Apps: `tenancy, accounts, catalog, inventory, sales, purchasing, reporting, admin_extras, compliance`.
+- Apps: `tenancy, accounts, catalog, inventory, sales, purchasing, reporting, admin_extras, compliance, staff`.
 
 ## Run / test
 ```bash
@@ -28,10 +28,10 @@ cd backend && .venv/bin/python manage.py migrate && .venv/bin/python manage.py s
 .venv/bin/python manage.py runserver 127.0.0.1:8000
 cd frontend && npm run dev            # http://localhost:5173  (Vite binds IPv6 localhost, not 127.0.0.1)
 cd console && npm install && npm run dev   # operator console on http://localhost:5174 (sign in as `operator`)
-cd backend && .venv/bin/python manage.py create_platform_admin --username op --email you@x.com   # first operator on a real install
+cd backend && .venv/bin/python manage.py create_platform_admin --email you@x.com   # first operator on a real install; add --reset for a forgotten operator password (hosted DB: scripts/hosted_operator.py)
 # demo logins (password demo-pass-123): admin (owner, both businesses), manager, cashier, cashier_pkr, clerk, viewer, manager_brt, manager_shoes; operator (console)
 
-cd backend && .venv/bin/python manage.py test                 # 263 tests, SQLite (4 Postgres-only skipped)
+cd backend && .venv/bin/python manage.py test                 # 273 tests, SQLite (4 Postgres-only skipped)
 .venv/bin/python scripts/test_with_postgres.py                # same suite on embedded Postgres (pgserver) — triggers + concurrency
 cd frontend && npm test && npx tsc -b && npm run build   # 154 tests; `npm run lint` (oxlint)
 cd console && npx tsc -b && npm run build              # console (src/shared/ = copies from frontend/src: `npm run sync-shared`)

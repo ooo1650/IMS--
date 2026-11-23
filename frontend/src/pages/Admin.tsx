@@ -138,7 +138,7 @@ const PERMISSION_GROUPS: [string, [string, string][]][] = [
   ['Catalog', [['catalog.view', 'View products'], ['catalog.manage', 'Create / edit products & prices'], ['import.run', 'Bulk import']]],
   ['Reporting & admin', [
     ['reports.view', 'Branch reports'], ['dashboard.view', 'Org-wide dashboard'], ['users.manage', 'Manage users & roles'],
-    ['branches.manage', 'Manage branches & registers'], ['audit.view', 'View audit log'],
+    ['branches.manage', 'Manage branches & registers'], ['audit.view', 'View audit log'], ['staff.manage', 'Staff & pay (business-wide only)'],
   ]],
 ]
 const ROLE_BLURB: Record<string, string> = {

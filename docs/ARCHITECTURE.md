@@ -38,6 +38,7 @@ There's **no microservices, Redis or queue broker**, by design (design doc §4).
 | `reporting` | Dashboard and branch report queries (sales, stock, alerts) | `queries.py` |
 | `compliance` | Tax categories (effective-dated), settings, CBMS outbox and client, BS calendar, tax documents (HTML/PDF), statutory reports, exports, append-only base and DB triggers | `bs.py`, `cbms.py`, `documents.py`, `reports.py`, `exports.py`, `appendonly.py` |
 | `admin_extras` | AuditLog (before/after), CSV import, demo seed | `audit.py`, `imports.py` |
+| `staff` | StaffMember (branch, monthly salary), StaffPayment (salary, advance, bonus, deduction, repayment; BS month); owners/admins only | `services.py` (monthly summary, BS months, staff import), `views.py` |
 
 Dependency direction (roughly): `tenancy ← accounts ← catalog ← inventory ← sales/purchasing ← compliance reports`. `compliance.appendonly` and `compliance.bs` are low-level helpers used by everything.
 
@@ -96,6 +97,71 @@ Outbox row created in the document's transaction → cron `cbms_sync` every minu
 - `reporting/queries.py`: operational dashboard (today in each branch's timezone, trend, low stock, slow movers, conflicts).
 - `compliance/reports.py`: statutory books for a BS fiscal year or month. They all share one row/column shape, so `exports.py` renders any of them to xlsx/xml/pdf/csv.
 
+### 4.8 Customer display: `sales/display.py`, `lib/devices/{display,tablet}.ts`
+
+The POS builds one screen state and `publishDisplay` sends it to three outputs:
+
+| Output | Path | Uses the database | Works offline |
+|---|---|---|---|
+| Monitor on the till (`/customer-display`) | BroadcastChannel, same browser | no | yes |
+| Pole display | WebSerial | no | yes |
+| Tablet (`/display`) | through the server, below | yes: one row per till | no |
+
+```
+ Till browser (POS)                           Tablet browser (/display)
+   | POST pos/display/state                     ^ GET display/state?version=
+   | login session + CSRF                       | X-Display-Token, no login
+   | on change; open bill again every 20 s      | every 1.5-5 s
+   v                                            |
+ +-------------------------------------------------+
+ | Web front: nginx (Docker) or Vercel (hosted)    |
+ |   -> Django, sales/display.py                   |
+ +------------------------+------------------------+
+                          | SQL as role ims_app
+ +------------------------v------------------------+
+ | Postgres (Supabase when hosted)                 |
+ |   sales_registerdisplay: one row per till       |
+ +-------------------------------------------------+
+```
+
+Neither browser connects to the database or holds a database password, and Supabase Realtime and the Data API are not used.
+
+**What each step does to the row**
+
+| Step | Request | Database |
+|---|---|---|
+| Show a code | `POST pos/display/pair` | create the row if missing; write `code_hash`, `code_expires_at` (10 min). A tablet already paired keeps working. |
+| Tablet uses the code | `POST display/claim` | clear the code; write the new `token_hash` (this revokes the old tablet), `paired_at`, `last_seen_at`; empty `state`; `seq` + 1 |
+| Bill changes | `POST pos/display/state` | write `state`, `sent_at`, `changed_at`; `seq` + 1 |
+| Same bill repeated | `POST pos/display/state` | write `sent_at` only |
+| Tablet asks | `GET display/state?version=` | one SELECT by token hash; write `last_seen_at` at most every 15 s. The reply carries the screen only if the version changed. |
+| Devices is open | `GET pos/display` | read only. "Tablet showing" = seen in the last 40 s. |
+| Disconnect | `POST pos/display/disconnect` | clear token, code and `state`; the row stays |
+
+**What is stored.** Only the latest screen, already formatted as text by the till:
+```json
+{"mode": "cart", "store": "Demo Mart", "lines": [{"name": "Rice 1 kg", "qty": 2, "amount": "240.00"}], "total": "240.00"}
+```
+`mode` is `idle`, `cart`, `pay` (may add `qr`, an inline PNG) or `done` (may add `change`). The display only copies the POS. It never reads or writes sales, payments or stock: checkout is a separate request and the server prices it again. The audit log records pairing and disconnecting, never the bills.
+
+**Timing and failures**
+
+| Situation | What the tablet shows |
+|---|---|
+| Normal | a change within about 1-6 s plus network time (300 ms settle + one poll). Polls every 1.5 s if the screen changed in the last minute, 3 s up to 15 min, then 5 s. |
+| Cashier leaves the POS or changes till | the till sends an idle screen |
+| Till offline, closed or crashed | the **last bill, which may be out of date**, until 90 s after the till last confirmed it, plus one poll. The till retries every 5 s. |
+| Tablet's requests fail | welcome screen and "Reconnecting" on the first failure more than 15 s after the last good reply (about 15-25 s when failures are immediate) |
+| Tablet's request hangs | **known bug:** the last bill stays until that request ends (still shown at 45 s in a test). `api()` has no timeout, so the 15 s rule never runs. Reload the page. |
+| Till's request hangs | no newer screen is sent until it ends (same missing timeout); the 90 s rule applies |
+| Replaced or disconnected | the token is refused at once; the screen changes at the tablet's next successful poll |
+| Two computers send for one till | the newer write wins |
+| Tablet page hidden, or 3 hours without a change on the welcome screen | polling stops until it is visible again or tapped |
+
+The 90 s rule hides an old bill from the tablet. It does not erase it: `state` stays until overwritten, paired again or disconnected.
+
+Polling rather than long-polling or SSE, which would pin a gunicorn thread and a pooled DB connection per tablet. It slows down when quiet because hosting plans count requests.
+
 ## 5. Frontend structure
 - `App.tsx`: routes filtered by permission. `components/Layout.tsx`: nav (`NAV` list), branch switcher, online/queue pills.
 - `auth.tsx`: session login with offline fallback, active branch, `can()` / `canOrg()`.
@@ -103,9 +169,7 @@ Outbox row created in the document's transaction → cron `cbms_sync` every minu
 - `lib/pricing.ts`: same tax engine as the server (parity tests). `lib/printer.ts`: browser HTML print or ESC/POS text.
 - `pages/*`: one file per screen. `Pos.tsx` is the largest (cart, buyer, payments, offline, returns, shifts).
 
-### Customer display
-- Monitor on the till: `/customer-display` window, fed over BroadcastChannel (same browser, works offline).
-- Tablet: `/display` polls `display/state` with a pairing token; the POS pushes changes to `pos/display/state` (`lib/devices/tablet.ts`: one request at a time, newest wins). Polling, not long-polling or SSE: those would pin a gunicorn thread and a pooled DB connection per tablet. The interval stretches from 1.5 to 5 s when quiet, and stops when the page is hidden or after 3 quiet hours, because hosting plans count requests.
+Customer display (monitor, tablet, pole): §4.8.
 
 ## 6. Deployment
 `docker-compose.yml` runs:

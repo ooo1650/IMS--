@@ -24,7 +24,8 @@ python3 -c "import secrets; print(secrets.token_urlsafe(48))"   # for each secre
 chmod 600 .env
 docker compose up -d --build
 docker compose ps                     # migrate: exited (0); others: running/healthy
-docker compose run --rm migrate manage create_platform_admin --username op --email you@example.com
+docker compose run --rm migrate manage create_platform_admin --email you@example.com
+# forgot an operator's password (and no reset email arrives): same command with --reset
 # then open https://<IMS_DOMAIN>:8443 (the operator console): set up email (System settings),
 # create each business with its first branch and admin; they get an emailed setup code
 ```
@@ -109,6 +110,8 @@ The console is its own project (`console/`, own `docker-compose.yml`), so it can
 - Tills need **https** for USB/serial printers and the camera (Chrome/Edge). A local print service on a till must listen on `http://localhost`; LAN `http://` printer addresses are blocked as mixed content.
 
 ## Tablet customer display
+It needs the table from migration `sales/0008` (hosted: see *Updating the database* below). To check, run `curl -H 'X-Display-Token: test' https://<the app's address>/api/v1/display/state`: `401 display_unpaired` means ready, `500 db_outdated` means the migration is missing. How it works: `docs/ARCHITECTURE.md` §4.8.
+
 Tablets open `https://<the app's address>/display`; plain `http://` redirects there, and no port has to be opened.
 - The address must be one the tablet can reach: with `IMS_DOMAIN=localhost` it can't (port 80 redirects to `https://localhost`). On a LAN-only install set `IMS_DOMAIN` to the server's LAN IP or name and accept the self-signed certificate on the tablet once.
 - Each tablet makes roughly 700–2,400 requests an hour while showing. On Vercel's Hobby plan count on about one always-on tablet before the monthly request allowance matters; on Render's free plan a showing tablet keeps the instance awake, using its monthly hours.
@@ -134,7 +137,9 @@ to the Render service and send the same security headers as nginx. Replace
   scheduler then). Run migrations over 5432 (`IMS_MIGRATE_DATABASE_URL`).
 * Pooler usernames carry the project ref: `postgres.<ref>` (owner) and `ims_app.<ref>` (app role).
 * Supabase's Data API exposes the `public` schema. `ensure_db_roles` removes the
-  `anon`/`authenticated` grants on every deploy; also turn the Data API off
+  `anon`/`authenticated` grants, but a deploy only runs it when
+  `IMS_MIGRATE_DATABASE_URL` is set (otherwise the update script below removes them).
+  Also turn the Data API off
   (Project Settings → Data API) since IMS never uses it.
 
 **Render** (Web Service, Docker, root directory `backend`, health check path `/api/v1/health`):
@@ -145,7 +150,7 @@ to the Render service and send the same security headers as nginx. Replace
 | `DJANGO_ALLOWED_HOSTS` | `<service>.onrender.com,<app>.vercel.app,<console>.vercel.app` |
 | `DJANGO_CSRF_TRUSTED_ORIGINS` | `https://<app>.vercel.app,https://<console>.vercel.app` |
 | `DATABASE_URL` | `postgresql://ims_app.<ref>:<IMS_APP_DB_PASSWORD>@<pooler-host>:5432/postgres?sslmode=require` |
-| `IMS_MIGRATE_DATABASE_URL` | same, with `postgres.<ref>` and the Supabase database password: migrations + `ensure_db_roles` run at start |
+| `IMS_MIGRATE_DATABASE_URL` | same, with `postgres.<ref>` and the Supabase database password: with it set, migrations + `ensure_db_roles` run at start; without it neither does |
 | `IMS_APP_DB_PASSWORD` | 16+ random characters (sets the `ims_app` password) |
 | `CBMS_ENCRYPTION_KEY` | Fernet key; keep it forever |
 | `IMS_PLATFORM_ORIGINS` | `https://<console>.vercel.app`: only the console may call `/api/v1/platform/` |
@@ -161,8 +166,18 @@ cd backend && .venv/bin/python scripts/update_hosted_db.py 'postgresql://postgre
 ```
 It asks for the database password (hidden), shows the plan, waits for `yes`, migrates, gives `ims_app` access without changing its password, and removes the Data API roles' access.
 
+**Operator account on the hosted database** (first operator, or a forgotten password when no reset email arrives):
+```bash
+cd backend && .venv/bin/python scripts/hosted_operator.py 'postgresql://postgres.<ref>@<pooler-host>:5432/postgres' --email you@example.com [--reset]
+```
+Both the database password and the operator's new password are asked for, hidden. Signing in still needs the emailed code, so email (SMTP in the console's System settings) must work.
+
 Limits of this setup:
 * Render's free plan sleeps after 15 idle minutes (first request ~1 min; jobs don't run while asleep) and its disk is wiped on every deploy, so **product photos are lost** unless a Render persistent disk is mounted at `/srv/media` (paid).
+* The proxy can be challenged: Render's edge (Cloudflare) sees the proxy's shared addresses, not the shop's. Seen 2026-11-22:
+  `/api` calls through the shop app got an HTML `429` with `cf-mitigated: challenge` while Render answered directly;
+  it cleared by itself after the checks began, and can come back. The app shows "Too many requests". It is not the sign-in lockout (that is JSON with a countdown) and no setting in IMS
+  lifts it. Check with `curl -i https://<app>.vercel.app/api/v1/health`; if it lasts, send the `cf-ray` and time to Render support.
 * No `pg_dump` backup service: use Supabase's backups.
 * `IMS_PLATFORM_ORIGINS`/`IMS_PLATFORM_ALLOW` keep browsers on the IMS address away from the console API, but a script calling Render directly can fake those headers. The real protection is the operator's password plus emailed code.
 * `/django-admin` isn't proxied and has no static files here; use the console.

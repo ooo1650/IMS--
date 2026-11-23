@@ -14,9 +14,10 @@ interface Result {
 
 export default function Import() {
   const { canOrg, can, branch } = useAuth()
-  const kinds: ['products' | 'opening-stock', string][] = []
+  const kinds: ['products' | 'opening-stock' | 'staff', string][] = []
   if (canOrg('catalog.manage')) kinds.push(['products', 'Products'])
   if (can('import.run')) kinds.push(['opening-stock', `Opening stock (${branch?.code})`])
+  if (canOrg('staff.manage')) kinds.push(['staff', 'Staff list'])
   const [kind, setKind] = useState(kinds[0]?.[0] ?? 'products')
   const [file, setFile] = useState<File | null>(null)
   const [result, setResult] = useState<Result | null>(null)
@@ -54,7 +55,9 @@ export default function Import() {
       <Tabs value={kind} onChange={(k) => { setKind(k); setResult(null) }} tabs={kinds} />
       <div className="card">
         <p className="muted">
-          {kind === 'products'
+          {kind === 'staff'
+            ? 'One row per person: name, branch code, job, phone, joined (YYYY-MM-DD, AD) and monthly salary in rupees. A name already at that branch is updated, so re-uploading adds nobody twice.'
+            : kind === 'products'
             ? 'Upserts on SKU — re-importing the same file updates rather than duplicates. Prices are in rupees (e.g. 120.50).'
             : 'Writes opening stock at the given cost and sets the weighted average. A SKU already imported for this branch is skipped, so re-uploading never doubles stock.'}
         </p>
@@ -69,7 +72,7 @@ export default function Import() {
           <>
             <div className={`alert ${result.ok ? (result.dry_run ? 'alert-info' : 'alert-good') : 'alert-error'}`}>
               {result.ok
-                ? `${result.dry_run ? 'Preview' : 'Imported'}: ${kind === 'products' ? `${result.creates} new, ${result.updates} updated` : `${result.imports} to import, ${result.skips} skipped`}`
+                ? `${result.dry_run ? 'Preview' : 'Imported'}: ${kind !== 'opening-stock' ? `${result.creates} new, ${result.updates} updated` : `${result.imports} to import, ${result.skips} skipped`}`
                 : `${result.errors.length} row(s) have errors — fix them and preview again. Nothing was written.`}
             </div>
             {result.errors.length > 0 && (
@@ -81,14 +84,14 @@ export default function Import() {
             {result.rows.length > 0 && (
               <div className="table-scroll tall">
                 <table className="table">
-                  <thead><tr><th>Row</th><th>SKU</th><th>{kind === 'products' ? 'Name' : 'Qty'}</th><th className="num">{kind === 'products' ? 'Price' : 'Cost'}</th><th>Action</th></tr></thead>
+                  <thead><tr><th>Row</th><th>{kind === 'staff' ? 'Branch' : 'SKU'}</th><th>{kind === 'opening-stock' ? 'Qty' : 'Name'}</th><th className="num">{kind === 'staff' ? 'Salary' : kind === 'products' ? 'Price' : 'Cost'}</th><th>Action</th></tr></thead>
                   <tbody>
                     {result.rows.map((r) => (
                       <tr key={String(r.row)}>
                         <td>{r.row}</td>
-                        <td className="mono">{r.sku}</td>
-                        <td>{kind === 'products' ? r.name : r.qty}</td>
-                        <td className="num">{npr(Number(kind === 'products' ? r.sale_price_paisa : r.unit_cost_paisa))}</td>
+                        <td className="mono">{kind === 'staff' ? r.branch : r.sku}</td>
+                        <td>{kind === 'opening-stock' ? r.qty : r.name}</td>
+                        <td className="num">{npr(Number(kind === 'staff' ? r.salary_paisa : kind === 'products' ? r.sale_price_paisa : r.unit_cost_paisa))}</td>
                         <td>{r.action}</td>
                       </tr>
                     ))}

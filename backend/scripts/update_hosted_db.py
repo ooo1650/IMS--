@@ -15,7 +15,10 @@ until you type "yes". Then it
   left alone, unlike ensure_db_roles, so the live DATABASE_URL keeps working;
 * removes the Supabase Data API roles' access to those tables, present and
   future (IMS doesn't use that API, and its key is public);
-* checks the result.
+* checks the result, including that the tables really exist.
+
+It can only vouch for the database in the address you give. Whether the server
+uses that database is set by the host's DATABASE_URL.
 """
 import getpass
 import os
@@ -30,6 +33,15 @@ from psycopg import conninfo, sql
 BACKEND = Path(__file__).resolve().parent.parent
 APP_ROLE = os.environ.get("IMS_APP_DB_USER", "ims_app")
 API_ROLES = ("anon", "authenticated")
+# Django trusts django_migrations, so "nothing to migrate" doesn't mean the tables are there.
+MISSING_TABLES = """
+from django.apps import apps
+from django.db import connection
+have = set(connection.introspection.table_names())
+need = {m._meta.db_table for m in apps.get_models(include_auto_created=True) if m._meta.managed and not m._meta.proxy}
+for name in sorted(need - have):
+    print("MISSING", name)
+"""
 
 
 def stop(message):
@@ -181,7 +193,7 @@ def main():
         app = bool(existing_roles(cur, [APP_ROLE]))
         api = existing_roles(cur, API_ROLES)
         exposed = api_readable(cur, api)
-        print(f"\nApp role {APP_ROLE}: {'exists, will be given access' if app else 'none (the app connects as the owner)'}")
+        print(f"\nApp role {APP_ROLE}: {'exists, will be given access' if app else 'none in this database (if the server signs in as ' + APP_ROLE + ', it uses a different database)'}")
         if exposed:
             print(f"WARNING: {len(exposed)} table(s) can be read with Supabase's public Data API key. This will close that.")
         try:
@@ -201,6 +213,13 @@ def main():
         problems = []
         if manage(env, "migrate", "--check").returncode:
             problems.append("some migrations are still pending")
+        tables = manage(env, "shell", "-c", MISSING_TABLES)
+        missing = [line.split()[1] for line in tables.stdout.splitlines() if line.startswith("MISSING ")]
+        if tables.returncode:
+            problems.append("couldn't check that the tables exist")
+        elif missing:
+            problems.append(f"recorded as updated, but these tables don't exist: {', '.join(missing)}. Ask before going "
+                            "further: running this again won't create them")
         cur.execute("""SELECT c.relname, c.relrowsecurity FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
                        WHERE n.nspname = 'public' AND c.relkind = 'r'""")
         for name, row_security in cur.fetchall():
@@ -218,7 +237,9 @@ def main():
                             "app works; to close those, turn the Data API off in Supabase (Project Settings > Data API)")
         if problems:
             stop("updated, but: " + "; ".join(problems[:8]))
-    print("\nDONE: the database is up to date." + (f" Closed Data API access to {len(exposed)} table(s)." if exposed else ""))
+    print("\nDONE: this database is up to date." + (f" Closed Data API access to {len(exposed)} table(s)." if exposed else ""))
+    print("If the app still says its database wasn't updated, the server uses another database: compare the user and "
+          "host in the host's DATABASE_URL with the address above.")
 
 
 if __name__ == "__main__":

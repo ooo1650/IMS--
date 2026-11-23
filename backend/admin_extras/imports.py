@@ -21,6 +21,8 @@ STOCK_COLUMNS = ["sku", "qty", "cost"]
 TEMPLATES = {
     "products": ",".join(PRODUCT_COLUMNS) + "\nRICE-5KG,Basmati Rice 5kg,8901234567890,850.00,700.00,13,yes,Grocery,pcs\n",
     "opening-stock": ",".join(STOCK_COLUMNS) + "\nRICE-5KG,40,700.00\n",
+    # Read by staff/services.py import_staff; joined = AD date, salary = rupees a month.
+    "staff": "name,branch,position,phone,joined,salary\nRam Bahadur,KTM,Cashier,9800000000,2024-04-14,18000\n",
 }
 
 
