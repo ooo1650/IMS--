@@ -138,7 +138,7 @@ def me_payload(user, active_branch, active_org=None):
     """The signed-in user, their businesses and the branches they can open.
     ``branches`` and ``org_*`` describe the active business only; ``businesses``
     lists every business they work for (for the switcher)."""
-    from tenancy.models import Branch, Organization
+    from tenancy.models import Branch, Organization, branch_colors
 
     roles = list(user.branch_roles.select_related("branch", "org"))
     org = active_branch.org if active_branch is not None else active_org
@@ -157,11 +157,12 @@ def me_payload(user, active_branch, active_org=None):
     else:
         branches = [r.branch for r in roles if r.branch_id and r.org_id == org.pk and r.branch.is_active]
     branch_list = []
+    colors = branch_colors(org.pk) if org is not None else {}
     for b in branches:
         branch_role = next((r.role for r in roles if r.branch_id == b.id), None)
         perms = set(permissions_for(org_role)) | set(permissions_for(branch_role))
         branch_list.append({
-            "id": b.id, "name": b.name, "code": b.code, "timezone": b.timezone,
+            "id": b.id, "name": b.name, "code": b.code, "timezone": b.timezone, "color": colors.get(b.id, "grey"),
             "role": branch_role or org_role, "permissions": sorted(perms),
         })
     return {

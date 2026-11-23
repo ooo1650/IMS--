@@ -8,14 +8,23 @@ from accounts.permissions import HasOrgPerm
 from admin_extras.models import log_action
 from ims.api import OrgFieldsMixin
 
-from .models import Branch, Register
+from .models import branch_colors, Branch, Register
 
 
 class BranchSerializer(serializers.ModelSerializer):
+    # ``color`` is what an admin chose ("" = automatic); ``color_shown`` is what the app uses.
+    color_shown = serializers.SerializerMethodField()
+
     class Meta:
         model = Branch
-        fields = ["id", "org", "name", "code", "timezone", "address", "is_active"]
+        fields = ["id", "org", "name", "code", "timezone", "address", "is_active", "color", "color_shown"]
         read_only_fields = ["org"]  # a branch belongs to the active business; it never moves
+
+    def get_color_shown(self, b):
+        cache = self.context.setdefault("_colors", {})
+        if b.org_id not in cache:
+            cache[b.org_id] = branch_colors(b.org_id)
+        return cache[b.org_id].get(b.id, "grey")
 
 
 class RegisterSerializer(OrgFieldsMixin, serializers.ModelSerializer):

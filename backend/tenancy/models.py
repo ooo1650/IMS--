@@ -58,6 +58,29 @@ def rules_for(org) -> "BusinessRules":
     return rules
 
 
+# Branch colours, so people see at a glance which branch they are working in.
+# Keys only; the shades live in the frontend (lib/branchColors.ts). No green or
+# red: those already mean "the app's accent" and "something is wrong".
+BRANCH_COLORS = ["blue", "orange", "purple", "teal", "pink", "yellow", "brown", "indigo", "grey"]
+
+
+def branch_colors(org_id):
+    """{branch_id: colour} for a business. A chosen colour is kept; the others
+    get the first colour nobody chose, in the order the branches were created,
+    so two branches look the same only after all nine colours are used."""
+    rows = list(Branch.objects.filter(org_id=org_id).order_by("id").values_list("id", "color"))
+    taken = {c for _, c in rows if c}
+    free = [c for c in BRANCH_COLORS if c not in taken] or BRANCH_COLORS
+    out, i = {}, 0
+    for pk, chosen in rows:
+        if chosen:
+            out[pk] = chosen
+        else:
+            out[pk] = free[i % len(free)]
+            i += 1
+    return out
+
+
 class Branch(models.Model):
     org = models.ForeignKey(Organization, on_delete=models.PROTECT, related_name="branches")
     name = models.CharField(max_length=200)
@@ -66,6 +89,8 @@ class Branch(models.Model):
     address = models.TextField(blank=True)
     phone = models.CharField(max_length=40, blank=True)
     is_active = models.BooleanField(default=True)
+    # Blank = automatic (see branch_colors).
+    color = models.CharField(max_length=12, blank=True, choices=[(c, c.title()) for c in BRANCH_COLORS])
 
     class Meta:
         ordering = ["name"]
