@@ -89,8 +89,9 @@ class Branch(models.Model):
     address = models.TextField(blank=True)
     phone = models.CharField(max_length=40, blank=True)
     is_active = models.BooleanField(default=True)
-    # Blank = automatic (see branch_colors).
-    color = models.CharField(max_length=12, blank=True, choices=[(c, c.title()) for c in BRANCH_COLORS])
+    # Empty = automatic (see branch_colors). Nullable so adding it is a plain
+    # ADD COLUMN on SQLite too (no table rebuild, which the auditor views block).
+    color = models.CharField(max_length=12, null=True, blank=True, choices=[(c, c.title()) for c in BRANCH_COLORS])
 
     class Meta:
         ordering = ["name"]

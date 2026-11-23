@@ -20,6 +20,14 @@ class BranchSerializer(serializers.ModelSerializer):
         fields = ["id", "org", "name", "code", "timezone", "address", "is_active", "color", "color_shown"]
         read_only_fields = ["org"]  # a branch belongs to the active business; it never moves
 
+    def validate_color(self, v):
+        return v or None  # "" from the form = automatic
+
+    def to_representation(self, b):
+        data = super().to_representation(b)
+        data["color"] = data["color"] or ""
+        return data
+
     def get_color_shown(self, b):
         cache = self.context.setdefault("_colors", {})
         if b.org_id not in cache:
